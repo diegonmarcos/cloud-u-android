@@ -1643,7 +1643,7 @@
     ]
   },
   "latex": {
-    "_doc": "#1329 the LaTeX page (Calculator > LaTeX, between Calc and Convert): ui.modes latex_library (the formula library: search + category chips, a list rendered with KaTeX, a detail view with Copy LaTeX / Edit / Share / Favourite) and latex_editor (monospace input, symbol palette, debounced live preview with the parse error inline, Copy / Share image / Save to Mine / Evaluate). Everything it shows is declared here or in the catalog file; Kotlin only dispatches on the mode kinds. Renderer: KaTeX 0.19.1 (MIT), bundled OFFLINE in the APK assets (data/assets/latex, wired by app/build.gradle's assets srcDir) and drawn in a WebView with network loads blocked. The catalog is GENERATED from the owner's markdown (data/latex/100-formulas.md via data/latex/gen-formulas.mjs).",
+    "_doc": "#1329 the LaTeX page (Calculator > LaTeX, between Calc and Convert): ui.modes latex_library (the formula library: search + category chips, a list rendered with KaTeX, a detail view with Copy LaTeX / Edit / Share / Favourite) and latex_editor (monospace input, symbol palette, debounced live preview with the parse error inline, Copy / Share image / Save to Mine / Evaluate). Everything it shows is declared here or in the catalog file; Kotlin only dispatches on the mode kinds. Renderer: KaTeX 0.19.1 (MIT), bundled OFFLINE in the APK assets (data/assets/latex, wired by app/build.gradle's assets srcDir) and drawn in a WebView with network loads blocked. The catalog is GENERATED from the owner's markdown (data/latex/100-formulas.md, verbatim), the pi list (data/latex/pi-formulas.md) and the plot specs (data/latex/plots.json) via data/latex/gen-formulas.mjs. #1336 adds the third mode latex_graph (Library | Edit | Graph) and the plots (build.json::latex.graph).",
     "renderer": {
       "engine": "KaTeX",
       "version": "0.19.1",
@@ -2007,6 +2007,98 @@
         ]
       }
     ],
+    "graph": {
+      "_doc": "#1336 the Graph subpage (Calculator > LaTeX > Graph) and the plots in the formula detail. Plots are declared as data per formula (data/latex/plots.json, merged into the catalog by gen-formulas.mjs: variables with default/min/max/step, a 2D and a 3D view, an optional animation variable and wave variables) and drawn OFFLINE in a WebView by the bundled own-code viewer (assets/latex/plot: expr.js = the safe expression parser, model.js = sampling, graph.js = a canvas 2D plot and a canvas 3D scene with orbit, zoom, tap / long-press probing and animation). No third-party library, no eval, network loads blocked. Plots are computed only when a formula's detail or the Graph page opens. 'Plot my formula' converts the Editor's LaTeX with plot_commands / greek / ignored (anything else is reported, never guessed) and ranges it with custom.",
+      "renderer": {
+        "viewer": "latex/plot/graph.html",
+        "scripts": [
+          "latex/plot/expr.js",
+          "latex/plot/model.js",
+          "latex/plot/graph.js"
+        ],
+        "bridge": "CalcPlot",
+        "license": "own code, no third-party library"
+      },
+      "modes": [
+        "both",
+        "2d",
+        "3d"
+      ],
+      "default_mode": "both",
+      "speed": {
+        "min": 0.25,
+        "max": 4,
+        "default": 1
+      },
+      "zoom_step": 1.25,
+      "default_formula": "the-classical-wave-equation",
+      "plot_commands": {
+        "\\sin": "sin({})",
+        "\\cos": "cos({})",
+        "\\tan": "tan({})",
+        "\\arcsin": "asin({})",
+        "\\arccos": "acos({})",
+        "\\arctan": "atan({})",
+        "\\sinh": "sinh({})",
+        "\\cosh": "cosh({})",
+        "\\tanh": "tanh({})",
+        "\\exp": "exp({})",
+        "\\ln": "ln({})",
+        "\\log": "log10({})",
+        "\\lg": "log10({})",
+        "\\sec": "(1/cos({}))",
+        "\\csc": "(1/sin({}))",
+        "\\cot": "(1/tan({}))"
+      },
+      "greek": [
+        "alpha",
+        "beta",
+        "delta",
+        "epsilon",
+        "zeta",
+        "eta",
+        "theta",
+        "iota",
+        "kappa",
+        "lambda",
+        "mu",
+        "nu",
+        "xi",
+        "rho",
+        "sigma",
+        "phi",
+        "chi",
+        "psi",
+        "omega",
+        "varphi",
+        "varepsilon",
+        "vartheta"
+      ],
+      "ignored": [
+        "\\,",
+        "\\;",
+        "\\!",
+        "\\:",
+        "\\ ",
+        "\\quad",
+        "\\qquad",
+        "\\displaystyle",
+        "\\textstyle"
+      ],
+      "custom": {
+        "range": 10,
+        "trig_range": 6.2832,
+        "step": 0.1,
+        "trig_step": 0.05,
+        "dummy": "ysweep",
+        "max_vars": 2,
+        "trig_functions": [
+          "sin",
+          "cos",
+          "tan"
+        ]
+      }
+    },
     "eval": {
       "_doc": "Evaluate: simple LaTeX becomes the engine's expression syntax (Latex.toExpression) and is computed by the bound libqalculate engine, the same contract the Calc page uses. `commands` maps a LaTeX command to the engine text it becomes; `ignored` commands are dropped; `constants` are the only bare letters allowed. \\frac, \\sqrt, ^{}, {} groups and \\left/\\right are structural. Anything else (variables, subscripts, sums, relations) is reported as not convertible, never guessed.",
       "commands": {
@@ -2637,19 +2729,28 @@
         "short": "Library",
         "tab": "latex",
         "kind": "latex_library",
-        "_doc": "The formula library: the catalog file named by build.json::latex.catalog (the owner's 100 formulas in 9 categories, in his order), a search field, category chips (All, Favourites, the 9, then Mine = the user's saved formulas), a list of 'N. Title' with the rendered formula, and a detail view with the description, the LaTeX source, Copy LaTeX, Edit (opens the Editor), Share (PNG and text) and Favourite."
+        "_doc": "The formula library: the catalog file named by build.json::latex.catalog (the owner's 100 formulas in 9 categories, in his order, then the 25 \"π (Pi)\" formulas of data/latex/pi-formulas.md), a search field, category chips (All, Favourites, the 9, π (Pi), then Mine = the user's saved formulas), a list of 'N. Title' with the rendered formula, and a detail view with the rendered formula, its 2D and 3D plots (#1336, drawn only when the detail opens), the description, the LaTeX source, Copy LaTeX, Edit (opens the Editor), Graph (opens the Graph page on it), Share (PNG and text) and Favourite."
       },
       {
         "id": "latex_editor",
-        "label": "Editor",
+        "label": "Edit",
         "icon": "edit",
-        "short": "Editor",
+        "short": "Edit",
         "tab": "latex",
         "kind": "latex_editor",
         "options": {
           "approx": 2
         },
         "_doc": "The LaTeX editor: a monospace input, the symbol palette (build.json::latex.palette), a live preview re-rendered after build.json::latex.preview_debounce_ms with the parse error shown inline, Copy LaTeX, Share image, Save to Mine (persisted locally, editable and deletable from the Library) and Evaluate (numeric LaTeX converted by build.json::latex.eval and computed by the bound engine with these options). Copy, Share, Save and Evaluate land in History as kind latex."
+      },
+      {
+        "id": "latex_graph",
+        "label": "Graph",
+        "icon": "chart",
+        "short": "Graph",
+        "tab": "latex",
+        "kind": "latex_graph",
+        "_doc": "#1336 The formula graph: a formula picker (the current one, or search), a 2D / 3D / both toggle over the offline plot viewer (build.json::latex.graph), tap or long-press on a plot for the point's coordinates with a crosshair readout, Animate (play / pause with speed) over the formula's animation variable, a slider plus a numeric field for EVERY variable starting from the declared defaults with Reset to defaults, frequency / amplitude / phase sliders for waves, 3D orbit / zoom / reset, and Plot my formula for an Editor formula that converts to an expression in one or two free variables."
       },
       {
         "id": "unit_length",

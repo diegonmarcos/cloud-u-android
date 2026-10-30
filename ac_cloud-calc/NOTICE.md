@@ -32,6 +32,11 @@ are its own data, compiled in.
 | ARCore SDK for Android (`com.google.ar:core`) 1.48.0 | Google APIs Terms of Service and the ARCore Additional Terms of Service |
 | KaTeX 0.19.1 (`katex.min.js`, `auto-render.min.js`, `katex.min.css` and 13 woff2 fonts; Khan Academy and contributors) | MIT |
 
+The LaTeX plots (#1336: the 2D plot, the 3D scene, the safe expression parser, the Graph page) are written in this
+repository (`data/assets/latex/plot/*.js`, `PlotExpr.kt`, `LatexPlot.kt`, `ui/LatexScreens.kt`): own code, no third-party
+library. uPlot, function-plot and three.js (all MIT) were considered and not bundled: the plots need only a canvas
+and a small projection, which keeps the APK growth to the scripts themselves.
+
 The sound meter's signal processing (radix-2 FFT, Hann window, IEC 61672-1 A-weighting, dBFS)
 is written in `sound/src/main/kotlin/com/diegonmarcos/cloudcalc/sound/Dsp.kt` (#772: with C-weighting, YIN pitch, onset and event detection beside it) from the published
 formulas; no code was taken from phyphox or OpeNoise (both GPL-3.0).

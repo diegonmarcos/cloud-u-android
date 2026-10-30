@@ -1,0 +1,457 @@
+{
+ "_doc": "Shared conformance vectors of the plot expression language: assets/latex/plot/expr.js (run by test/test-plots.mjs) and PlotExpr.kt (run by PlotTest) must agree on every accept value and must reject every reject entry. reject.vars lists the declared variables.",
+ "accept": [
+  {
+   "expr": "1/(sigma*sqrt(2*pi))*exp(-(x-mu)^2/(2*sigma^2))",
+   "vars": {
+    "x": 0,
+    "mu": 0,
+    "sigma": 1
+   },
+   "expect": 0.3989422804014327,
+   "tol": 1e-12,
+   "why": "the Gaussian density at 0 is 1/sqrt(2 pi)"
+  },
+  {
+   "expr": "1/(sigma*sqrt(2*pi))*exp(-(x-mu)^2/(2*sigma^2))",
+   "vars": {
+    "x": 1,
+    "mu": 0,
+    "sigma": 1
+   },
+   "expect": 0.24197072451914337,
+   "tol": 1e-12,
+   "why": "the Gaussian density at 1"
+  },
+  {
+   "expr": "4*sum(k,0,999,(-1)^k/(2*k+1))",
+   "vars": {},
+   "expect": 3.140592653839794,
+   "tol": 1e-12,
+   "why": "the Leibniz partial sum at n = 1000 is within 1/n of pi"
+  },
+  {
+   "expr": "-2^2",
+   "vars": {},
+   "expect": -4,
+   "tol": 0,
+   "why": "unary minus binds looser than the power"
+  },
+  {
+   "expr": "2^3^2",
+   "vars": {},
+   "expect": 512,
+   "tol": 0,
+   "why": "the power is right associative"
+  },
+  {
+   "expr": "2^-1",
+   "vars": {},
+   "expect": 0.5,
+   "tol": 0,
+   "why": "a signed exponent"
+  },
+  {
+   "expr": "10/4/5",
+   "vars": {},
+   "expect": 0.5,
+   "tol": 1e-15,
+   "why": "division is left associative"
+  },
+  {
+   "expr": "fact(10)",
+   "vars": {},
+   "expect": 3628800,
+   "tol": 0
+  },
+  {
+   "expr": "comb(10,3)",
+   "vars": {},
+   "expect": 120,
+   "tol": 0
+  },
+  {
+   "expr": "primepi(100)",
+   "vars": {},
+   "expect": 25,
+   "tol": 0
+  },
+  {
+   "expr": "erf(1)",
+   "vars": {},
+   "expect": 0.8427007929497148,
+   "tol": 1e-12
+  },
+  {
+   "expr": "gamma(0.5)^2",
+   "vars": {},
+   "expect": 3.1415926535897927,
+   "tol": 1e-12,
+   "why": "Gamma(1/2)^2 = pi"
+  },
+  {
+   "expr": "lgamma(10)",
+   "vars": {},
+   "expect": 12.801827480081474,
+   "tol": 1e-11
+  },
+  {
+   "expr": "atan2(1,1)*4",
+   "vars": {},
+   "expect": 3.141592653589793,
+   "tol": 1e-15
+  },
+  {
+   "expr": "if(x>1,10,20)",
+   "vars": {
+    "x": 2
+   },
+   "expect": 10,
+   "tol": 0,
+   "why": "if is lazy and returns the branch"
+  },
+  {
+   "expr": "if(x>1,10,20)",
+   "vars": {
+    "x": 0
+   },
+   "expect": 20,
+   "tol": 0
+  },
+  {
+   "expr": "min(3,4)+max(3,4)",
+   "vars": {},
+   "expect": 7,
+   "tol": 0
+  },
+  {
+   "expr": "mod(-1,3)",
+   "vars": {},
+   "expect": 2,
+   "tol": 0,
+   "why": "mod takes the sign of the divisor"
+  },
+  {
+   "expr": "sum(i,1,10,i)",
+   "vars": {},
+   "expect": 55,
+   "tol": 0
+  },
+  {
+   "expr": "prod(i,1,5,i)",
+   "vars": {},
+   "expect": 120,
+   "tol": 0
+  },
+  {
+   "expr": "cfan(0.5,8)",
+   "vars": {},
+   "expect": 0.5463024898437905,
+   "tol": 1e-12,
+   "why": "Lambert continued fraction for tan"
+  },
+  {
+   "expr": "logistic(3.5,0.2,100)",
+   "vars": {},
+   "expect": 0.8269407065914387,
+   "tol": 1e-9
+  },
+  {
+   "expr": "sinc(0)",
+   "vars": {},
+   "expect": 1,
+   "tol": 0
+  },
+  {
+   "expr": "step(-1)",
+   "vars": {},
+   "expect": 0,
+   "tol": 0
+  },
+  {
+   "expr": "sign(-3)",
+   "vars": {},
+   "expect": -1,
+   "tol": 0
+  },
+  {
+   "expr": "clamp(5,0,3)",
+   "vars": {},
+   "expect": 3,
+   "tol": 0
+  },
+  {
+   "expr": "hypot(3,4)",
+   "vars": {},
+   "expect": 5,
+   "tol": 0
+  },
+  {
+   "expr": "round(2.5)",
+   "vars": {},
+   "expect": 3,
+   "tol": 0
+  },
+  {
+   "expr": "1e-3+.5",
+   "vars": {},
+   "expect": 0.501,
+   "tol": 1e-15,
+   "why": "number forms"
+  },
+  {
+   "expr": "e^1",
+   "vars": {},
+   "expect": 2.718281828459045,
+   "tol": 1e-15
+  },
+  {
+   "expr": "tau/pi",
+   "vars": {},
+   "expect": 2,
+   "tol": 1e-15
+  },
+  {
+   "expr": "4*agma(1,1/sqrt(2),4)^2/(1-sum(j,1,4,2^(j+1)*(agma(1,1/sqrt(2),j)^2-agmb(1,1/sqrt(2),j)^2)))",
+   "vars": {},
+   "expect": 3.1415926535898313,
+   "tol": 1e-14,
+   "why": "Gauss-Legendre after 4 steps is pi"
+  },
+  {
+   "expr": "16/sum(k,0,19,(42*k+5)*comb(2*k,k)^3/2^(12*k))",
+   "vars": {},
+   "expect": 3.141592653589793,
+   "tol": 1e-13,
+   "why": "Ramanujan-Sato after 20 terms is pi"
+  },
+  {
+   "expr": "sum(k,1,3,sum(j,1,k,j))",
+   "vars": {},
+   "expect": 10,
+   "tol": 0,
+   "why": "nested sums"
+  },
+  {
+   "expr": "x^2+y^2",
+   "vars": {
+    "x": 3,
+    "y": 4
+   },
+   "expect": 25,
+   "tol": 0
+  },
+  {
+   "expr": "abs(-3)+floor(2.7)+ceil(2.1)",
+   "vars": {},
+   "expect": 8,
+   "tol": 0
+  }
+ ],
+ "reject": [
+  {
+   "expr": "eval(1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "x.y",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "constructor",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "__proto__",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "toString(1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sin",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "1+",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sum(k,1,3,j)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "a b",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sin(1,2)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "y+1",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "window",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "this",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "x=1",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "x;1",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "`1`",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "a",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "2 3",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sum(x,1,3,x)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "(1",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sin()",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "[1]",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "{}",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "Math.sin(1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "function(){}",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "x[0]",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "x**2",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "1,2",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "import(1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "alert(1)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "sum(k,1,3)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "pi(2)",
+   "vars": [
+    "x"
+   ]
+  },
+  {
+   "expr": "e(1)",
+   "vars": [
+    "x"
+   ]
+  }
+ ]
+}

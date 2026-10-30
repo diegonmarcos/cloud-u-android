@@ -19,6 +19,13 @@ class LatexModel(
     /** What the Editor opens with: the LaTeX, and the saved formula it edits (null = a new one). */
     data class Draft(val tex: String, val mineId: String?, val title: String)
 
+    /** #1336 what the Graph page opens with: a catalog formula by id, or the LaTeX (and title) of a user's formula to convert. */
+    data class GraphTarget(val formulaId: String?, val tex: String = "", val title: String = "")
+    var graphTarget by mutableStateOf<GraphTarget?>(null)
+
+    /** The Editor's current LaTeX, mirrored so the Graph page can plot it. */
+    var editorText by mutableStateOf("")
+
     val mine = mutableStateListOf<Latex.Formula>().apply { addAll(Latex.decodeMine(prefs?.getString(MINE, null), cfg)) }
     val favourites = mutableStateListOf<String>().apply { addAll(Latex.decodeFavourites(prefs?.getString(FAV, null))) }
     var draft by mutableStateOf<Draft?>(null)

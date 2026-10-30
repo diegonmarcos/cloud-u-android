@@ -12,9 +12,29 @@ import org.json.JSONObject
 object Latex {
     data class Symbol(val label: String, val insert: String)
     data class Palette(val id: String, val label: String, val symbols: List<Symbol>)
-    data class Category(val id: String, val label: String)
+    /** [includes]: ids of formulas of another category that also list here (the pi category references Euler's identity, Basel, Chudnovsky). */
+    data class Category(val id: String, val label: String, val includes: List<String> = emptyList())
     /** build.json::latex.eval: what Evaluate may convert. */
     data class EvalRules(val commands: Map<String, String>, val ignored: Set<String>, val constants: Set<String>)
+    /** #1336 build.json::latex.graph.custom: how "Plot my formula" ranges a converted expression. */
+    data class CustomPlot(val range: Double, val trigRange: Double, val step: Double, val trigStep: Double, val dummy: String, val maxVars: Int, val trigFunctions: List<String>)
+    /** #1336 build.json::latex.graph: the plot viewer's assets and bridge, the Graph page's limits, and the LaTeX -> plot-expression rules. */
+    data class GraphConfig(
+        val viewer: String,
+        val scripts: List<String>,
+        val bridge: String,
+        val modes: List<String>,
+        val defaultMode: String,
+        val speedMin: Double,
+        val speedMax: Double,
+        val speedDefault: Double,
+        val zoomStep: Double,
+        val defaultFormula: String,
+        val plotCommands: Map<String, String>,
+        val greek: Set<String>,
+        val ignored: Set<String>,
+        val custom: CustomPlot,
+    )
     data class Config(
         val viewer: String,
         val script: String,
@@ -35,6 +55,7 @@ object Latex {
         val shareTheme: String,
         val palette: List<Palette>,
         val eval: EvalRules,
+        val graph: GraphConfig,
     )
 
     /** One library entry. [number] is the owner's numbering (0 for a user's formula); [mine] marks a saved one. */
@@ -46,6 +67,8 @@ object Latex {
         val tex: String,
         val description: String,
         val mine: Boolean = false,
+        /** #1336 how the formula is drawn (null for a user's formula, which is plotted by converting its LaTeX). */
+        val plot: PlotSpec? = null,
     ) {
         /** "N. Title" as the list shows it; a user's formula has no number. */
         val heading: String get() = if (number > 0) "$number. $title" else title
@@ -53,11 +76,28 @@ object Latex {
 
     data class Catalog(val categories: List<Category>, val formulas: List<Formula>)
 
+    /** One plotted variable: every one gets a slider and a numeric field on the Graph page. */
+    data class PlotVar(val symbol: String, val label: String, val default: Double, val min: Double, val max: Double, val step: Double)
+    /** The variable the Animate button drives over its range. */
+    data class PlotAnim(val variable: String, val min: Double, val max: Double, val speed: Double)
+    /** The variables a wave exposes as the frequency / amplitude / phase sliders. */
+    data class PlotWave(val freq: String?, val amp: String?, val phase: String?)
+    /** A formula's plot block (catalog) or a converted user formula; [json] is what the viewer page receives. */
+    data class PlotSpec(
+        val caption: String,
+        val illustration: Boolean,
+        val vars: List<PlotVar>,
+        val anim: PlotAnim?,
+        val wave: PlotWave?,
+        val json: JSONObject,
+    )
+
     fun parseConfig(json: String): Config {
         val o = JSONObject(json)
         val r = o.getJSONObject("renderer")
         val sh = o.getJSONObject("share")
         val ev = o.getJSONObject("eval")
+        val gr = o.getJSONObject("graph")
         return Config(
             viewer = r.getString("viewer"), script = r.getString("script"), autoRender = r.getString("auto_render"),
             style = r.getString("style"), fontsDir = r.getString("fonts_dir"), bridge = r.getString("bridge"),
@@ -75,6 +115,22 @@ object Latex {
                 ev.getJSONArray("ignored").strings().toSet(),
                 ev.getJSONArray("constants").strings().toSet(),
             ),
+            graph = parseGraph(gr),
+        )
+    }
+
+    private fun parseGraph(g: JSONObject): GraphConfig {
+        val r = g.getJSONObject("renderer")
+        val sp = g.getJSONObject("speed")
+        val c = g.getJSONObject("custom")
+        return GraphConfig(
+            viewer = r.getString("viewer"), scripts = r.getJSONArray("scripts").strings(), bridge = r.getString("bridge"),
+            modes = g.getJSONArray("modes").strings(), defaultMode = g.getString("default_mode"),
+            speedMin = sp.getDouble("min"), speedMax = sp.getDouble("max"), speedDefault = sp.getDouble("default"),
+            zoomStep = g.getDouble("zoom_step"), defaultFormula = g.getString("default_formula"),
+            plotCommands = g.getJSONObject("plot_commands").let { m -> m.keys().asSequence().associateWith { m.getString(it) } },
+            greek = g.getJSONArray("greek").strings().toSet(), ignored = g.getJSONArray("ignored").strings().toSet(),
+            custom = CustomPlot(c.getDouble("range"), c.getDouble("trig_range"), c.getDouble("step"), c.getDouble("trig_step"), c.getString("dummy"), c.getInt("max_vars"), c.getJSONArray("trig_functions").strings()),
         )
     }
 
@@ -86,11 +142,65 @@ object Latex {
     fun parseCatalog(json: String): Catalog {
         val o = JSONObject(json)
         return Catalog(
-            o.getJSONArray("categories").objects().map { category(it) },
+            o.getJSONArray("categories").objects().map { c ->
+                Category(c.getString("id"), c.getString("label"), c.optJSONArray("includes")?.strings().orEmpty())
+            },
             o.getJSONArray("formulas").objects().map {
-                Formula(it.getString("id"), it.optInt("number", 0), it.getString("title"), it.getString("category"), it.getString("latex"), it.optString("description"))
+                Formula(
+                    it.getString("id"), it.optInt("number", 0), it.getString("title"), it.getString("category"), it.getString("latex"), it.optString("description"),
+                    plot = it.optJSONObject("plot")?.let { p -> parsePlot(p) },
+                )
             },
         )
+    }
+
+    // ── plots (#1336) ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    fun parsePlot(o: JSONObject): PlotSpec = PlotSpec(
+        caption = o.getString("caption"),
+        illustration = o.optString("kind") == "illustration",
+        vars = o.getJSONArray("vars").objects().map {
+            PlotVar(it.getString("symbol"), it.getString("label"), it.getDouble("default"), it.getDouble("min"), it.getDouble("max"), it.getDouble("step"))
+        },
+        anim = o.optJSONObject("anim")?.let { PlotAnim(it.getString("var"), it.getDouble("min"), it.getDouble("max"), it.optDouble("speed", 1.0)) },
+        wave = o.optJSONObject("wave")?.let { w -> PlotWave(w.optString("freq").ifEmpty { null }, w.optString("amp").ifEmpty { null }, w.optString("phase").ifEmpty { null }) },
+        json = o,
+    )
+
+    /** The layer keys that hold an expression in the safe language (assets/latex/plot/model.js EXPR_KEYS). */
+    private val EXPR_KEYS = listOf("y", "z", "fx", "fy", "fz", "at", "sel")
+
+    /**
+     * What a plot spec is wrong about, or an empty list: a caption, variables whose defaults sit inside [min, max], a 2D and a 3D view
+     * with layers, every swept variable declared, and EVERY expression parsed by the safe parser against the declared variables.
+     */
+    fun plotProblems(p: PlotSpec): List<String> {
+        val bad = mutableListOf<String>()
+        if (p.caption.isBlank() || p.caption.contains('\n')) bad += "needs a one-line caption"
+        if (p.vars.isEmpty()) bad += "no variables"
+        p.vars.forEach { v ->
+            if (!(v.min < v.max)) bad += "${v.symbol}: min is not below max"
+            if (!(v.default >= v.min && v.default <= v.max)) bad += "${v.symbol}: default ${v.default} outside [${v.min}, ${v.max}]"
+            if (!(v.step > 0)) bad += "${v.symbol}: step is not positive"
+            if (v.symbol in PlotExpr.functions || v.symbol in PlotExpr.constants) bad += "${v.symbol}: is a function or constant name"
+        }
+        val names = p.vars.map { it.symbol }
+        listOf("d2", "d3").forEach { dim ->
+            val d = p.json.optJSONObject(dim)
+            val layers = d?.optJSONArray("layers")
+            if (d == null || layers == null || layers.length() == 0) { bad += "no ${dim.uppercase()} view"; return@forEach }
+            listOf("x", "y", "z").forEach { k -> if (d.has(k) && d.getString(k) !in names) bad += "$dim.$k names an undeclared variable" }
+            if (!d.has("x")) bad += "$dim has no swept variable"
+            layers.objects().forEachIndexed { i, l ->
+                EXPR_KEYS.filter { l.has(it) }.forEach { k ->
+                    try { PlotExpr.compile(l.getString(k), names) }
+                    catch (e: PlotExpr.ExprException) { bad += "$dim layer ${i + 1} $k: ${e.message}" }
+                }
+            }
+        }
+        p.anim?.let { if (it.variable !in names) bad += "anim names an undeclared variable" }
+        p.wave?.let { w -> listOfNotNull(w.freq, w.amp, w.phase).forEach { if (it !in names) bad += "wave names an undeclared variable $it" } }
+        return bad
     }
 
     /** What the catalog is wrong about, or an empty list: the load-time guard the JVM suite also runs. */
@@ -100,7 +210,9 @@ object Latex {
         c.formulas.forEach { f ->
             if (f.tex.isBlank()) bad += "${f.id}: empty LaTeX"
             if (c.categories.none { it.id == f.category }) bad += "${f.id}: unknown category ${f.category}"
+            f.plot?.let { p -> plotProblems(p).forEach { bad += "${f.id}: $it" } }
         }
+        c.categories.forEach { cat -> cat.includes.filter { id -> c.formulas.none { it.id == id } }.forEach { bad += "${cat.id}: includes unknown formula $it" } }
         return bad
     }
 
@@ -118,7 +230,10 @@ object Latex {
             "" -> all
             cfg.favourites.id -> all.filter { it.id in favourites }
             cfg.mine.id -> mine
-            else -> all.filter { it.category == chip }
+            else -> {
+                val extra = c.categories.firstOrNull { it.id == chip }?.includes.orEmpty()
+                all.filter { it.category == chip || it.id in extra }
+            }
         }
         val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (words.isEmpty()) return base

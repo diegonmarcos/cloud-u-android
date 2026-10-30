@@ -1,0 +1,1877 @@
+{
+"_doc": "Plot specs of the Cloud Calc LaTeX library, keyed by formula id (data/latex/100-formulas.md and pi-formulas.md). Merged into assets/latex/formulas.json by gen-formulas.mjs. Per formula: caption (one line: what is plotted), kind (function = the formula itself, illustration = an honest picture of an identity or relation), vars {symbol: [label, default, min, max, step]} (every variable gets a slider and a field; a variable a plot sweeps is also the probe), d2 {x (swept variable), y (second swept variable of a field), n, layers}, d3 {x, y, z (swept variables), n, g, layers}, anim (variable the Animate button drives) and wave {freq, amp, phase} (variables the Wave sliders expose). Layers: 2D line param points scatter hline vline dot field; 3D surface psurface curve points dot quiver platonic. Expressions are the safe language of assets/latex/plot/expr.js (sin, cos, exp, sqrt, sum(i,a,b,body), ...; no eval).",
+"plots": {
+"the-pythagorean-theorem": {
+ "caption": "Hypotenuse c = sqrt(a^2 + b^2): c against leg a for the chosen b (2D), and over both legs (3D).", "kind": "function",
+ "vars": {
+  "a": ["Leg a",3,0.5,10,0.1],
+  "b": ["Leg b",4,0.5,10,0.1]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"sqrt(a^2+b^2)","label":"c"},
+    {"t":"line","y":"a","label":"leg a","dash":true}
+  ]},
+ "d3": {"x": "a", "y": "b", "layers": [
+    {"t":"surface","z":"sqrt(a^2+b^2)","label":"c"}
+  ]}
+},
+"euler-s-identity": {
+ "caption": "e^(i*theta) on the unit circle (2D) and as a helix (theta, cos, sin) (3D); at theta = pi the point is -1, so e^(i pi) + 1 = 0.", "kind": "illustration",
+ "vars": {
+  "th": ["Angle θ (rad)",3.1416,0,6.2832,0.01]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"param","fx":"cos(th)","fy":"sin(th)","label":"e^(iθ)"},
+    {"t":"dot","fx":"-1","fy":"0","label":"e^(iπ) = -1"}
+  ]},
+ "d3": {"x": "th", "layers": [
+    {"t":"curve","fx":"th","fy":"cos(th)","fz":"sin(th)","label":"(θ, cos θ, sin θ)"}
+  ]},
+ "anim": "th"
+},
+"euler-s-formula": {
+ "caption": "Re and Im of e^(i k theta) = cos(k theta) + i sin(k theta) against theta (2D), and the helix (theta, cos, sin) (3D); k is the frequency.", "kind": "function",
+ "vars": {
+  "th": ["Angle θ (rad)",1,0,6.2832,0.01],
+  "k": ["Frequency k",1,0.5,5,0.1],
+  "A": ["Amplitude",1,0.2,2,0.1]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"line","y":"A*cos(k*th)","label":"Re"},
+    {"t":"line","y":"A*sin(k*th)","label":"Im"}
+  ]},
+ "d3": {"x": "th", "layers": [
+    {"t":"curve","fx":"th","fy":"A*cos(k*th)","fz":"A*sin(k*th)","label":"helix"}
+  ]},
+ "anim": "th",
+ "wave": {"freq":"k","amp":"A"}
+},
+"the-quadratic-formula": {
+ "caption": "The parabola y = a x^2 + b x + c with its roots where it crosses 0 (2D), and the same polynomial over x and c (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0,-6,6,0.1],
+  "a": ["a",1,-3,3,0.1],
+  "b": ["b",-2,-6,6,0.1],
+  "c": ["c",-3,-6,6,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"a*x^2+b*x+c","label":"ax²+bx+c"},
+    {"t":"hline","y":"0","label":"y = 0","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "c", "layers": [
+    {"t":"surface","z":"a*x^2+b*x+c","label":"ax²+bx+c"}
+  ]}
+},
+"the-binomial-theorem": {
+ "caption": "(x+y)^n against x, and its binomial expansion term by term (they coincide) (2D); (x+y)^n over x and y (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-3,3,0.05],
+  "y": ["y",1,-3,3,0.1],
+  "n": ["Power n",4,0,8,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"(x+y)^n","label":"(x+y)^n"},
+    {"t":"line","y":"sum(k,0,n,comb(n,k)*x^(n-k)*y^k)","label":"expansion","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"(x+y)^n","label":"(x+y)^n"}
+  ]}
+},
+"euler-s-polyhedral-formula": {
+ "caption": "Illustration: for the five regular polyhedra the point (V+F, E) lies on the line E = V+F-2 (2D); the chosen polyhedron drawn in 3D.", "kind": "illustration",
+ "vars": {
+  "vf": ["V + F",14,6,34,1],
+  "s": ["Solid (1 tetra, 2 cube, 3 octa, 4 dodeca, 5 icosa)",2,1,5,1]
+ },
+ "d2": {"x": "vf", "layers": [
+    {"t":"line","y":"vf-2","label":"E = V+F-2"},
+    {"t":"scatter","xs":[8,14,14,32,32],"ys":[6,12,12,30,30],"names":["tetrahedron","cube","octahedron","dodecahedron","icosahedron"],"label":"regular polyhedra"}
+  ]},
+ "d3": {"x": "s", "layers": [
+    {"t":"platonic","sel":"s","label":"polyhedron"}
+  ]}
+},
+"the-law-of-cosines": {
+ "caption": "Side c = sqrt(a^2+b^2-2ab cos C) against the angle C (2D), and over a and C (3D).", "kind": "function",
+ "vars": {
+  "C": ["Angle C (rad)",1.0472,0.05,3.09,0.01],
+  "a": ["Side a",5,1,10,0.1],
+  "b": ["Side b",4,1,10,0.1]
+ },
+ "d2": {"x": "C", "layers": [
+    {"t":"line","y":"sqrt(a^2+b^2-2*a*b*cos(C))","label":"c"},
+    {"t":"hline","y":"sqrt(a^2+b^2)","label":"right angle: sqrt(a²+b²)","dash":true}
+  ]},
+ "d3": {"x": "a", "y": "C", "layers": [
+    {"t":"surface","z":"sqrt(a^2+b^2-2*a*b*cos(C))","label":"c"}
+  ]}
+},
+"the-law-of-sines": {
+ "caption": "Side a = 2R sin A against the angle A for the circumradius R (2D), and over R and A (3D).", "kind": "function",
+ "vars": {
+  "A": ["Angle A (rad)",1,0.01,3.13,0.01],
+  "R": ["Circumradius R",5,1,10,0.1]
+ },
+ "d2": {"x": "A", "layers": [
+    {"t":"line","y":"2*R*sin(A)","label":"a = 2R sin A"},
+    {"t":"hline","y":"2*R","label":"2R (largest side)","dash":true}
+  ]},
+ "d3": {"x": "A", "y": "R", "layers": [
+    {"t":"surface","z":"2*R*sin(A)","label":"a"}
+  ]}
+},
+"heron-s-formula": {
+ "caption": "Triangle area A against side a (gaps where no triangle exists) (2D), and over a and b (3D).", "kind": "function",
+ "vars": {
+  "a": ["Side a",5,0.5,10,0.1],
+  "b": ["Side b",6,0.5,10,0.1],
+  "c": ["Side c",7,0.5,10,0.1]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"sqrt(((a+b+c)/2)*((b+c-a)/2)*((a+c-b)/2)*((a+b-c)/2))","label":"area"}
+  ]},
+ "d3": {"x": "a", "y": "b", "layers": [
+    {"t":"surface","z":"sqrt(((a+b+c)/2)*((b+c-a)/2)*((a+c-b)/2)*((a+b-c)/2))","label":"area"}
+  ]}
+},
+"the-prime-number-theorem": {
+ "caption": "The prime counting function pi(x) against x/ln x (2D); the curve (x, pi(x), x/ln x) (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",100,2,200,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"primepi(x)","label":"π(x)"},
+    {"t":"line","y":"x/ln(x)","label":"x/ln x","dash":true}
+  ]},
+ "d3": {"x": "x", "layers": [
+    {"t":"curve","fx":"x","fy":"primepi(x)","fz":"x/ln(x)","label":"(x, π(x), x/ln x)"}
+  ]}
+},
+"the-basel-problem-euler-s-sum": {
+ "caption": "Partial sums of 1/k^s with N terms against N, and the limit zeta(s) (2D); the term magnitude N^-s over N and s (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",20,1,100,1],
+  "s": ["Exponent s",2,1.1,4,0.1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"sum(k,1,N,1/k^s)","label":"partial sum"},
+    {"t":"hline","y":"sum(k,1,5000,1/k^s)+5000^(1-s)/(s-1)","label":"limit ζ(s)","dash":true}
+  ]},
+ "d3": {"x": "N", "y": "s", "layers": [
+    {"t":"surface","z":"N^(-s)","label":"term 1/N^s"}
+  ]}
+},
+"the-riemann-zeta-function": {
+ "caption": "zeta(s) from the sum over n and from the Euler product over primes up to N (2D); the partial sum over s and N (3D).", "kind": "function",
+ "vars": {
+  "s": ["s",2,1.1,6,0.05],
+  "N": ["Terms / primes up to N",30,2,100,1]
+ },
+ "d2": {"x": "s", "layers": [
+    {"t":"line","y":"sum(k,1,N,1/k^s)","label":"Σ n ≤ N"},
+    {"t":"line","y":"prod(p,2,N,if(primepi(p)-primepi(p-1)>0,1/(1-p^(-s)),1))","label":"Π p ≤ N","dash":true}
+  ]},
+ "d3": {"x": "s", "y": "N", "layers": [
+    {"t":"surface","z":"sum(k,1,floor(N),1/k^s)","label":"partial sum"}
+  ]}
+},
+"de-moivre-s-formula": {
+ "caption": "Re and Im of (cos t + i sin t)^n = cos(nt) + i sin(nt) (2D); the helix (t, cos nt, sin nt) (3D); n is the frequency.", "kind": "function",
+ "vars": {
+  "th": ["Angle θ (rad)",1,0,6.2832,0.01],
+  "n": ["Power n",3,1,8,1]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"line","y":"cos(n*th)","label":"cos nθ"},
+    {"t":"line","y":"sin(n*th)","label":"sin nθ"}
+  ]},
+ "d3": {"x": "th", "layers": [
+    {"t":"curve","fx":"th","fy":"cos(n*th)","fz":"sin(n*th)","label":"helix"}
+  ]},
+ "anim": "th",
+ "wave": {"freq":"n"}
+},
+"stirling-s-approximation": {
+ "caption": "The ratio n! / (sqrt(2 pi n) (n/e)^n) tends to 1 (2D); the ratio with the 1/(12n) correction over n and m (3D).", "kind": "function",
+ "vars": {
+  "n": ["n",10,1,30,1],
+  "m": ["Correction on (1)/off (0)",0,0,1,0.1]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"line","y":"gamma(n+1)/(sqrt(2*pi*n)*(n/e)^n*(1+m/(12*n)))","label":"n! / Stirling"},
+    {"t":"hline","y":"1","label":"1","dash":true}
+  ]},
+ "d3": {"x": "n", "y": "m", "layers": [
+    {"t":"surface","z":"gamma(n+1)/(sqrt(2*pi*n)*(n/e)^n*(1+m/(12*n)))","label":"ratio"}
+  ]}
+},
+"the-chudnovsky-algorithm-for": {
+ "caption": "Correct digits of pi after N terms of the Chudnovsky series (2D); the log10 term size over k and the constant b (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",3,1,8,1],
+  "b": ["Constant 13591409 scaled",13591409,0,30000000,100000],
+  "k": ["k",3,0,8,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"-log10(abs(1/(12*sum(j,0,N-1,(-1)^j*exp(lgamma(6*j+1)-lgamma(3*j+1)-3*lgamma(j+1)-(3*j+1.5)*ln(640320))*(545140134*j+13591409)))-pi)+1e-16)","label":"correct digits","stem":true}
+  ]},
+ "d3": {"x": "k", "y": "b", "layers": [
+    {"t":"surface","z":"log10(abs(exp(lgamma(6*k+1)-lgamma(3*k+1)-3*lgamma(k+1)-(3*k+1.5)*ln(640320))*(545140134*k+b))+1e-30)","label":"log10 |term k|"}
+  ]}
+},
+"the-fundamental-theorem-of-calculus": {
+ "caption": "f(x) = x^3/6 - x with f'(x), and f(x) - f(a) = integral of f' from a to x; the bounds a and b marked (2D); f(b) - f(a) over a and b (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-4,4,0.1],
+  "a": ["Lower bound a",-2,-3,3,0.1],
+  "b": ["Upper bound b",2,-3,3,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"x^3/6-x","label":"f(x)"},
+    {"t":"line","y":"x^2/2-1","label":"f'(x)"},
+    {"t":"line","y":"(x^3/6-x)-(a^3/6-a)","label":"∫ₐˣ f'","dash":true},
+    {"t":"vline","at":"a","label":"a","dash":true},
+    {"t":"vline","at":"b","label":"b","dash":true}
+  ]},
+ "d3": {"x": "a", "y": "b", "layers": [
+    {"t":"surface","z":"(b^3/6-b)-(a^3/6-a)","label":"f(b) − f(a)"}
+  ]}
+},
+"the-formal-definition-of-the-derivative": {
+ "caption": "The difference quotient of sin with step h against the true derivative cos (2D); the quotient over x and h (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-3.1416,3.1416,0.05],
+  "h": ["Step h",0.5,0.01,2,0.01]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"sin(x)","label":"f = sin"},
+    {"t":"line","y":"(sin(x+h)-sin(x))/h","label":"difference quotient"},
+    {"t":"line","y":"cos(x)","label":"f' = cos","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "h", "layers": [
+    {"t":"surface","z":"(sin(x+h)-sin(x))/h","label":"(f(x+h)-f(x))/h"}
+  ]}
+},
+"integration-by-parts": {
+ "caption": "With u = x, dv = cos(kx) dx: u*v, the integral of v du, and their difference, the integral of u dv (2D); the integral of u dv over x and k (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",2,0,6,0.05],
+  "k": ["Frequency k",1,0.5,4,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"x*sin(k*x)/k","label":"u·v"},
+    {"t":"line","y":"(1-cos(k*x))/k^2","label":"∫ v du"},
+    {"t":"line","y":"x*sin(k*x)/k-(1-cos(k*x))/k^2","label":"∫ u dv","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "k", "layers": [
+    {"t":"surface","z":"x*sin(k*x)/k-(1-cos(k*x))/k^2","label":"∫₀ˣ u dv"}
+  ]},
+ "wave": {"freq":"k"}
+},
+"taylor-series-expansion": {
+ "caption": "sin x and its Taylor polynomial of degree N about 0 (2D); the error of the polynomial over x and N (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-6.2832,6.2832,0.05],
+  "N": ["Degree N",5,1,15,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"sin(x)","label":"sin x"},
+    {"t":"line","y":"sum(k,0,floor((N-1)/2),(-1)^k*x^(2*k+1)/fact(2*k+1))","label":"Taylor degree N","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "N", "layers": [
+    {"t":"surface","z":"sum(k,0,floor((N-1)/2),(-1)^k*x^(2*k+1)/fact(2*k+1))-sin(x)","label":"error"}
+  ]}
+},
+"the-continuous-fourier-transform": {
+ "caption": "A Gaussian f(x) of width s and its Fourier transform, which is a Gaussian of width 1/s (2D); the transform over xi and s (3D).", "kind": "function",
+ "vars": {
+  "x": ["x or ξ",0,-3,3,0.05],
+  "s": ["Width s",0.5,0.2,2,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-x^2/(2*s^2))","label":"f(x)"},
+    {"t":"line","y":"s*sqrt(2*pi)*exp(-2*pi^2*s^2*x^2)","label":"f̂(ξ)"}
+  ]},
+ "d3": {"x": "x", "y": "s", "layers": [
+    {"t":"surface","z":"s*sqrt(2*pi)*exp(-2*pi^2*s^2*x^2)","label":"f̂(ξ)"}
+  ]}
+},
+"the-inverse-fourier-transform": {
+ "caption": "A Gaussian rebuilt from its spectrum cut off at band B, against the exact Gaussian (2D); the rebuilt function over x and B (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0,-3,3,0.05],
+  "s": ["Width s",0.5,0.2,2,0.05],
+  "B": ["Band limit B",2,0.2,4,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-x^2/(2*s^2))","label":"f(x)"},
+    {"t":"line","y":"sum(k,-60,60,s*sqrt(2*pi)*exp(-2*pi^2*s^2*(B*k/60)^2)*cos(2*pi*x*B*k/60))*B/60","label":"from spectrum","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "B", "layers": [
+    {"t":"surface","z":"sum(k,-30,30,s*sqrt(2*pi)*exp(-2*pi^2*s^2*(B*k/30)^2)*cos(2*pi*x*B*k/30))*B/30","label":"rebuilt f"}
+  ]}
+},
+"the-laplace-transform": {
+ "caption": "F(s) = 1/(s+a) for f(t) = e^(-at), and the same integral done numerically (2D); F over s and a (3D).", "kind": "function",
+ "vars": {
+  "s": ["s",1,0.1,5,0.05],
+  "a": ["Decay a",1,0.1,3,0.1]
+ },
+ "d2": {"x": "s", "layers": [
+    {"t":"line","y":"1/(s+a)","label":"F(s) exact"},
+    {"t":"line","y":"sum(k,0,1999,exp(-(a+s)*(k+0.5)*0.015))*0.015","label":"numeric ∫","dash":true}
+  ]},
+ "d3": {"x": "s", "y": "a", "layers": [
+    {"t":"surface","z":"1/(s+a)","label":"F(s)"}
+  ]}
+},
+"the-cauchy-schwarz-inequality": {
+ "caption": "(u.v)^2 stays below |u|^2 |v|^2 as the angle between the vectors turns (2D); both sides over the angle and |v| (3D).", "kind": "function",
+ "vars": {
+  "th": ["Angle θ (rad)",0.8,0,6.2832,0.01],
+  "a": ["|u|",2,0.1,5,0.1],
+  "r": ["|v|",2,0.1,5,0.1]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"line","y":"(a*r*cos(th))^2","label":"(u·v)²"},
+    {"t":"line","y":"(a*r)^2","label":"|u|²|v|²","dash":true}
+  ]},
+ "d3": {"x": "th", "y": "r", "layers": [
+    {"t":"surface","z":"(a*r)^2-(a*r*cos(th))^2","label":"slack ≥ 0"}
+  ]}
+},
+"cauchy-s-integral-formula": {
+ "caption": "Illustration: the contour circle and the point a inside it (2D); |1/(z-a)| over the complex plane, the pole at a (3D, clipped).", "kind": "illustration",
+ "vars": {
+  "th": ["Angle on contour",1,0,6.2832,0.01],
+  "R": ["Radius R",2,0.5,4,0.1],
+  "ar": ["Re a",0.5,-1.5,1.5,0.05],
+  "ai": ["Im a",0.3,-1.5,1.5,0.05],
+  "x": ["Re z",0,-3,3,0.1],
+  "y": ["Im z",0,-3,3,0.1]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"param","fx":"R*cos(th)","fy":"R*sin(th)","label":"contour γ"},
+    {"t":"dot","fx":"ar","fy":"ai","label":"a"}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"min(6,1/hypot(x-ar,y-ai))","label":"|1/(z−a)|"}
+  ]}
+},
+"cauchy-s-residue-theorem": {
+ "caption": "Illustration: the contour and two simple poles at +-p (2D); |1/((z-p)(z+p))| over the complex plane (3D, clipped).", "kind": "illustration",
+ "vars": {
+  "th": ["Angle on contour",1,0,6.2832,0.01],
+  "R": ["Radius R",2,0.5,4,0.1],
+  "p": ["Pole position p",1,0.2,2,0.05],
+  "x": ["Re z",0,-3,3,0.1],
+  "y": ["Im z",0,-3,3,0.1]
+ },
+ "d2": {"x": "th", "layers": [
+    {"t":"param","fx":"R*cos(th)","fy":"R*sin(th)","label":"contour γ"},
+    {"t":"dot","fx":"p","fy":"0","label":"pole +p"},
+    {"t":"dot","fx":"-p","fy":"0","label":"pole −p"}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"min(6,1/(hypot(x-p,y)*hypot(x+p,y)))","label":"|f(z)|"}
+  ]}
+},
+"the-divergence-gauss-ostrogradsky-theorem": {
+ "caption": "Illustration: the field F = (x, k y) with the boundary circle of radius R (2D); the field F = (x, k y, z) as arrows in a cube (3D). Divergence is 1+k (2D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "z": ["z",0,-2,2,0.5],
+  "k": ["Stretch k",1,-1,2,0.1],
+  "R": ["Radius R",2,0.5,3,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"x","fy":"k*y","label":"F"},
+    {"t":"param","fx":"R*cos(pi*(x+3)/3)","fy":"R*sin(pi*(x+3)/3)","label":"boundary ∂V"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"x","fy":"k*y","fz":"z","label":"F"}
+  ]}
+},
+"stokes-theorem": {
+ "caption": "Illustration: the rotating field F = k(-y, x) with a boundary loop of radius R (2D); the same field in 3D. Its curl is 2k.", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "z": ["z",0,-2,2,0.5],
+  "k": ["Rotation k",1,-2,2,0.1],
+  "R": ["Radius R",2,0.5,3,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"-k*y","fy":"k*x","label":"F"},
+    {"t":"param","fx":"R*cos(pi*(x+3)/3)","fy":"R*sin(pi*(x+3)/3)","label":"loop ∂S"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"-k*y","fy":"k*x","fz":"0*z+0.3*k","label":"F"}
+  ]}
+},
+"green-s-theorem": {
+ "caption": "Illustration: the field (L, M) = (-k y, x y) with a loop of radius R (2D); the integrand dM/dx - dL/dy = y + k over the plane (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "k": ["k",1,-2,2,0.1],
+  "R": ["Radius R",2,0.5,3,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"-k*y","fy":"x*y","label":"(L, M)"},
+    {"t":"param","fx":"R*cos(pi*(x+3)/3)","fy":"R*sin(pi*(x+3)/3)","label":"curve C"}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"y+k","label":"∂M/∂x − ∂L/∂y"}
+  ]}
+},
+"the-heat-equation": {
+ "caption": "The spreading Gaussian solution u(x,t) = exp(-x^2/(4at)) / sqrt(4 pi a t) at time t, with an earlier snapshot (2D); the space-time surface (3D).", "kind": "function",
+ "vars": {
+  "x": ["Position x",0,-5,5,0.1],
+  "t": ["Time t",0.3,0.05,3,0.01],
+  "al": ["Diffusivity α",0.5,0.05,2,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-x^2/(4*al*t))/sqrt(4*pi*al*t)","label":"u(x, t)"},
+    {"t":"line","y":"exp(-x^2/(4*al*0.05))/sqrt(4*pi*al*0.05)","label":"u(x, 0.05)","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "t", "layers": [
+    {"t":"surface","z":"exp(-x^2/(4*al*t))/sqrt(4*pi*al*t)","label":"u(x, t)"}
+  ]},
+ "anim": "t"
+},
+"the-classical-wave-equation": {
+ "caption": "A travelling wave u = A sin(2 pi f (x/v - t) + phase) at time t (2D); the space-time surface (3D). Change the frequency f.", "kind": "function",
+ "vars": {
+  "x": ["Position x",0,0,10,0.05],
+  "t": ["Time t",0,0,10,0.02],
+  "A": ["Amplitude A",1,0.1,2,0.05],
+  "f": ["Frequency f",0.5,0.1,3,0.05],
+  "v": ["Speed v",2,0.5,5,0.1],
+  "ph": ["Phase",0,0,6.2832,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"A*sin(2*pi*f*(x/v-t)+ph)","label":"u(x, t)"}
+  ]},
+ "d3": {"x": "x", "y": "t", "layers": [
+    {"t":"surface","z":"A*sin(2*pi*f*(x/v-t)+ph)","label":"u(x, t)"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"f","amp":"A","phase":"ph"}
+},
+"bayes-theorem": {
+ "caption": "The posterior P(A|B) against the prior P(A), with the prior itself dashed (2D); the posterior over the prior and the false positive rate (3D).", "kind": "function",
+ "vars": {
+  "x": ["Prior P(A)",0.01,0.001,0.5,0.001],
+  "sens": ["Sensitivity P(B|A)",0.99,0.5,1,0.01],
+  "fp": ["False positive P(B|¬A)",0.05,0.001,0.5,0.001]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"sens*x/(sens*x+fp*(1-x))","label":"P(A|B)"},
+    {"t":"line","y":"x","label":"prior","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "fp", "layers": [
+    {"t":"surface","z":"sens*x/(sens*x+fp*(1-x))","label":"P(A|B)"}
+  ]}
+},
+"the-normal-gaussian-distribution": {
+ "caption": "The normal density and its cumulative distribution (2D); the density over x and the spread (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0,-6,6,0.1],
+  "mu": ["Mean μ",0,-3,3,0.1],
+  "sg": ["Spread σ",1,0.3,3,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-(x-mu)^2/(2*sg^2))/(sg*sqrt(2*pi))","label":"density"},
+    {"t":"line","y":"0.5*(1+erf((x-mu)/(sg*sqrt(2))))","label":"cumulative","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "sg", "layers": [
+    {"t":"surface","z":"exp(-(x-mu)^2/(2*sg^2))/(sg*sqrt(2*pi))","label":"density"}
+  ]}
+},
+"the-central-limit-theorem": {
+ "caption": "The density of the standardised mean of n uniform variables (Irwin-Hall) against the standard normal (2D); that density over z and n (3D).", "kind": "function",
+ "vars": {
+  "z": ["z",0,-4,4,0.05],
+  "n": ["Sample size n",4,1,12,1]
+ },
+ "d2": {"x": "z", "layers": [
+    {"t":"line","y":"if(n/2+z*sqrt(n/12)>0,if(n/2+z*sqrt(n/12)<n,sqrt(n/12)*sum(k,0,floor(n/2+z*sqrt(n/12)),(-1)^k*comb(n,k)*(n/2+z*sqrt(n/12)-k)^(n-1))/fact(n-1),0),0)","label":"standardised mean"},
+    {"t":"line","y":"exp(-z^2/2)/sqrt(2*pi)","label":"N(0, 1)","dash":true}
+  ]},
+ "d3": {"x": "z", "y": "n", "layers": [
+    {"t":"surface","z":"if(n/2+z*sqrt(n/12)>0,if(n/2+z*sqrt(n/12)<n,sqrt(n/12)*sum(k,0,floor(n/2+z*sqrt(n/12)),(-1)^k*comb(n,k)*(n/2+z*sqrt(n/12)-k)^(n-1))/fact(n-1),0),0)","label":"density"}
+  ]}
+},
+"the-poisson-distribution": {
+ "caption": "The Poisson probabilities P(X = k) as stems for the rate lambda (2D); the probability over k and lambda (3D).", "kind": "function",
+ "vars": {
+  "k": ["k",4,0,30,1],
+  "lam": ["Rate λ",4,0.5,15,0.1]
+ },
+ "d2": {"x": "k", "layers": [
+    {"t":"points","fy":"lam^k*exp(-lam)/fact(k)","label":"P(X = k)","stem":true}
+  ]},
+ "d3": {"x": "k", "y": "lam", "layers": [
+    {"t":"surface","z":"lam^k*exp(-lam)/gamma(k+1)","label":"P(X = k)"}
+  ]}
+},
+"the-binomial-distribution": {
+ "caption": "The binomial probabilities P(X = k) as stems for n trials and success rate p (2D); the probability over k and p (3D).", "kind": "function",
+ "vars": {
+  "k": ["k",8,0,40,1],
+  "n": ["Trials n",20,1,40,1],
+  "p": ["Success p",0.4,0.01,0.99,0.01]
+ },
+ "d2": {"x": "k", "layers": [
+    {"t":"points","fy":"comb(n,k)*p^k*(1-p)^(n-k)","label":"P(X = k)","stem":true}
+  ]},
+ "d3": {"x": "k", "y": "p", "layers": [
+    {"t":"surface","z":"if(k<=n,exp(lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1))*p^k*(1-p)^(n-k),0)","label":"P(X = k)"}
+  ]}
+},
+"variance-of-a-random-variable": {
+ "caption": "Var(X) = E[X^2] - (E[X])^2 for a binomial count, from the two sides (identical) against p (2D); the variance over p and n (3D).", "kind": "function",
+ "vars": {
+  "p": ["p",0.3,0,1,0.01],
+  "n": ["Trials n",10,1,50,1]
+ },
+ "d2": {"x": "p", "layers": [
+    {"t":"line","y":"n*p*(1-p)","label":"Var(X)"},
+    {"t":"line","y":"n*p*(1-p)+(n*p)^2-(n*p)^2","label":"E[X²] − (E[X])²","dash":true}
+  ]},
+ "d3": {"x": "p", "y": "n", "layers": [
+    {"t":"surface","z":"n*p*(1-p)","label":"Var(X)"}
+  ]}
+},
+"covariance": {
+ "caption": "A cloud of 300 correlated pairs with covariance rho*s1*s2 (2D); their joint density over the plane (3D).", "kind": "function",
+ "vars": {
+  "i": ["Sample index",1,1,300,1],
+  "rho": ["Correlation ρ",0.7,-0.95,0.95,0.01],
+  "s1": ["σ₁",1,0.3,2,0.05],
+  "s2": ["σ₂",1,0.3,2,0.05],
+  "u": ["x",0,-4,4,0.1],
+  "w": ["y",0,-4,4,0.1]
+ },
+ "d2": {"x": "i", "layers": [
+    {"t":"points","fy":"s2*(rho*sqrt(-2*ln(rnd(2*i)+0.000001))*cos(2*pi*rnd(2*i+1))+sqrt(1-rho^2)*sqrt(-2*ln(rnd(2*i)+0.000001))*sin(2*pi*rnd(2*i+1)))","label":"samples","fx":"s1*sqrt(-2*ln(rnd(2*i)+0.000001))*cos(2*pi*rnd(2*i+1))"}
+  ]},
+ "d3": {"x": "u", "y": "w", "layers": [
+    {"t":"surface","z":"exp(-(u^2/s1^2-2*rho*u*w/(s1*s2)+w^2/s2^2)/(2*(1-rho^2)))/(2*pi*s1*s2*sqrt(1-rho^2))","label":"joint density"}
+  ]}
+},
+"pearson-correlation-coefficient": {
+ "caption": "The same cloud with its regression line y = rho*(s2/s1)*x (2D); the joint density for sigma_x, sigma_y and rho (3D).", "kind": "function",
+ "vars": {
+  "i": ["Sample index",1,1,300,1],
+  "rho": ["Correlation ρ",0.6,-0.95,0.95,0.01],
+  "sx": ["σx",1,0.3,2,0.05],
+  "sy": ["σy",1.5,0.3,2,0.05],
+  "u": ["x",0,-4,4,0.1],
+  "w": ["y",0,-4,4,0.1]
+ },
+ "d2": {"x": "i", "layers": [
+    {"t":"points","fy":"sy*(rho*sqrt(-2*ln(rnd(2*i)+0.000001))*cos(2*pi*rnd(2*i+1))+sqrt(1-rho^2)*sqrt(-2*ln(rnd(2*i)+0.000001))*sin(2*pi*rnd(2*i+1)))","label":"samples","fx":"sx*sqrt(-2*ln(rnd(2*i)+0.000001))*cos(2*pi*rnd(2*i+1))"},
+    {"t":"param","fx":"sx*(i-150)/50","fy":"rho*sy*(i-150)/50","label":"regression line"}
+  ]},
+ "d3": {"x": "u", "y": "w", "layers": [
+    {"t":"surface","z":"exp(-(u^2/sx^2-2*rho*u*w/(sx*sy)+w^2/sy^2)/(2*(1-rho^2)))/(2*pi*sx*sy*sqrt(1-rho^2))","label":"joint density"}
+  ]}
+},
+"shannon-entropy": {
+ "caption": "Binary entropy H(p) in bits (2D); the entropy of a three-outcome distribution (p1, p2, 1-p1-p2) (3D).", "kind": "function",
+ "vars": {
+  "p": ["p",0.3,0.001,0.999,0.001],
+  "p1": ["p₁",0.3,0.001,0.998,0.001],
+  "p2": ["p₂",0.3,0.001,0.998,0.001]
+ },
+ "d2": {"x": "p", "layers": [
+    {"t":"line","y":"-p*log2(p)-(1-p)*log2(1-p)","label":"H(p)"}
+  ]},
+ "d3": {"x": "p1", "y": "p2", "layers": [
+    {"t":"surface","z":"if(p1+p2<0.999,-p1*log2(p1)-p2*log2(p2)-(1-p1-p2)*log2(1-p1-p2),0)","label":"H"}
+  ]}
+},
+"kullback-leibler-divergence": {
+ "caption": "D(P||Q) and D(Q||P) for Bernoulli P (p) and Q (q) against q: not symmetric (2D); D(P||Q) over p and q (3D).", "kind": "function",
+ "vars": {
+  "q": ["q",0.5,0.01,0.99,0.01],
+  "p": ["p",0.3,0.01,0.99,0.01]
+ },
+ "d2": {"x": "q", "layers": [
+    {"t":"line","y":"p*ln(p/q)+(1-p)*ln((1-p)/(1-q))","label":"D(P‖Q)"},
+    {"t":"line","y":"q*ln(q/p)+(1-q)*ln((1-q)/(1-p))","label":"D(Q‖P)","dash":true}
+  ]},
+ "d3": {"x": "p", "y": "q", "layers": [
+    {"t":"surface","z":"p*ln(p/q)+(1-p)*ln((1-p)/(1-q))","label":"D(P‖Q)"}
+  ]}
+},
+"chebyshev-s-inequality": {
+ "caption": "The bound 1/k^2 against the true tail of a normal and of a Laplace variable (2D); the slack of the bound over k and the mix m (3D).", "kind": "function",
+ "vars": {
+  "k": ["k",2,1,5,0.05],
+  "m": ["Laplace share m",0.5,0,1,0.05]
+ },
+ "d2": {"x": "k", "layers": [
+    {"t":"line","y":"1/k^2","label":"Chebyshev 1/k²"},
+    {"t":"line","y":"1-erf(k/sqrt(2))","label":"normal tail"},
+    {"t":"line","y":"exp(-k*sqrt(2))","label":"Laplace tail","dash":true}
+  ]},
+ "d3": {"x": "k", "y": "m", "layers": [
+    {"t":"surface","z":"1/k^2-((1-m)*(1-erf(k/sqrt(2)))+m*exp(-k*sqrt(2)))","label":"bound − tail"}
+  ]}
+},
+"weak-law-of-large-numbers": {
+ "caption": "Running mean of n deterministic pseudo-random coin flips (rate p) settling at p (2D); the distance |mean - p| over n and the seed (3D).", "kind": "illustration",
+ "vars": {
+  "n": ["Flips n",100,1,500,1],
+  "p": ["Probability p",0.5,0.1,0.9,0.05],
+  "s": ["Seed",1,0,40,1]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"line","y":"sum(i,1,floor(n),if(rnd(i+17*s)<p,1,0))/floor(n)","label":"sample mean"},
+    {"t":"hline","y":"p","label":"p","dash":true}
+  ]},
+ "d3": {"x": "n", "y": "s", "layers": [
+    {"t":"surface","z":"abs(sum(i,1,floor(n),if(rnd(i+17*floor(s))<p,1,0))/floor(n)-p)","label":"|mean − p|"}
+  ]}
+},
+"the-black-scholes-equation": {
+ "caption": "European call value from the Black-Scholes solution against the price S, with the payoff (2D); the value over S and the time to expiry (3D).", "kind": "function",
+ "vars": {
+  "S": ["Price S",100,50,150,1],
+  "K": ["Strike K",100,60,140,1],
+  "r": ["Rate r",0.05,0,0.15,0.005],
+  "sg": ["Volatility σ",0.2,0.05,0.8,0.01],
+  "te": ["Time to expiry",1,0.02,3,0.02]
+ },
+ "d2": {"x": "S", "layers": [
+    {"t":"line","y":"S*0.5*(1+erf((ln(S/K)+(r+sg^2/2)*te)/(sg*sqrt(te))/sqrt(2)))-K*exp(-r*te)*0.5*(1+erf((ln(S/K)+(r-sg^2/2)*te)/(sg*sqrt(te))/sqrt(2)))","label":"call value V"},
+    {"t":"line","y":"max(S-K,0)","label":"payoff","dash":true}
+  ]},
+ "d3": {"x": "S", "y": "te", "layers": [
+    {"t":"surface","z":"S*0.5*(1+erf((ln(S/K)+(r+sg^2/2)*te)/(sg*sqrt(te))/sqrt(2)))-K*exp(-r*te)*0.5*(1+erf((ln(S/K)+(r-sg^2/2)*te)/(sg*sqrt(te))/sqrt(2)))","label":"V"}
+  ]}
+},
+"newton-s-second-law-of-motion": {
+ "caption": "F = m a against the acceleration, and the momentum gained after t seconds (2D); F over m and a (3D).", "kind": "function",
+ "vars": {
+  "a": ["Acceleration a (m/s²)",3,0,10,0.1],
+  "m": ["Mass m (kg)",2,0.1,10,0.1],
+  "t": ["Time t (s)",2,0,10,0.1]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"m*a","label":"F = ma (N)"},
+    {"t":"line","y":"m*a*t","label":"Δp = F t (kg m/s)","dash":true}
+  ]},
+ "d3": {"x": "m", "y": "a", "layers": [
+    {"t":"surface","z":"m*a","label":"F (N)"}
+  ]}
+},
+"newton-s-law-of-universal-gravitation": {
+ "caption": "Attraction F = G m1 m2 / r^2 against the distance r (masses in 1e24 kg, r in 1e8 m, force in 1e18 N at the default scale) (2D); F over r and m1 (3D).", "kind": "function",
+ "vars": {
+  "r": ["Distance r (1e8 m)",3.8,0.5,10,0.1],
+  "m1": ["Mass 1 (1e24 kg)",6,0.1,20,0.1],
+  "m2": ["Mass 2 (1e24 kg)",0.07,0.01,20,0.01]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"6.674e3*m1*m2/r^2","label":"F"}
+  ]},
+ "d3": {"x": "r", "y": "m1", "layers": [
+    {"t":"surface","z":"6.674e3*m1*m2/r^2","label":"F"}
+  ]}
+},
+"kinetic-energy": {
+ "caption": "E = m v^2 / 2 against the speed, and p^2/(2m) from the momentum (identical) (2D); E over v and m (3D).", "kind": "function",
+ "vars": {
+  "v": ["Speed v (m/s)",5,0,30,0.5],
+  "m": ["Mass m (kg)",2,0.1,10,0.1]
+ },
+ "d2": {"x": "v", "layers": [
+    {"t":"line","y":"0.5*m*v^2","label":"½mv²"},
+    {"t":"line","y":"(m*v)^2/(2*m)","label":"p²/2m","dash":true}
+  ]},
+ "d3": {"x": "v", "y": "m", "layers": [
+    {"t":"surface","z":"0.5*m*v^2","label":"E"}
+  ]}
+},
+"gravitational-potential-energy-uniform-field": {
+ "caption": "U = m g h against the height for the field g (2D); U over h and g (3D, from the Moon to Jupiter).", "kind": "function",
+ "vars": {
+  "h": ["Height h (m)",10,0,100,1],
+  "m": ["Mass m (kg)",2,0.1,10,0.1],
+  "g": ["Gravity g (m/s²)",9.81,1.6,25,0.01]
+ },
+ "d2": {"x": "h", "layers": [
+    {"t":"line","y":"m*g*h","label":"U = mgh (J)"}
+  ]},
+ "d3": {"x": "h", "y": "g", "layers": [
+    {"t":"surface","z":"m*g*h","label":"U"}
+  ]}
+},
+"general-gravitational-potential-energy": {
+ "caption": "U(r) = -G M m / r against the distance (M in 1e24 kg, r in 1e6 m, U in MJ) (2D); U over r and M (3D).", "kind": "function",
+ "vars": {
+  "r": ["Distance r (1e6 m)",6.4,1,20,0.1],
+  "M": ["Mass M (1e24 kg)",5.97,0.5,20,0.1],
+  "m": ["Mass m (kg)",1,0.1,5,0.1]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"-66.74*M*m/r","label":"U (MJ)"}
+  ]},
+ "d3": {"x": "r", "y": "M", "layers": [
+    {"t":"surface","z":"-66.74*M*m/r","label":"U (MJ)"}
+  ]}
+},
+"hooke-s-law": {
+ "caption": "Spring force F = -k x and its stored energy k x^2 / 2 against the extension (2D); F over x and k (3D).", "kind": "function",
+ "vars": {
+  "x": ["Extension x (m)",0.5,-2,2,0.05],
+  "k": ["Stiffness k (N/m)",10,1,50,0.5]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"-k*x","label":"F = −kx"},
+    {"t":"line","y":"0.5*k*x^2","label":"energy ½kx²","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "k", "layers": [
+    {"t":"surface","z":"-k*x","label":"F"}
+  ]}
+},
+"simple-harmonic-angular-frequency": {
+ "caption": "The oscillation x(t) = A cos(omega t) with omega = sqrt(k/m) (2D); omega over k and m (3D). Change the stiffness to change the frequency.", "kind": "function",
+ "vars": {
+  "t": ["Time t (s)",0,0,10,0.02],
+  "A": ["Amplitude A",1,0.1,2,0.05],
+  "k": ["Stiffness k",10,1,60,0.5],
+  "m": ["Mass m",1,0.2,5,0.1]
+ },
+ "d2": {"x": "t", "layers": [
+    {"t":"line","y":"A*cos(sqrt(k/m)*t)","label":"x(t)"}
+  ]},
+ "d3": {"x": "k", "y": "m", "layers": [
+    {"t":"surface","z":"sqrt(k/m)","label":"ω"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"k","amp":"A"}
+},
+"period-of-a-simple-pendulum": {
+ "caption": "Period T = 2 pi sqrt(L/g) against the length L, with the large-angle correction (2D); T over L and g (3D).", "kind": "function",
+ "vars": {
+  "L": ["Length L (m)",1,0.1,5,0.05],
+  "g": ["Gravity g (m/s²)",9.81,1.6,25,0.01],
+  "a0": ["Amplitude θ₀ (rad)",0.3,0,1.5,0.05]
+ },
+ "d2": {"x": "L", "layers": [
+    {"t":"line","y":"2*pi*sqrt(L/g)","label":"T small angle"},
+    {"t":"line","y":"2*pi*sqrt(L/g)*(1+a0^2/16+11*a0^4/3072)","label":"T with amplitude","dash":true}
+  ]},
+ "d3": {"x": "L", "y": "g", "layers": [
+    {"t":"surface","z":"2*pi*sqrt(L/g)","label":"T"}
+  ]}
+},
+"kepler-s-third-law-harmonic-law": {
+ "caption": "Orbital period T = sqrt(a^3 / M) in years against the semi-major axis (AU) around a star of M suns, with the planets for M = 1 (2D); T over a and M (3D).", "kind": "function",
+ "vars": {
+  "a": ["Semi-major axis a (AU)",1,0.2,40,0.1],
+  "M": ["Star mass M (suns)",1,0.1,5,0.05]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"sqrt(a^3/M)","label":"T (years)"},
+    {"t":"scatter","xs":[0.387,0.723,1,1.524,5.203,9.537,19.19,30.07],"ys":[0.241,0.615,1,1.881,11.86,29.46,84.01,164.8],"names":["Mercury","Venus","Earth","Mars","Jupiter","Saturn","Uranus","Neptune"],"label":"planets (M = 1)"}
+  ]},
+ "d3": {"x": "a", "y": "M", "layers": [
+    {"t":"surface","z":"sqrt(a^3/M)","label":"T (years)"}
+  ]}
+},
+"the-work-energy-theorem": {
+ "caption": "Force F(x) = F0 + c x and the work W(x) = F0 x + c x^2 / 2, which is the kinetic energy gained (2D); W over x and c (3D).", "kind": "function",
+ "vars": {
+  "x": ["Displacement x (m)",2,0,5,0.05],
+  "F0": ["Force F₀ (N)",4,0,10,0.1],
+  "c": ["Slope c (N/m)",1,-1,3,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"F0+c*x","label":"F(x)"},
+    {"t":"line","y":"F0*x+c*x^2/2","label":"W = ΔK (J)"}
+  ]},
+ "d3": {"x": "x", "y": "c", "layers": [
+    {"t":"surface","z":"F0*x+c*x^2/2","label":"W"}
+  ]}
+},
+"the-euler-lagrange-equation": {
+ "caption": "The path q(t) = A cos(omega t + phase) that satisfies the Euler-Lagrange equation for L = m qdot^2/2 - k q^2/2, with qdot (2D); the curve (t, q, qdot) (3D).", "kind": "function",
+ "vars": {
+  "t": ["Time t",0,0,20,0.05],
+  "A": ["Amplitude A",1,0.1,2,0.05],
+  "k": ["Stiffness k",4,0.5,20,0.1],
+  "m": ["Mass m",1,0.2,4,0.1],
+  "ph": ["Phase",0,0,6.2832,0.05]
+ },
+ "d2": {"x": "t", "layers": [
+    {"t":"line","y":"A*cos(sqrt(k/m)*t+ph)","label":"q(t)"},
+    {"t":"line","y":"-A*sqrt(k/m)*sin(sqrt(k/m)*t+ph)","label":"q̇(t)","dash":true}
+  ]},
+ "d3": {"x": "t", "layers": [
+    {"t":"curve","fx":"t","fy":"A*cos(sqrt(k/m)*t+ph)","fz":"-A*sqrt(k/m)*sin(sqrt(k/m)*t+ph)","label":"(t, q, q̇)"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"k","amp":"A","phase":"ph"}
+},
+"hamilton-s-canonical-equations": {
+ "caption": "Pendulum phase plane: the flow field (q̇, ṗ) with the level curve of H = p^2/2m - m gl cos q for energy E (2D); H over q and p (3D).", "kind": "function",
+ "vars": {
+  "x": ["q (rad)",0,-6.2832,6.2832,0.05],
+  "y": ["p",0,-4,4,0.05],
+  "m": ["Mass m",1,0.5,3,0.1],
+  "gl": ["g·L",9.8,1,20,0.1],
+  "E": ["Energy E",5,-9,20,0.5]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"y/m","fy":"-m*gl*sin(x)","label":"flow"},
+    {"t":"line","y":"sqrt(2*m*(E+m*gl*cos(x)))","label":"H = E"},
+    {"t":"line","y":"-sqrt(2*m*(E+m*gl*cos(x)))","label":"H = E","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"y^2/(2*m)-m*gl*cos(x)","label":"H(q, p)"}
+  ]}
+},
+"the-first-law-of-thermodynamics": {
+ "caption": "Ideal-gas P-V diagram: the isotherm (heat in = work out) and the adiabat (no heat) from the same start (2D); P over V and T (3D).", "kind": "function",
+ "vars": {
+  "V": ["Volume V (L)",30,10,100,1],
+  "T": ["Temperature T (K)",300,200,600,5],
+  "n": ["Amount n (mol)",1,0.1,5,0.1],
+  "gam": ["γ = Cp/Cv",1.4,1.1,1.67,0.01]
+ },
+ "d2": {"x": "V", "layers": [
+    {"t":"line","y":"n*8.314*T/V","label":"isotherm (kPa)"},
+    {"t":"line","y":"n*8.314*T/20*(20/V)^gam","label":"adiabat (kPa)","dash":true}
+  ]},
+ "d3": {"x": "V", "y": "T", "layers": [
+    {"t":"surface","z":"n*8.314*T/V","label":"P (kPa)"}
+  ]}
+},
+"the-second-law-of-thermodynamics-clausius-inequality": {
+ "caption": "Entropy created by moving heat Q from a hot body to a cold one, Q (1/Tc - 1/Th), against Tc: negative when the direction is forbidden (2D); over Tc and Th (3D).", "kind": "function",
+ "vars": {
+  "Tc": ["Cold Tc (K)",300,50,800,5],
+  "Th": ["Hot Th (K)",400,200,800,5],
+  "Q": ["Heat Q (J)",1000,100,5000,100]
+ },
+ "d2": {"x": "Tc", "layers": [
+    {"t":"line","y":"Q*(1/Tc-1/Th)","label":"ΔS total (J/K)"},
+    {"t":"hline","y":"0","label":"0","dash":true}
+  ]},
+ "d3": {"x": "Tc", "y": "Th", "layers": [
+    {"t":"surface","z":"Q*(1/Tc-1/Th)","label":"ΔS total"}
+  ]}
+},
+"boltzmann-s-entropy-formula": {
+ "caption": "S/k = ln(Omega) for N two-state particles with a fraction f up, Omega = C(N, fN) (2D); S/k over f and N (3D).", "kind": "function",
+ "vars": {
+  "f": ["Fraction up f",0.5,0.01,0.99,0.01],
+  "N": ["Particles N",50,10,500,1]
+ },
+ "d2": {"x": "f", "layers": [
+    {"t":"line","y":"lgamma(N+1)-lgamma(f*N+1)-lgamma(N-f*N+1)","label":"S/k = ln Ω"}
+  ]},
+ "d3": {"x": "f", "y": "N", "layers": [
+    {"t":"surface","z":"lgamma(N+1)-lgamma(f*N+1)-lgamma(N-f*N+1)","label":"S/k"}
+  ]}
+},
+"the-ideal-gas-law": {
+ "caption": "Pressure P = n R T / V against the volume at T and at 2T (2D); P over V and T (3D). P in kPa, V in litres.", "kind": "function",
+ "vars": {
+  "V": ["Volume V (L)",20,5,60,0.5],
+  "T": ["Temperature T (K)",300,100,800,5],
+  "n": ["Amount n (mol)",1,0.1,5,0.1]
+ },
+ "d2": {"x": "V", "layers": [
+    {"t":"line","y":"n*8.314*T/V","label":"P at T"},
+    {"t":"line","y":"n*8.314*2*T/V","label":"P at 2T","dash":true}
+  ]},
+ "d3": {"x": "V", "y": "T", "layers": [
+    {"t":"surface","z":"n*8.314*T/V","label":"P (kPa)"}
+  ]}
+},
+"carnot-engine-thermal-efficiency": {
+ "caption": "Efficiency 1 - Tc/Th against Tc, below zero where Tc exceeds Th (2D); over Tc and Th (3D).", "kind": "function",
+ "vars": {
+  "Tc": ["Cold Tc (K)",300,50,600,5],
+  "Th": ["Hot Th (K)",500,200,900,5]
+ },
+ "d2": {"x": "Tc", "layers": [
+    {"t":"line","y":"1-Tc/Th","label":"η"},
+    {"t":"hline","y":"0","label":"0","dash":true}
+  ]},
+ "d3": {"x": "Tc", "y": "Th", "layers": [
+    {"t":"surface","z":"1-Tc/Th","label":"η"}
+  ]}
+},
+"maxwell-boltzmann-speed-distribution": {
+ "caption": "Speed distribution f(v) of a gas of molar mass M (g/mol) at temperature T (2D); f over v and T (3D).", "kind": "function",
+ "vars": {
+  "v": ["Speed v (m/s)",500,0,2500,10],
+  "T": ["Temperature T (K)",300,50,1000,10],
+  "M": ["Molar mass M (g/mol)",28,2,200,1]
+ },
+ "d2": {"x": "v", "layers": [
+    {"t":"line","y":"4*pi*(M*1.20272e-4/T/(2*pi))^1.5*v^2*exp(-M*1.20272e-4/T*v^2/2)","label":"f(v)"}
+  ]},
+ "d3": {"x": "v", "y": "T", "layers": [
+    {"t":"surface","z":"4*pi*(M*1.20272e-4/T/(2*pi))^1.5*v^2*exp(-M*1.20272e-4/T*v^2/2)","label":"f(v)"}
+  ]}
+},
+"gibbs-free-energy": {
+ "caption": "dG = dH - T dS against T: the reaction is spontaneous where it is below 0 (2D); dG over T and dS (3D). kJ and kJ/K.", "kind": "function",
+ "vars": {
+  "T": ["Temperature T (K)",300,100,800,5],
+  "H": ["ΔH (kJ)",40,-100,100,1],
+  "S": ["ΔS (kJ/K)",0.1,-0.3,0.3,0.005]
+ },
+ "d2": {"x": "T", "layers": [
+    {"t":"line","y":"H-T*S","label":"ΔG"},
+    {"t":"hline","y":"0","label":"0","dash":true}
+  ]},
+ "d3": {"x": "T", "y": "S", "layers": [
+    {"t":"surface","z":"H-T*S","label":"ΔG"}
+  ]}
+},
+"enthalpy-definition": {
+ "caption": "H = U + P V against the volume at fixed U and P (2D); H over V and P (3D). kPa and litres give joules.", "kind": "function",
+ "vars": {
+  "V": ["Volume V (L)",10,1,50,0.5],
+  "U": ["Internal energy U (J)",1500,0,5000,50],
+  "P": ["Pressure P (kPa)",100,10,500,5]
+ },
+ "d2": {"x": "V", "layers": [
+    {"t":"line","y":"U+P*V","label":"H"},
+    {"t":"line","y":"P*V","label":"PV","dash":true}
+  ]},
+ "d3": {"x": "V", "y": "P", "layers": [
+    {"t":"surface","z":"U+P*V","label":"H"}
+  ]}
+},
+"the-stefan-boltzmann-law": {
+ "caption": "Radiated power per area j = eps sigma T^4 against T (2D); j over T and the emissivity (3D). W/m^2.", "kind": "function",
+ "vars": {
+  "T": ["Temperature T (K)",300,100,1000,5],
+  "eps": ["Emissivity ε",1,0.1,1,0.01]
+ },
+ "d2": {"x": "T", "layers": [
+    {"t":"line","y":"eps*5.670374e-8*T^4","label":"j"}
+  ]},
+ "d3": {"x": "T", "y": "eps", "layers": [
+    {"t":"surface","z":"eps*5.670374e-8*T^4","label":"j"}
+  ]}
+},
+"planck-s-law-of-blackbody-radiation": {
+ "caption": "Spectral radiance of a black body against the wavelength (micrometres) at temperature T (2D); over wavelength and T (3D).", "kind": "function",
+ "vars": {
+  "lam": ["Wavelength λ (µm)",0.5,0.1,3,0.01],
+  "T": ["Temperature T (K)",5800,1000,10000,100]
+ },
+ "d2": {"x": "lam", "layers": [
+    {"t":"line","y":"1.19104e8/lam^5/(exp(14387.8/(lam*T))-1)","label":"B(λ, T) W/(m² sr µm)"}
+  ]},
+ "d3": {"x": "lam", "y": "T", "layers": [
+    {"t":"surface","z":"1.19104e8/lam^5/(exp(14387.8/(lam*T))-1)","label":"B(λ, T)"}
+  ]}
+},
+"gauss-s-law-electrostatics": {
+ "caption": "Field of a point charge q: arrows pointing out of a positive charge, in to a negative one (2D); the field in a cube (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "z": ["z",0,-3,3,0.5],
+  "q": ["Charge q",1,-2,2,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"q*x/(x^2+y^2+0.05)","fy":"q*y/(x^2+y^2+0.05)","label":"E"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"q*x/(x^2+y^2+z^2+0.05)^1.5","fy":"q*y/(x^2+y^2+z^2+0.05)^1.5","fz":"q*z/(x^2+y^2+z^2+0.05)^1.5","label":"E"}
+  ]}
+},
+"gauss-s-law-for-magnetism": {
+ "caption": "Field of a magnetic dipole in the x-z plane: the lines close on themselves (2D); the dipole field in a cube (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y (z in 2D)",0,-3,3,0.1],
+  "z": ["z",0,-3,3,0.5],
+  "m": ["Moment m",1,0.2,2,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"m*3*x*y/(x^2+y^2+0.1)^2.5","fy":"m*(2*y^2-x^2)/(x^2+y^2+0.1)^2.5","label":"B"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"m*3*x*z/(x^2+y^2+z^2+0.1)^2.5","fy":"m*3*y*z/(x^2+y^2+z^2+0.1)^2.5","fz":"m*(2*z^2-x^2-y^2)/(x^2+y^2+z^2+0.1)^2.5","label":"B"}
+  ]}
+},
+"faraday-s-law-of-electromagnetic-induction": {
+ "caption": "Induced electric field circulating around a changing uniform magnetic field of radius R (2D); the field in a cube (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "z": ["z",0,-2,2,0.5],
+  "dB": ["Rate dB/dt",1,-3,3,0.1],
+  "R": ["Field radius R",1.5,0.5,3,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"dB*y*if(x^2+y^2<R^2,0.5,0.5*R^2/(x^2+y^2))","fy":"-dB*x*if(x^2+y^2<R^2,0.5,0.5*R^2/(x^2+y^2))","label":"E"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"dB*y*if(x^2+y^2<R^2,0.5,0.5*R^2/(x^2+y^2))","fy":"-dB*x*if(x^2+y^2<R^2,0.5,0.5*R^2/(x^2+y^2))","fz":"0*z","label":"E"}
+  ]}
+},
+"the-ampe-re-maxwell-law": {
+ "caption": "Magnetic field circling a wire carrying current I (2D); the field around the wire in a cube (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",0,-3,3,0.1],
+  "y": ["y",0,-3,3,0.1],
+  "z": ["z",0,-2,2,0.5],
+  "I": ["Current I",1,-3,3,0.1]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"-I*y/(x^2+y^2+0.05)","fy":"I*x/(x^2+y^2+0.05)","label":"B"}
+  ]},
+ "d3": {"x": "x", "y": "y", "z": "z", "g": 5, "layers": [
+    {"t":"quiver","fx":"-I*y/(x^2+y^2+0.05)","fy":"I*x/(x^2+y^2+0.05)","fz":"0*z","label":"B"}
+  ]}
+},
+"the-lorentz-force-law": {
+ "caption": "Path of a charge in crossed fields E and B, a cycloid in the plane (2D) with the drift along B in 3D. w is the cyclotron frequency.", "kind": "function",
+ "vars": {
+  "t": ["Time t",5,0,20,0.05],
+  "w": ["Cyclotron frequency ω",2,0.5,5,0.1],
+  "Eb": ["Drift E/B",1,0,3,0.1],
+  "vz": ["Speed along B",0.5,-1,1,0.1]
+ },
+ "d2": {"x": "t", "layers": [
+    {"t":"param","fx":"Eb*(t-sin(w*t)/w)","fy":"Eb*(1-cos(w*t))/w","label":"path in the x-y plane"}
+  ]},
+ "d3": {"x": "t", "layers": [
+    {"t":"curve","fx":"Eb*(t-sin(w*t)/w)","fy":"Eb*(1-cos(w*t))/w","fz":"vz*t","label":"path"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"w"}
+},
+"coulomb-s-law": {
+ "caption": "Force F = k q1 q2 / r^2 against the distance (charges in µC, r in cm, F in N; negative = attraction) (2D); F over r and q1 (3D).", "kind": "function",
+ "vars": {
+  "r": ["Distance r (cm)",5,0.5,20,0.1],
+  "q1": ["Charge q₁ (µC)",1,-5,5,0.1],
+  "q2": ["Charge q₂ (µC)",1,-5,5,0.1]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"89.875*q1*q2/r^2","label":"F (N)"}
+  ]},
+ "d3": {"x": "r", "y": "q1", "layers": [
+    {"t":"surface","z":"89.875*q1*q2/r^2","label":"F (N)"}
+  ]}
+},
+"ohm-s-law-microscopic-and-macroscopic": {
+ "caption": "V = I R against the current for resistance R, and for 2R (2D); V over I and R (3D). The microscopic J = sigma E is the same line.", "kind": "function",
+ "vars": {
+  "I": ["Current I (A)",1,0,10,0.1],
+  "R": ["Resistance R (Ω)",10,1,100,1]
+ },
+ "d2": {"x": "I", "layers": [
+    {"t":"line","y":"I*R","label":"V = IR"},
+    {"t":"line","y":"I*2*R","label":"V at 2R","dash":true}
+  ]},
+ "d3": {"x": "I", "y": "R", "layers": [
+    {"t":"surface","z":"I*R","label":"V"}
+  ]}
+},
+"snell-s-law-of-refraction": {
+ "caption": "Refraction angle against the incidence angle; the curve stops at the critical angle where light is totally reflected (2D); the angle over theta1 and n2 (3D).", "kind": "function",
+ "vars": {
+  "a1": ["Incidence θ₁ (rad)",0.6,0,1.5708,0.01],
+  "n1": ["Index n₁",1.5,1,2.5,0.05],
+  "n2": ["Index n₂",1,1,2.5,0.05]
+ },
+ "d2": {"x": "a1", "layers": [
+    {"t":"line","y":"asin(n1*sin(a1)/n2)","label":"θ₂"},
+    {"t":"line","y":"a1","label":"no bending","dash":true}
+  ]},
+ "d3": {"x": "a1", "y": "n2", "layers": [
+    {"t":"surface","z":"asin(n1*sin(a1)/n2)","label":"θ₂"}
+  ]}
+},
+"the-poynting-vector": {
+ "caption": "A plane wave: E, B and the energy flow S = E B at time t (2D); S over position and time (3D). Change the frequency f.", "kind": "function",
+ "vars": {
+  "x": ["Position x",0,0,4,0.02],
+  "t": ["Time t",0,0,10,0.02],
+  "E0": ["Amplitude E₀",1,0.1,2,0.05],
+  "f": ["Frequency f",1,0.2,3,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"E0*sin(2*pi*(x-f*t))","label":"E"},
+    {"t":"line","y":"E0*sin(2*pi*(x-f*t))","label":"B","dash":true},
+    {"t":"line","y":"E0^2*sin(2*pi*(x-f*t))^2","label":"S = E×B"}
+  ]},
+ "d3": {"x": "x", "y": "t", "layers": [
+    {"t":"surface","z":"E0^2*sin(2*pi*(x-f*t))^2","label":"S"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"f","amp":"E0"}
+},
+"speed-of-light-from-electromagnetic-constants": {
+ "caption": "Speed of light 1/sqrt(eps mu) in a medium, in 1e8 m/s, against the relative permittivity (2D); over eps_r and mu_r (3D).", "kind": "function",
+ "vars": {
+  "er": ["Relative permittivity εr",1,1,10,0.1],
+  "mr": ["Relative permeability μr",1,1,5,0.1]
+ },
+ "d2": {"x": "er", "layers": [
+    {"t":"line","y":"2.99792458/sqrt(er*mr)","label":"c (10⁸ m/s)"}
+  ]},
+ "d3": {"x": "er", "y": "mr", "layers": [
+    {"t":"surface","z":"2.99792458/sqrt(er*mr)","label":"c"}
+  ]}
+},
+"mass-energy-equivalence": {
+ "caption": "E = m c^2 in units of 1e16 J against the mass in kg (2D); E over the mass and a scale of c (3D).", "kind": "function",
+ "vars": {
+  "m": ["Mass m (kg)",0.5,0,1,0.01],
+  "cf": ["c as a fraction of its value",1,0.1,1.5,0.05]
+ },
+ "d2": {"x": "m", "layers": [
+    {"t":"line","y":"8.98755*cf^2*m","label":"E (10¹⁶ J)"}
+  ]},
+ "d3": {"x": "m", "y": "cf", "layers": [
+    {"t":"surface","z":"8.98755*cf^2*m","label":"E"}
+  ]}
+},
+"relativistic-energy-momentum-relation": {
+ "caption": "Total energy sqrt((pc)^2 + (mc^2)^2) in MeV against pc, with the massless line and the kinetic energy (2D); E over pc and mc^2 (3D).", "kind": "function",
+ "vars": {
+  "pc": ["Momentum pc (MeV)",2,0,10,0.05],
+  "mc2": ["Rest energy mc² (MeV)",0.511,0,10,0.01]
+ },
+ "d2": {"x": "pc", "layers": [
+    {"t":"line","y":"sqrt(pc^2+mc2^2)","label":"E"},
+    {"t":"line","y":"pc","label":"massless E = pc","dash":true},
+    {"t":"line","y":"sqrt(pc^2+mc2^2)-mc2","label":"kinetic"}
+  ]},
+ "d3": {"x": "pc", "y": "mc2", "layers": [
+    {"t":"surface","z":"sqrt(pc^2+mc2^2)","label":"E (MeV)"}
+  ]}
+},
+"the-lorentz-factor": {
+ "caption": "gamma against v/c, rising without bound near 1 (2D); gamma over the velocity components (bx, by) inside the unit disc (3D).", "kind": "function",
+ "vars": {
+  "b": ["v/c",0.6,0,0.995,0.005],
+  "bx": ["vx/c",0,-0.95,0.95,0.01],
+  "by": ["vy/c",0,-0.95,0.95,0.01]
+ },
+ "d2": {"x": "b", "layers": [
+    {"t":"line","y":"1/sqrt(1-b^2)","label":"γ"}
+  ]},
+ "d3": {"x": "bx", "y": "by", "layers": [
+    {"t":"surface","z":"if(bx^2+by^2<0.99,1/sqrt(1-bx^2-by^2),0/0)","label":"γ"}
+  ]}
+},
+"relativistic-time-dilation": {
+ "caption": "Time between two ticks seen by an observer: dt/sqrt(1-b^2) against v/c (2D); over v/c and the proper time (3D).", "kind": "function",
+ "vars": {
+  "b": ["v/c",0.6,0,0.995,0.005],
+  "dt": ["Proper time Δt",1,0.1,5,0.1]
+ },
+ "d2": {"x": "b", "layers": [
+    {"t":"line","y":"dt/sqrt(1-b^2)","label":"Δt′"},
+    {"t":"hline","y":"dt","label":"Δt","dash":true}
+  ]},
+ "d3": {"x": "b", "y": "dt", "layers": [
+    {"t":"surface","z":"dt/sqrt(1-b^2)","label":"Δt′"}
+  ]}
+},
+"relativistic-length-contraction": {
+ "caption": "Length L0 sqrt(1-b^2) seen by an observer against v/c (2D); over v/c and the rest length (3D).", "kind": "function",
+ "vars": {
+  "b": ["v/c",0.6,0,0.995,0.005],
+  "L0": ["Rest length L₀",1,0.1,5,0.1]
+ },
+ "d2": {"x": "b", "layers": [
+    {"t":"line","y":"L0*sqrt(1-b^2)","label":"L"},
+    {"t":"hline","y":"L0","label":"L₀","dash":true}
+  ]},
+ "d3": {"x": "b", "y": "L0", "layers": [
+    {"t":"surface","z":"L0*sqrt(1-b^2)","label":"L"}
+  ]}
+},
+"einstein-s-field-equations-of-general-relativity": {
+ "caption": "Illustration: the time-time metric -(1 - rs/r) of a mass against r (2D); the embedding surface (Flamm paraboloid) of the space around it (3D).", "kind": "illustration",
+ "vars": {
+  "r": ["Radius r",3,1.01,10,0.05],
+  "rs": ["Schwarzschild radius rs",1,0.3,2,0.05],
+  "x": ["x",0,-6,6,0.1],
+  "y": ["y",0,-6,6,0.1]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"-(1-rs/r)","label":"g_tt"},
+    {"t":"line","y":"1/(1-rs/r)","label":"g_rr","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"if(hypot(x,y)>rs,-2*sqrt(rs*(hypot(x,y)-rs)),0/0)","label":"embedding"}
+  ]}
+},
+"the-schwarzschild-radius": {
+ "caption": "rs = 2GM/c^2 in km against the mass in suns (2D); the horizon sphere of the chosen mass (3D).", "kind": "function",
+ "vars": {
+  "M": ["Mass M (suns)",5,0.1,30,0.1],
+  "u": ["Polar angle",1,0,3.1416,0.05],
+  "w": ["Azimuth",1,0,6.2832,0.05]
+ },
+ "d2": {"x": "M", "layers": [
+    {"t":"line","y":"2.95325*M","label":"rs (km)"}
+  ]},
+ "d3": {"x": "u", "y": "w", "layers": [
+    {"t":"psurface","fx":"2.95325*M*sin(u)*cos(w)","fy":"2.95325*M*sin(u)*sin(w)","fz":"2.95325*M*cos(u)","label":"horizon"}
+  ]}
+},
+"the-spacetime-invariant-interval": {
+ "caption": "Illustration: the light cone and the curves of constant interval s2 in an x-ct diagram (2D); the interval x^2 + y^2 - (ct)^2 over the plane (3D).", "kind": "illustration",
+ "vars": {
+  "x": ["x",1,-5,5,0.05],
+  "s2": ["Interval s²",1,0,4,0.1],
+  "y": ["y",0,-5,5,0.1],
+  "t": ["ct",1,0,5,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"abs(x)","label":"light cone"},
+    {"t":"line","y":"-abs(x)","label":"light cone","dash":true},
+    {"t":"line","y":"sqrt(x^2+s2)","label":"timelike (ct)"},
+    {"t":"line","y":"sqrt(x^2-s2)","label":"spacelike","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"x^2+y^2-t^2","label":"ds²"}
+  ]},
+ "anim": "t"
+},
+"the-planck-einstein-relation": {
+ "caption": "Photon energy E = h nu in eV against the frequency in THz (2D); the energy of N photons over nu and N (3D).", "kind": "function",
+ "vars": {
+  "nu": ["Frequency ν (THz)",500,1,2000,1],
+  "N": ["Photons N",1,1,10,1]
+ },
+ "d2": {"x": "nu", "layers": [
+    {"t":"line","y":"0.004135667*nu","label":"E (eV)"}
+  ]},
+ "d3": {"x": "nu", "y": "N", "layers": [
+    {"t":"surface","z":"0.004135667*nu*N","label":"N·hν (eV)"}
+  ]},
+ "wave": {"freq":"nu"}
+},
+"the-de-broglie-wavelength": {
+ "caption": "Wavelength lambda = h/(m v) in nm against the speed (1e6 m/s) for a particle of m electron masses (2D); over v and m (3D).", "kind": "function",
+ "vars": {
+  "v": ["Speed v (10⁶ m/s)",1,0.1,10,0.05],
+  "mr": ["Mass (electron masses)",1,1,10,0.1]
+ },
+ "d2": {"x": "v", "layers": [
+    {"t":"line","y":"0.72737/(mr*v)","label":"λ (nm)"}
+  ]},
+ "d3": {"x": "v", "y": "mr", "layers": [
+    {"t":"surface","z":"0.72737/(mr*v)","label":"λ (nm)"}
+  ]}
+},
+"the-time-dependent-schro-dinger-equation": {
+ "caption": "A free Gaussian wave packet: density |psi|^2 spreading and moving, with an illustrative Re psi (2D); the density over x and t (3D). hbar = m = 1.", "kind": "function",
+ "vars": {
+  "x": ["x",0,-8,20,0.1],
+  "t": ["Time t",0,0,6,0.02],
+  "sg": ["Width σ",1,0.3,2,0.05],
+  "k0": ["Wave number k₀",2,0,3,0.1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-(x-k0*t)^2/(2*(sg^2+t^2/(4*sg^2))))/sqrt(2*pi*(sg^2+t^2/(4*sg^2)))","label":"|ψ|²"},
+    {"t":"line","y":"sqrt(exp(-(x-k0*t)^2/(2*(sg^2+t^2/(4*sg^2))))/sqrt(2*pi*(sg^2+t^2/(4*sg^2))))*cos(k0*x-k0^2*t/2)","label":"Re ψ (illustrative)","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "t", "layers": [
+    {"t":"surface","z":"exp(-(x-k0*t)^2/(2*(sg^2+t^2/(4*sg^2))))/sqrt(2*pi*(sg^2+t^2/(4*sg^2)))","label":"|ψ|²"}
+  ]},
+ "anim": "t",
+ "wave": {"freq":"k0"}
+},
+"the-time-independent-schro-dinger-equation": {
+ "caption": "Particle in a box of width L: the eigenfunction psi_n and its density, with E_n = n^2 pi^2/(2L^2) (2D); psi over x and n (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0.3,0,2,0.01],
+  "n": ["Level n",2,1,6,1],
+  "L": ["Box width L",1,0.5,2,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"if(x<=L,sqrt(2/L)*sin(n*pi*x/L),0)","label":"ψₙ"},
+    {"t":"line","y":"if(x<=L,2/L*sin(n*pi*x/L)^2,0)","label":"|ψₙ|²","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "n", "layers": [
+    {"t":"surface","z":"if(x<=L,sqrt(2/L)*sin(n*pi*x/L),0)","label":"ψ"}
+  ]},
+ "wave": {"freq":"n"}
+},
+"heisenberg-s-uncertainty-principle": {
+ "caption": "The smallest allowed sigma_p = hbar/(2 sigma_x) and that of the oscillator level n against sigma_x (2D); sigma_x sigma_p - hbar/2 over both (3D). hbar = 1.", "kind": "function",
+ "vars": {
+  "sx": ["σx",1,0.2,3,0.05],
+  "n": ["Oscillator level n",0,0,5,1],
+  "sp": ["σp",1,0.2,3,0.05]
+ },
+ "d2": {"x": "sx", "layers": [
+    {"t":"line","y":"0.5/sx","label":"minimum σp = ħ/2σx"},
+    {"t":"line","y":"(n+0.5)/sx","label":"level n","dash":true}
+  ]},
+ "d3": {"x": "sx", "y": "sp", "layers": [
+    {"t":"surface","z":"sx*sp-0.5","label":"σxσp − ħ/2"}
+  ]}
+},
+"the-dirac-equation": {
+ "caption": "The relativistic dispersion E = +-sqrt(p^2 + m^2) with the gap 2m (2D); both energy sheets over (px, py) (3D). c = 1.", "kind": "function",
+ "vars": {
+  "p": ["Momentum p",1,-5,5,0.05],
+  "m": ["Mass m",1,0,3,0.05],
+  "py": ["py",0,-4,4,0.1]
+ },
+ "d2": {"x": "p", "layers": [
+    {"t":"line","y":"sqrt(p^2+m^2)","label":"E₊"},
+    {"t":"line","y":"-sqrt(p^2+m^2)","label":"E₋"}
+  ]},
+ "d3": {"x": "p", "y": "py", "layers": [
+    {"t":"surface","z":"sqrt(p^2+py^2+m^2)","label":"E₊"},
+    {"t":"surface","z":"-sqrt(p^2+py^2+m^2)","label":"E₋"}
+  ]}
+},
+"bohr-orbit-radius": {
+ "caption": "Bohr radii r_n = a0 n^2 / Z (nm) as stems (2D); the first four orbits drawn as circles (3D).", "kind": "function",
+ "vars": {
+  "n": ["Level n",2,1,8,1],
+  "Z": ["Charge Z",1,1,10,1],
+  "a": ["Angle",0,0,6.2832,0.05]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"points","fy":"0.0529177*n^2/Z","label":"rₙ (nm)","stem":true}
+  ]},
+ "d3": {"x": "a", "layers": [
+    {"t":"curve","fx":"0.0529177*1/Z*cos(a)","fy":"0.0529177*1/Z*sin(a)","fz":"0*a","label":"n = 1"},
+    {"t":"curve","fx":"0.0529177*4/Z*cos(a)","fy":"0.0529177*4/Z*sin(a)","fz":"0*a","label":"n = 2"},
+    {"t":"curve","fx":"0.0529177*9/Z*cos(a)","fy":"0.0529177*9/Z*sin(a)","fz":"0*a","label":"n = 3"},
+    {"t":"curve","fx":"0.0529177*16/Z*cos(a)","fy":"0.0529177*16/Z*sin(a)","fz":"0*a","label":"n = 4"}
+  ]}
+},
+"the-rydberg-formula": {
+ "caption": "Spectral line wavelengths (nm) for the lower level n1 as n2 grows (2D); wavelength over n1 and n2 (3D).", "kind": "function",
+ "vars": {
+  "n2": ["Upper level n₂",3,2,12,1],
+  "n1": ["Lower level n₁",2,1,5,1]
+ },
+ "d2": {"x": "n2", "layers": [
+    {"t":"points","fy":"if(n2>n1,91.1267/(1/n1^2-1/n2^2),0/0)","label":"λ (nm)","stem":true}
+  ]},
+ "d3": {"x": "n1", "y": "n2", "layers": [
+    {"t":"surface","z":"if(n2>n1,91.1267/(1/n1^2-1/n2^2),0/0)","label":"λ (nm)"}
+  ]}
+},
+"the-fermi-dirac-distribution": {
+ "caption": "Occupation 1/(exp((en-mu)/kT)+1) against the energy, with the zero-temperature step (2D); occupation over e and kT (3D).", "kind": "function",
+ "vars": {
+  "en": ["Energy ε (eV)",5,0,10,0.05],
+  "mu": ["Chemical potential μ",5,1,9,0.1],
+  "kT": ["Thermal energy kT (eV)",0.5,0.02,2,0.02]
+ },
+ "d2": {"x": "en", "layers": [
+    {"t":"line","y":"1/(exp((en-mu)/kT)+1)","label":"occupation"},
+    {"t":"line","y":"if(en<mu,1,0)","label":"T = 0","dash":true}
+  ]},
+ "d3": {"x": "en", "y": "kT", "layers": [
+    {"t":"surface","z":"1/(exp((en-mu)/kT)+1)","label":"occupation"}
+  ]}
+},
+"the-incompressible-navier-stokes-equations": {
+ "caption": "The Taylor-Green vortex, an exact solution, decaying with viscosity nu: velocity arrows at time t (2D); its vorticity surface (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0,0,6.2832,0.05],
+  "y": ["y",0,0,6.2832,0.05],
+  "nu": ["Viscosity ν",0.1,0,1,0.01],
+  "t": ["Time t",0,0,5,0.02]
+ },
+ "d2": {"x": "x", "y": "y", "layers": [
+    {"t":"field","fx":"sin(x)*cos(y)*exp(-2*nu*t)","fy":"-cos(x)*sin(y)*exp(-2*nu*t)","label":"u"}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"2*sin(x)*sin(y)*exp(-2*nu*t)","label":"vorticity"}
+  ]},
+ "anim": "t"
+},
+"the-fluid-continuity-equation": {
+ "caption": "A density pulse carried along by a flow u: rho(x,t) = rho0(x - u t) (2D); the pulse in space-time (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0,-6,14,0.1],
+  "t": ["Time t",0,0,6,0.02],
+  "u": ["Flow speed u",1.5,-2,2,0.1],
+  "w": ["Pulse width",1,0.3,2,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-(x-u*t)^2/(2*w^2))","label":"ρ(x, t)"},
+    {"t":"line","y":"exp(-x^2/(2*w^2))","label":"ρ(x, 0)","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "t", "layers": [
+    {"t":"surface","z":"exp(-(x-u*t)^2/(2*w^2))","label":"ρ"}
+  ]},
+ "anim": "t"
+},
+"bernoulli-s-principle": {
+ "caption": "Pressure p2 (kPa) in a pipe whose cross-section changes by the ratio a = A2/A1 (2D); p2 over a and the inflow speed (3D).", "kind": "function",
+ "vars": {
+  "a": ["Area ratio A₂/A₁",0.6,0.2,2,0.02],
+  "v1": ["Speed v₁ (m/s)",2,0.5,10,0.1],
+  "p1": ["Pressure p₁ (kPa)",200,50,500,5],
+  "h": ["Height drop h₁−h₂ (m)",0,-5,5,0.5]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"p1+0.5*1000*(v1^2-(v1/a)^2)/1000+1000*9.81*h/1000","label":"p₂ (kPa)"}
+  ]},
+ "d3": {"x": "a", "y": "v1", "layers": [
+    {"t":"surface","z":"p1+0.5*1000*(v1^2-(v1/a)^2)/1000+1000*9.81*h/1000","label":"p₂"}
+  ]}
+},
+"the-arrhenius-equation": {
+ "caption": "Rate constant k = A exp(-Ea/RT) against T (2D); k over T and Ea (3D). Ea in kJ/mol.", "kind": "function",
+ "vars": {
+  "T": ["Temperature T (K)",400,200,1000,5],
+  "Ea": ["Activation energy Ea (kJ/mol)",50,5,200,1],
+  "A": ["Prefactor A",1,0.1,10,0.1]
+ },
+ "d2": {"x": "T", "layers": [
+    {"t":"line","y":"A*exp(-Ea*1000/(8.314*T))","label":"k"}
+  ]},
+ "d3": {"x": "T", "y": "Ea", "layers": [
+    {"t":"surface","z":"A*exp(-Ea*1000/(8.314*T))","label":"k"}
+  ]}
+},
+"the-nernst-equation": {
+ "caption": "Cell potential E = E0 - (RT/zF) ln Q against log10 Q (2D); E over log10 Q and the temperature (3D).", "kind": "function",
+ "vars": {
+  "q": ["log₁₀ Q",0,-6,6,0.1],
+  "E0": ["Standard E° (V)",1.1,-2,2,0.05],
+  "T": ["Temperature T (K)",298.15,250,350,1],
+  "z": ["Electrons z",2,1,4,1]
+ },
+ "d2": {"x": "q", "layers": [
+    {"t":"line","y":"E0-8.314*T/(z*96485)*2.302585*q","label":"E (V)"}
+  ]},
+ "d3": {"x": "q", "y": "T", "layers": [
+    {"t":"surface","z":"E0-8.314*T/(z*96485)*2.302585*q","label":"E (V)"}
+  ]}
+},
+"the-hubble-lemai-tre-law": {
+ "caption": "Recession speed v = H0 d against the distance (Mpc), with the two measured H0 values dashed (2D); v over d and H0 (3D). km/s.", "kind": "function",
+ "vars": {
+  "d": ["Distance d (Mpc)",500,0,1000,5],
+  "H0": ["Hubble constant H₀",70,50,90,0.5]
+ },
+ "d2": {"x": "d", "layers": [
+    {"t":"line","y":"H0*d","label":"v = H₀d"},
+    {"t":"line","y":"67.4*d","label":"67.4","dash":true},
+    {"t":"line","y":"73*d","label":"73","dash":true}
+  ]},
+ "d3": {"x": "d", "y": "H0", "layers": [
+    {"t":"surface","z":"H0*d","label":"v"}
+  ]}
+},
+"the-first-friedmann-equation": {
+ "caption": "Expansion rate H(a)/H0 = sqrt(Om a^-3 + Ok a^-2 + OL) against the scale factor (2D); over a and Om (3D). Ok = 1 - Om - OL.", "kind": "function",
+ "vars": {
+  "a": ["Scale factor a",1,0.2,2,0.01],
+  "Om": ["Matter Ωm",0.3,0,1.5,0.01],
+  "OL": ["Dark energy ΩΛ",0.7,0,1.5,0.01]
+ },
+ "d2": {"x": "a", "layers": [
+    {"t":"line","y":"sqrt(Om*a^-3+(1-Om-OL)*a^-2+OL)","label":"H/H₀"}
+  ]},
+ "d3": {"x": "a", "y": "Om", "layers": [
+    {"t":"surface","z":"sqrt(Om*a^-3+(1-Om-OL)*a^-2+OL)","label":"H/H₀"}
+  ]}
+},
+"the-logistic-map": {
+ "caption": "The bifurcation diagram: late iterates of x -> r x (1-x) for each r (2D); the iterate x_n over r and the step n (3D).", "kind": "function",
+ "vars": {
+  "r": ["Growth rate r",3.7,2.5,4,0.005],
+  "x0": ["Start x₀",0.2,0.05,0.95,0.05],
+  "n": ["Step n",20,0,60,1]
+ },
+ "d2": {"x": "r", "n": 600, "layers": [
+    {"t":"line","y":"logistic(r,x0,300+0)","label":"late iterates","style":"dots"},
+    {"t":"line","y":"logistic(r,x0,300+1)","label":"","style":"dots"},
+    {"t":"line","y":"logistic(r,x0,300+2)","label":"","style":"dots"},
+    {"t":"line","y":"logistic(r,x0,300+3)","label":"","style":"dots"},
+    {"t":"line","y":"logistic(r,x0,300+4)","label":"","style":"dots"},
+    {"t":"line","y":"logistic(r,x0,300+5)","label":"","style":"dots"}
+  ]},
+ "d3": {"x": "r", "y": "n", "layers": [
+    {"t":"surface","z":"logistic(r,x0,n)","label":"xₙ"}
+  ]}
+},
+"pi-leibniz-series": {
+ "caption": "Partial sums of the Leibniz series 4(1 - 1/3 + 1/5 - ...) closing in on pi (2D); the Gregory partial sum over N and the argument z, z = 1 being Leibniz (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",50,1,200,1],
+  "z": ["Argument z",1,0,1,0.01]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"4*sum(k,0,N-1,(-1)^k/(2*k+1))","label":"4·Σ"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "y": "z", "layers": [
+    {"t":"surface","z":"4*sum(k,0,floor(N)-1,(-1)^k*z^(2*k+1)/(2*k+1))","label":"4·arctan z (partial)"}
+  ]}
+},
+"pi-nilakantha-series": {
+ "caption": "Partial sums of 3 + 4/(2·3·4) - 4/(4·5·6) + ... (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",10,1,60,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"3+sum(k,1,N,(-1)^(k+1)*4/((2*k)*(2*k+1)*(2*k+2)))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"3+sum(k,1,N,(-1)^(k+1)*4/((2*k)*(2*k+1)*(2*k+2)))","fz":"-log10(abs(3+sum(k,1,N,(-1)^(k+1)*4/((2*k)*(2*k+1)*(2*k+2)))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-wallis-product": {
+ "caption": "Partial Wallis products 2·Π 4k^2/(4k^2-1) rising to pi (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",50,1,200,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"2*prod(k,1,N,4*k^2/(4*k^2-1))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"2*prod(k,1,N,4*k^2/(4*k^2-1))","fz":"-log10(abs(2*prod(k,1,N,4*k^2/(4*k^2-1))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-viete-product": {
+ "caption": "Viete's product: pi = 2 / Π cos(pi/2^(k+1)), the nested radicals, after N factors (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",6,1,20,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"2/prod(k,1,N,cos(pi/2^(k+1)))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"2/prod(k,1,N,cos(pi/2^(k+1)))","fz":"-log10(abs(2/prod(k,1,N,cos(pi/2^(k+1)))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-machin-formula": {
+ "caption": "Machin: 16 arctan(1/5) - 4 arctan(1/239) with N series terms each (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",4,1,12,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"16*sum(k,0,N-1,(-1)^k/((2*k+1)*5^(2*k+1)))-4*sum(k,0,N-1,(-1)^k/((2*k+1)*239^(2*k+1)))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"16*sum(k,0,N-1,(-1)^k/((2*k+1)*5^(2*k+1)))-4*sum(k,0,N-1,(-1)^k/((2*k+1)*239^(2*k+1)))","fz":"-log10(abs(16*sum(k,0,N-1,(-1)^k/((2*k+1)*5^(2*k+1)))-4*sum(k,0,N-1,(-1)^k/((2*k+1)*239^(2*k+1)))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-bbp-formula": {
+ "caption": "BBP: pi = Σ 16^-k (4/(8k+1) - 2/(8k+4) - 1/(8k+5) - 1/(8k+6)) after N terms (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",4,1,14,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"sum(k,0,N-1,16^(-k)*(4/(8*k+1)-2/(8*k+4)-1/(8*k+5)-1/(8*k+6)))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"sum(k,0,N-1,16^(-k)*(4/(8*k+1)-2/(8*k+4)-1/(8*k+5)-1/(8*k+6)))","fz":"-log10(abs(sum(k,0,N-1,16^(-k)*(4/(8*k+1)-2/(8*k+4)-1/(8*k+5)-1/(8*k+6)))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-ramanujan-1914-series": {
+ "caption": "Ramanujan's 1914 series: each term adds about 8 digits (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",2,1,6,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"1/(2*sqrt(2)/9801*sum(k,0,N-1,fact(4*k)*(1103+26390*k)/(fact(k)^4*396^(4*k))))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"1/(2*sqrt(2)/9801*sum(k,0,N-1,fact(4*k)*(1103+26390*k)/(fact(k)^4*396^(4*k))))","fz":"-log10(abs(1/(2*sqrt(2)/9801*sum(k,0,N-1,fact(4*k)*(1103+26390*k)/(fact(k)^4*396^(4*k))))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-gauss-legendre-iteration": {
+ "caption": "Gauss-Legendre: the digits double with every AGM step; N steps (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",3,1,5,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"4*agma(1,1/sqrt(2),N)^2/(1-sum(j,1,N,2^(j+1)*(agma(1,1/sqrt(2),j)^2-agmb(1,1/sqrt(2),j)^2)))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"4*agma(1,1/sqrt(2),N)^2/(1-sum(j,1,N,2^(j+1)*(agma(1,1/sqrt(2),j)^2-agmb(1,1/sqrt(2),j)^2)))","fz":"-log10(abs(4*agma(1,1/sqrt(2),N)^2/(1-sum(j,1,N,2^(j+1)*(agma(1,1/sqrt(2),j)^2-agmb(1,1/sqrt(2),j)^2)))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-zeta-4": {
+ "caption": "pi estimated as (90 Σ 1/k^4)^(1/4) after N terms (2D); the term size 1/k^s over N and s (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",10,1,100,1],
+  "s": ["Exponent s",4,2,6,0.1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"(90*sum(k,1,N,1/k^4))^0.25","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "y": "s", "layers": [
+    {"t":"surface","z":"N^(-s)","label":"term 1/N^s"}
+  ]}
+},
+"pi-gaussian-integral": {
+ "caption": "The Gaussian e^(-x^2) and the area -x..x under it, sqrt(pi) erf(x), approaching sqrt(pi) (2D); the surface e^(-(x^2+y^2)) whose volume is pi (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-4,4,0.05],
+  "y": ["y",0,-3,3,0.1],
+  "s": ["Scale s",1,0.5,2,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"exp(-x^2)","label":"e^(−x²)"},
+    {"t":"line","y":"sqrt(pi)*erf(x)","label":"area from −x to x"},
+    {"t":"hline","y":"sqrt(pi)","label":"√π","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"exp(-s*(x^2+y^2))","label":"e^(−s r²)"}
+  ]}
+},
+"pi-circle-area": {
+ "caption": "Area of the circle pi r^2 against r, with the area of an inscribed n-gon (2D); the n-gon area over r and n approaching pi r^2 (3D).", "kind": "function",
+ "vars": {
+  "r": ["Radius r",2,0.1,5,0.05],
+  "n": ["Polygon sides n",8,3,60,1]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"pi*r^2","label":"πr²"},
+    {"t":"line","y":"n/2*r^2*sin(2*pi/n)","label":"inscribed n-gon","dash":true}
+  ]},
+ "d3": {"x": "r", "y": "n", "layers": [
+    {"t":"surface","z":"n/2*r^2*sin(2*pi/n)","label":"n-gon area"}
+  ]}
+},
+"pi-circle-circumference": {
+ "caption": "Circumference 2 pi r against r, with the perimeter of an inscribed n-gon (2D); the perimeter over r and n (3D).", "kind": "function",
+ "vars": {
+  "r": ["Radius r",2,0.1,5,0.05],
+  "n": ["Polygon sides n",8,3,60,1]
+ },
+ "d2": {"x": "r", "layers": [
+    {"t":"line","y":"2*pi*r","label":"2πr"},
+    {"t":"line","y":"2*n*r*sin(pi/n)","label":"inscribed n-gon","dash":true}
+  ]},
+ "d3": {"x": "r", "y": "n", "layers": [
+    {"t":"surface","z":"2*n*r*sin(pi/n)","label":"perimeter"}
+  ]}
+},
+"pi-buffon-s-needle": {
+ "caption": "Buffon: pi estimated as 2 l n / (t hits) from n pseudo-random needle drops (2D); the drops as points (distance, angle, hit) (3D).", "kind": "illustration",
+ "vars": {
+  "i": ["Drop index",1,1,400,1],
+  "n": ["Drops n",500,10,2000,10],
+  "l": ["Needle l",1,0.2,1,0.05],
+  "t": ["Line spacing t",1,0.5,2,0.05],
+  "s": ["Seed",1,0,40,1]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"line","y":"2*l*floor(n)/(t*(sum(j,1,floor(n),if(rnd(2*j+97*s)*t/2<=l/2*sin(rnd(2*j+1+97*s)*pi/2),1,0))+0.000001))","label":"estimate of π"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "i", "layers": [
+    {"t":"points","fx":"rnd(2*i+97*s)*t/2","fy":"rnd(2*i+1+97*s)*pi/2","fz":"if(rnd(2*i+97*s)*t/2<=l/2*sin(rnd(2*i+1+97*s)*pi/2),1,0)","label":"drops (z = 1 crosses a line)"}
+  ]}
+},
+"pi-monte-carlo-quarter-circle": {
+ "caption": "Random points in the unit square: those inside the quarter circle (above) and outside, pi ~ 4 inside/total (2D); random points in a cube, the octant of the ball holds pi/6 of them (3D).", "kind": "illustration",
+ "vars": {
+  "i": ["Point index",1,1,1500,1],
+  "a": ["Arc angle",0,0,1.5708,0.01]
+ },
+ "d2": {"x": "i", "layers": [
+    {"t":"points","fy":"if(rnd(2*i)^2+rnd(2*i+1)^2<=1,rnd(2*i+1),0/0)","label":"inside","fx":"if(rnd(2*i)^2+rnd(2*i+1)^2<=1,rnd(2*i),0/0)"},
+    {"t":"points","fy":"if(rnd(2*i)^2+rnd(2*i+1)^2<=1,0/0,rnd(2*i+1))","label":"outside","fx":"if(rnd(2*i)^2+rnd(2*i+1)^2<=1,0/0,rnd(2*i))"},
+    {"t":"param","fx":"cos((i-1)*pi/2/1499)","fy":"sin((i-1)*pi/2/1499)","label":"quarter circle"}
+  ]},
+ "d3": {"x": "i", "layers": [
+    {"t":"points","fx":"if(rnd(3*i)^2+rnd(3*i+1)^2+rnd(3*i+2)^2<=1,rnd(3*i),0/0)","fy":"rnd(3*i+1)","fz":"rnd(3*i+2)","label":"inside the ball"},
+    {"t":"points","fx":"if(rnd(3*i)^2+rnd(3*i+1)^2+rnd(3*i+2)^2<=1,0/0,rnd(3*i))","fy":"rnd(3*i+1)","fz":"rnd(3*i+2)","label":"outside"}
+  ]}
+},
+"pi-stirling-sqrt-2pi": {
+ "caption": "n! / (sqrt(n) (n/e)^n) tends to sqrt(2 pi) (2D); the same ratio with the 1/(12n) correction over n and m (3D).", "kind": "function",
+ "vars": {
+  "n": ["n",10,1,60,1],
+  "m": ["Correction on (1)/off (0)",0,0,1,0.1]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"line","y":"gamma(n+1)/(sqrt(n)*(n/e)^n*(1+m/(12*n)))","label":"n!/(√n (n/e)ⁿ)"},
+    {"t":"hline","y":"sqrt(2*pi)","label":"√(2π)","dash":true}
+  ]},
+ "d3": {"x": "n", "y": "m", "layers": [
+    {"t":"surface","z":"gamma(n+1)/(sqrt(n)*(n/e)^n*(1+m/(12*n)))","label":"ratio"}
+  ]}
+},
+"pi-gregory-arctan-series": {
+ "caption": "arctan x and its Gregory partial sum of N terms, with 4 arctan(1) = pi at x = 1 (2D); the partial-sum error over x and N (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",1,-1.2,1.2,0.01],
+  "N": ["Terms N",6,1,30,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"atan(x)","label":"arctan x"},
+    {"t":"line","y":"sum(k,0,N-1,(-1)^k*x^(2*k+1)/(2*k+1))","label":"partial sum","dash":true},
+    {"t":"dot","fx":"1","fy":"pi/4","label":"x = 1: π/4"}
+  ]},
+ "d3": {"x": "x", "y": "N", "layers": [
+    {"t":"surface","z":"sum(k,0,floor(N)-1,(-1)^k*x^(2*k+1)/(2*k+1))-atan(x)","label":"error"}
+  ]}
+},
+"pi-euler-arcsin-series": {
+ "caption": "arcsin x and its series partial sum of N terms, with 6 arcsin(1/2) = pi (2D); the partial sum over x and N (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0.5,-0.99,0.99,0.01],
+  "N": ["Terms N",5,1,30,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"asin(x)","label":"arcsin x"},
+    {"t":"line","y":"sum(k,0,N-1,fact(2*k)/(4^k*fact(k)^2*(2*k+1))*x^(2*k+1))","label":"partial sum","dash":true},
+    {"t":"dot","fx":"0.5","fy":"pi/6","label":"x = ½: π/6"}
+  ]},
+ "d3": {"x": "x", "y": "N", "layers": [
+    {"t":"surface","z":"sum(k,0,floor(N)-1,fact(2*k)/(4^k*fact(k)^2*(2*k+1))*x^(2*k+1))","label":"partial sum"}
+  ]}
+},
+"pi-lambert-continued-fraction": {
+ "caption": "Lambert's continued fraction for tan x cut at depth N against tan x (2D); its error over x and the depth (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0.785,-1.5,1.5,0.005],
+  "N": ["Depth N",4,1,12,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"tan(x)","label":"tan x"},
+    {"t":"line","y":"cfan(x,N)","label":"continued fraction","dash":true},
+    {"t":"dot","fx":"pi/4","fy":"1","label":"tan(π/4) = 1"}
+  ]},
+ "d3": {"x": "x", "y": "N", "layers": [
+    {"t":"surface","z":"cfan(x,N)-tan(x)","label":"error"}
+  ]}
+},
+"pi-ramanujan-sato-series": {
+ "caption": "A Ramanujan-Sato series, 16/pi = Σ (42k+5) C(2k,k)^3 / 2^(12k), after N terms: each term adds almost two digits (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",4,1,20,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"16/sum(k,0,N-1,(42*k+5)*comb(2*k,k)^3/2^(12*k))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"16/sum(k,0,N-1,(42*k+5)*comb(2*k,k)^3/2^(12*k))","fz":"-log10(abs(16/sum(k,0,N-1,(42*k+5)*comb(2*k,k)^3/2^(12*k))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+},
+"pi-euler-arctan-identity": {
+ "caption": "arctan a + arctan((1-a)/(1+a)) = pi/4 for every a: the two parts and their constant sum (2D); arctan x + arctan y with the line where the sum is pi/4 (3D).", "kind": "function",
+ "vars": {
+  "x": ["a",0.5,0,0.99,0.01],
+  "y": ["y",0.33,0,1,0.01]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"atan(x)","label":"arctan a"},
+    {"t":"line","y":"atan((1-x)/(1+x))","label":"arctan((1−a)/(1+a))"},
+    {"t":"line","y":"atan(x)+atan((1-x)/(1+x))","label":"sum = π/4","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "y", "layers": [
+    {"t":"surface","z":"atan(x)+atan(y)","label":"arctan x + arctan y"},
+    {"t":"curve","fx":"x","fy":"(1-x)/(1+x)","fz":"pi/4","label":"sum = π/4"}
+  ]}
+},
+"pi-euler-sine-product": {
+ "caption": "sin(pi x) and Euler's product pi x Π (1 - x^2/n^2) over n <= N (2D); the product over x and N (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0.5,-3,3,0.01],
+  "N": ["Factors N",5,1,60,1]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"sin(pi*x)","label":"sin πx"},
+    {"t":"line","y":"pi*x*prod(n,1,N,1-x^2/n^2)","label":"product","dash":true}
+  ]},
+ "d3": {"x": "x", "y": "N", "layers": [
+    {"t":"surface","z":"pi*x*prod(n,1,floor(N),1-x^2/n^2)","label":"product"}
+  ]}
+},
+"pi-gamma-half": {
+ "caption": "The gamma function with Gamma(1/2) = sqrt(pi) marked (2D); the beta function B(x, y) with B(1/2, 1/2) = pi (3D).", "kind": "function",
+ "vars": {
+  "x": ["x",0.5,-4,5,0.01],
+  "y": ["y",0.5,0.2,3,0.05],
+  "u": ["Beta x",0.5,0.2,3,0.05]
+ },
+ "d2": {"x": "x", "layers": [
+    {"t":"line","y":"gamma(x)","label":"Γ(x)"},
+    {"t":"dot","fx":"0.5","fy":"sqrt(pi)","label":"Γ(½) = √π"}
+  ]},
+ "d3": {"x": "u", "y": "y", "layers": [
+    {"t":"surface","z":"gamma(u)*gamma(y)/gamma(u+y)","label":"B(x, y)"},
+    {"t":"dot","fx":"0.5","fy":"0.5","fz":"pi","label":"B(½, ½) = π"}
+  ]}
+},
+"pi-reflection-formula": {
+ "caption": "Gamma(z) Gamma(1-z) against pi / sin(pi z): the same curve (2D); the product times sin(pi y) over z and y, equal to pi along y = z (3D).", "kind": "function",
+ "vars": {
+  "z": ["z",0.5,0.05,0.95,0.01],
+  "y": ["y",0.5,0.05,0.95,0.01]
+ },
+ "d2": {"x": "z", "layers": [
+    {"t":"line","y":"gamma(z)*gamma(1-z)","label":"Γ(z)Γ(1−z)"},
+    {"t":"line","y":"pi/sin(pi*z)","label":"π/sin πz","dash":true},
+    {"t":"dot","fx":"0.5","fy":"pi","label":"z = ½: π"}
+  ]},
+ "d3": {"x": "z", "y": "y", "layers": [
+    {"t":"surface","z":"gamma(z)*gamma(1-z)*sin(pi*y)","label":"Γ(z)Γ(1−z) sin πy"}
+  ]}
+},
+"pi-archimedes-polygons": {
+ "caption": "Archimedes: for an n-gon the inscribed n sin(pi/n) and circumscribed n tan(pi/n) half-perimeters bracket pi (2D); the bracket width over n (3D).", "kind": "function",
+ "vars": {
+  "n": ["Sides n",12,3,100,1],
+  "m": ["Scale m",1,0.5,2,0.05]
+ },
+ "d2": {"x": "n", "layers": [
+    {"t":"points","fy":"n*sin(pi/n)","label":"inscribed","fx":"n"},
+    {"t":"points","fy":"n*tan(pi/n)","label":"circumscribed","fx":"n"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "n", "y": "m", "layers": [
+    {"t":"surface","z":"m*(n*tan(pi/n)-n*sin(pi/n))","label":"bracket width × m"}
+  ]}
+},
+"pi-madhava-series": {
+ "caption": "Madhava: pi = sqrt(12) Σ (-1/3)^k / (2k+1) after N terms (2D); the curve (N, estimate, correct digits) (3D).", "kind": "function",
+ "vars": {
+  "N": ["Terms N",8,1,40,1]
+ },
+ "d2": {"x": "N", "layers": [
+    {"t":"points","fy":"sqrt(12)*sum(k,0,N-1,(-1/3)^k/(2*k+1))","label":"estimate"},
+    {"t":"hline","y":"pi","label":"π","dash":true}
+  ]},
+ "d3": {"x": "N", "layers": [
+    {"t":"curve","fx":"N","fy":"sqrt(12)*sum(k,0,N-1,(-1/3)^k/(2*k+1))","fz":"-log10(abs(sqrt(12)*sum(k,0,N-1,(-1/3)^k/(2*k+1))-pi)+1e-16)","label":"(N, estimate, correct digits)"}
+  ]}
+}
+}
+}

@@ -29,11 +29,12 @@ class LatexTest {
         assertEquals(cfg, Latex.config)
     }
 
-    @Test fun `the tab order is Calc, LaTeX, Convert and the page holds Library then Editor`() {
+    @Test fun `the tab order is Calc, LaTeX, Convert and the page holds Library, Edit, then Graph`() {
         val pages = Declarations.tabsOf("calculator").map { it.id }
         assertEquals(listOf("calc", "latex", "convert", "graph", "tools", "history"), pages)
-        assertEquals(listOf("latex_library", "latex_editor"), Declarations.modesOf("latex").map { it.id })
-        assertEquals(listOf("latex_library", "latex_editor"), Declarations.modesOf("latex").map { it.kind })
+        assertEquals(listOf("latex_library", "latex_editor", "latex_graph"), Declarations.modesOf("latex").map { it.id })
+        assertEquals(listOf("latex_library", "latex_editor", "latex_graph"), Declarations.modesOf("latex").map { it.kind })
+        assertEquals(listOf("Library", "Edit", "Graph"), Declarations.modesOf("latex").map { it.short })
         assertEquals("LaTeX", Declarations.tabs.first { it.id == "latex" }.label)
     }
 
@@ -47,13 +48,13 @@ class LatexTest {
 
     // ── the catalog ─────────────────────────────────────────────────────────────────────────────────────────────
 
-    @Test fun `the catalog is the owner's 100 formulas in 9 categories, in his order`() {
-        assertEquals(100, catalog.formulas.size)
-        assertTrue(catalog.formulas.size >= 60)
-        assertEquals(9, catalog.categories.size)
+    @Test fun `the catalog is the owner's 100 formulas in 9 categories in his order, then the pi category`() {
+        assertEquals(125, catalog.formulas.size)
+        assertEquals(10, catalog.categories.size)
         assertEquals("Pure Mathematics, Geometry & Number Theory", catalog.categories.first().label)
-        assertEquals("Fluid Dynamics, Chemistry, Cosmology & Nonlinear Systems", catalog.categories.last().label)
-        assertEquals((1..100).toList(), catalog.formulas.map { it.number })
+        assertEquals("Fluid Dynamics, Chemistry, Cosmology & Nonlinear Systems", catalog.categories[8].label)
+        assertEquals("π (Pi)", catalog.categories.last().label)
+        assertEquals((1..125).toList(), catalog.formulas.map { it.number })
         assertEquals(catalog.categories.map { it.id }, catalog.formulas.map { it.category }.distinct())
         assertEquals("1. The Pythagorean Theorem", catalog.formulas.first().heading)
     }
@@ -77,14 +78,15 @@ class LatexTest {
     @Test fun `the chips are All, Favourites, the categories, then Mine`() {
         val chips = Latex.chips(catalog, cfg)
         assertEquals(listOf("All", "Favourites"), chips.take(2).map { it.label })
-        assertEquals(catalog.categories, chips.subList(2, 11))
+        assertEquals(catalog.categories, chips.subList(2, 12))
+        assertEquals("π (Pi)", chips[chips.size - 2].label)
         assertEquals("Mine", chips.last().label)
-        assertEquals(12, chips.size)
+        assertEquals(13, chips.size)
     }
 
     @Test fun `search and chips filter the library`() {
         val none = emptyList<Latex.Formula>()
-        assertEquals(100, Latex.filter(catalog, none, emptySet(), "", "", cfg).size)
+        assertEquals(125, Latex.filter(catalog, none, emptySet(), "", "", cfg).size)
         val cat = catalog.categories[3]
         assertEquals(catalog.formulas.count { it.category == cat.id }, Latex.filter(catalog, none, emptySet(), cat.id, "", cfg).size)
         val hits = Latex.filter(catalog, none, emptySet(), "", "pythagorean", cfg)

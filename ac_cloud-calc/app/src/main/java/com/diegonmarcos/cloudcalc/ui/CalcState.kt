@@ -61,6 +61,14 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
         tab = m.tab
     }
 
+    /** #1336 Open the Graph page on [target] (the detail's Graph button). */
+    fun openLatexGraph(target: LatexModel.GraphTarget) {
+        val m = Declarations.modes.firstOrNull { it.kind == KIND_LATEX_GRAPH } ?: return
+        latex.graphTarget = target
+        modeByTab[m.tab] = m.id
+        tab = m.tab
+    }
+
     val history = mutableStateListOf<Logic.Entry>().apply { addAll(Logic.decode(prefs?.getString(KEY, null))) }
 
     /** Text a history tap sends to an expression mode: (mode id, text). */
@@ -118,6 +126,7 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
         const val KEY = "history"
         const val KIND_EXPRESSION = "expression"
         const val KIND_LATEX_EDITOR = "latex_editor"
+        const val KIND_LATEX_GRAPH = "latex_graph"
     }
 }
 

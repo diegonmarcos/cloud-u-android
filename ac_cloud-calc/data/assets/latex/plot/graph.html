@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<!-- Cloud Calc plot viewer (build.json::latex.graph). Everything it loads sits beside it in the APK's assets: expr.js (the safe
+     expression parser), model.js (samples a plot spec) and graph.js (draws it: a canvas 2D plot and a canvas 3D scene of its own).
+     No library, no network: the WebView blocks it and nothing here names an address. -->
+<style>
+  :root { --bg: #121212; --fg: #e8e8e8; --muted: #9aa0a6; --accent: #8ab4f8; --err: #f28b82; --line: #2a2a2a; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: sans-serif; overflow: hidden; }
+  body { padding: 4px 6px 6px 6px; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #cap { font-size: 12px; color: var(--muted); line-height: 1.35; padding: 2px 2px 6px 2px; }
+  .lab { font-size: 12px; color: var(--accent); padding: 4px 2px 2px 2px; }
+  canvas { display: block; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+  #c2 { touch-action: pan-y; }
+  #c3 { touch-action: none; }
+  .read { font-family: monospace; font-size: 12px; color: var(--fg); min-height: 16px; padding: 3px 2px; }
+  #msg { color: var(--err); font-size: 13px; font-family: monospace; white-space: pre-wrap; padding: 6px 2px; }
+</style>
+</head>
+<body>
+<div id="cap"></div>
+<div id="s2"><div class="lab" id="l2"></div><canvas id="c2"></canvas><div class="read" id="r2"></div></div>
+<div id="s3"><div class="lab" id="l3"></div><canvas id="c3"></canvas><div class="read" id="r3"></div></div>
+<div id="msg"></div>
+<script src="expr.js"></script>
+<script src="model.js"></script>
+<script src="graph.js"></script>
+</body>
+</html>

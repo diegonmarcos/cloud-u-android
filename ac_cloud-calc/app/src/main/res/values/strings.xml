@@ -396,5 +396,27 @@
     <string name="latex_name">Name</string>
     <string name="latex_evaluate">Evaluate</string>
     <string name="latex_not_convertible">Cannot evaluate: %1$s</string>
+    <string name="latex_graph">Graph</string>
+    <string name="latex_graph_pick">Choose a formula</string>
+    <string name="latex_plot_2d">2D</string>
+    <string name="latex_plot_3d">3D</string>
+    <string name="latex_plot_both">2D + 3D</string>
+    <string name="latex_plot_illustration">illustration</string>
+    <string name="latex_plot_hint">Tap a point for its coordinates, long-press to read the curves. Drag the 3D view to orbit, pinch to zoom.</string>
+    <string name="latex_plot_play">Animate</string>
+    <string name="latex_plot_pause">Pause</string>
+    <string name="latex_plot_speed">Speed ×%1$s</string>
+    <string name="latex_plot_reset_view">Reset view</string>
+    <string name="latex_plot_zoom_in">Zoom in</string>
+    <string name="latex_plot_zoom_out">Zoom out</string>
+    <string name="latex_plot_wave">Wave: frequency, amplitude, phase</string>
+    <string name="latex_plot_variables">Variables</string>
+    <string name="latex_plot_reset">Reset to defaults</string>
+    <string name="latex_plot_mine">Plot my formula</string>
+    <string name="latex_plot_mine_hint">LaTeX to plot (one or two free variables)</string>
+    <string name="latex_plot_go">Plot</string>
+    <string name="latex_plot_from_editor">Use the Editor\'s formula</string>
+    <string name="latex_plot_not_plottable">Cannot plot: %1$s</string>
+    <string name="latex_plot_custom_caption">Your formula %1$s: a curve against the first variable (2D), a surface over both variables (3D).</string>
     <string name="latex_eval_failed">The engine could not compute it: %1$s</string>
 </resources>

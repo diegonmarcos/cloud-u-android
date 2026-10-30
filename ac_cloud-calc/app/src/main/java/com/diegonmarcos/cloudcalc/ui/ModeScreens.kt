@@ -110,6 +110,7 @@ fun ModeScreen(mode: Declarations.Mode) {
             "history" -> HistoryMode(mode)
             "latex_library" -> LatexLibraryMode(mode)
             "latex_editor" -> LatexEditorMode(mode)
+            "latex_graph" -> LatexGraphMode(mode)
             "worldclock" -> WorldClockMode(mode)
             "alarms" -> AlarmsMode(mode)
             "timers" -> TimersMode(mode)
