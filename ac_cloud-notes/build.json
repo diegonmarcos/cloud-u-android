@@ -207,12 +207,13 @@
     "_doc": "Cloud Notes as the fleet's open Obsidian (Notion + Obsidian + Canvas). EVERYTHING the Vault view does is read from here: how a folder is opened, which files open in which viewer, the panes, the commands, the sandbox policy, the default plugin set. The web half reads the generated mirror core/src/mobile/vault/vault-decl.json (written by scripts/gen-vault-decl.py, which also writes docs/vault-plugin-mapping.md; test/test-vault.sh fails on drift). Obsidian config in the opened folder (<folder>/.obsidian) is only READ and SHOWN in this milestone; applying it is next.",
     "route": "/vault",
     "open": {
-      "_doc": "Three ways to a folder. saf: ACTION_OPEN_DOCUMENT_TREE with a persisted tree URI (works for any folder the user picks). path: a direct path under direct_roots (needs All files access, like the file explorer). store: a clone in the fleet's shared store, reached through its ContentProvider (the same route Cloud Drive's StoreAccess falls back to when it is not on the shared uid); authority and permission are pinned to ac_cloud-termux/build.json::shared_store.provider by test/test-vault.sh, and the store route is unverified on a device until the phone check.",
+      "_doc": "Three ways to a folder. saf: ACTION_OPEN_DOCUMENT_TREE with a persisted tree URI (works for any folder the user picks). path: a direct path under direct_roots (needs All files access, like the file explorer). store: a clone in the fleet's shared store, reached through its ContentProvider (the same route Cloud Drive's StoreAccess falls back to when it is not on the shared uid); owner_package, authority and permission are pinned to ac_cloud-termux/build.json::shared_store.provider by test/test-vault.sh, and the store route is unverified on a device until the phone check.",
       "saf": true,
       "direct_roots": [
         "/storage/emulated/0/"
       ],
       "store": {
+        "owner_package": "cld.termux",
         "authority": "cld.termux.sharedstore",
         "permission": "com.diegonmarcos.cloud.permission.SHARED_STORE",
         "git_subdir": "git"

@@ -30,6 +30,8 @@ def check(ok, msg):
 rd = lambda *p: open(os.path.join(root, *p), encoding='utf-8').read()
 v = json.loads(rd('build.json'))['vault']
 termux = json.loads(open(os.path.join(root, '..', 'ac_cloud-termux', 'build.json'), encoding='utf-8').read())['shared_store']['provider']
+termux_all = json.loads(open(os.path.join(root, '..', 'ac_cloud-termux', 'build.json'), encoding='utf-8').read())['shared_store']
+check(v['open']['store']['owner_package'] == termux_all['owner_package'], 'store owner package equals ac_cloud-termux shared_store.owner_package')
 check(v['open']['store']['authority'] == termux['authority'], 'store authority equals ac_cloud-termux shared_store.provider.authority')
 check(v['open']['store']['permission'] == termux['permission'], 'store permission equals ac_cloud-termux shared_store.provider.permission')
 app = 'packages/frontend/apps/android'
@@ -41,7 +43,9 @@ check('@CapacitorPlugin(name = "Vault"' in kt or 'name = "Vault"' in kt, 'VaultP
 check("registerPlugin<VaultNative>('Vault')" in ts, "the web side registers 'Vault'")
 check('VaultPlugin::class.java' in act, 'MainActivity registers VaultPlugin')
 check('ACTION_OPEN_DOCUMENT_TREE' in kt and 'takePersistableUriPermission' in kt, 'the picker is SAF with a persisted grant')
-check(v['open']['store']['authority'] in man, 'the manifest can see the store provider (queries)')
+check('<package android:name="%s"' % v['open']['store']['owner_package'] in man, 'the manifest <queries> sees the store owner package')
+check('<provider' not in man.split('</queries>')[0], 'no <provider> inside <queries> (it clashes with application providers in the manifest merge)')
+check('"%s"' % v['open']['store']['authority'] in kt, 'VaultPlugin addresses the declared store authority')
 check(v['open']['store']['permission'] in man, 'the manifest requests the store permission')
 for m in re.findall(r'^\s+(\w+)\(options', rd('packages/frontend/core/src/mobile/vault/vault-fs.ts'), re.M):
     check(re.search(r'fun %s\(call' % m, kt) is not None, 'VaultNative.%s is implemented in Kotlin' % m)

@@ -50,7 +50,7 @@ export interface VaultDecl {
   open: {
     saf: boolean;
     direct_roots: string[];
-    store: { authority: string; permission: string; git_subdir: string };
+    store: { owner_package: string; authority: string; permission: string; git_subdir: string };
     recent_max: number;
     storage_key: string;
   };

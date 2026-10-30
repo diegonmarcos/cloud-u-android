@@ -5,9 +5,11 @@
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
-        <!-- Vault view, store route: the fleet shared store's ContentProvider
-             (build.json::vault.open.store; pinned to ac_cloud-termux by test-vault.sh). -->
-        <provider android:authorities="cld.termux.sharedstore" />
+        <!-- Vault view, store route: the package that owns the fleet shared store's
+             ContentProvider must be visible (build.json::vault.open.store.owner_package; pinned
+             to ac_cloud-termux by test-vault.sh). A provider entry here would clash with the
+             application providers in the manifest merge. -->
+        <package android:name="cld.termux" />
     </queries>
 
     <application
