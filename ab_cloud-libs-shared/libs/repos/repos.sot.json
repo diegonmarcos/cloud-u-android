@@ -1,5 +1,5 @@
 {
-  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from projects-repos.json by gen-registry.js: edit projects-repos.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
+  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `0_registry/clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from projects-repos.json by 0_registry/gen-registry.js: edit projects-repos.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
   "_schema": "cloud-repos/v1",
   "_self_doc": "_git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
   "self": {
@@ -13,7 +13,7 @@
   },
   "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
   "_lfs_doc": "`lfs` is optional. `true` = the repository stores its large files in git-lfs, so a plain clone fetches pointers until `git lfs pull`; absent = a normal repository. Declarative: the libs:repos mirror and the cloud-drive repos table (LFS | Normal column) read this field, nothing hardcodes which repo is LFS.",
-  "_hub_submodule_doc": "Hub hierarchy (declarative, #3ff19f58). A hub entry carries `parent_hub`, a member entry carries `hub`; z-archived_* entries are members of the hub z-archived-___ (#1291); 7.Others entries (farm 7.Others) carry neither and have no hub submodule. Every repo except the top (_git-repos-master) gets its hub (member) or its parent hub (hub) as a git submodule at the one fixed path `0_hub/<hub-name>`, URL https://github.com/diegonmarcos/<hub>.git, pinned to the hub main. Only the upward link is a submodule; hubs keep symlinks to members (no cycles). A public repo never gets a private hub (would leak its name/URL): repos-sot.js reports such cases and they are skipped. Guard: `node repos-sot.js check-hubs [--remote]`.",
+  "_hub_submodule_doc": "Hub hierarchy (declarative, #3ff19f58). A hub entry carries `parent_hub`, a member entry carries `hub`; z-archived_* entries are members of the hub z-archived-___ (#1291); 7.Others entries (farm 7.Others) carry neither and have no hub submodule. Every repo except the top (_git-repos-master) gets its hub (member) or its parent hub (hub) as a git submodule at the one fixed path `0_hub/<hub-name>`, URL https://github.com/diegonmarcos/<hub>.git, pinned to the hub main. Only the upward link is a submodule; hubs keep symlinks to members (no cycles). A public repo never gets a private hub (would leak its name/URL): repos-sot.js reports such cases and they are skipped. Guard: `node 0_registry/repos-sot.js check-hubs [--remote]`.",
   "_status_doc": "`status` is optional. Absent = the repo exists and is cloned/linked as usual. `pending_creation` = declared on purpose, but the GitHub repo is NOT created yet: every farmer (clone.sh, the cloud-drive seed, the libs:repos mirror, the fleet dotfiles guard) must SKIP it - no clone, no symlink, no seed - and the guard fails if a pending entry is treated as live. Flip it by deleting the field in the same commit that creates the repo. `parts` (optional) lists named sub-trees that live INSIDE the same repo, declared as placeholders so farmers and docs know the planned layout before any file moves; a part is never a repo of its own and is never cloned or linked.",
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
@@ -842,18 +842,18 @@
     }
   ],
   "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
-  "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know. `copies` (optional, per consumer) declares every file the consumer holds that is rendered here, so all of them live in this one place: {from, to[], pin?} is a byte copy of a rendered file (pin = {file, path}: a JSON field in the consumer that pins the copy by sha256, rewritten in place), {run, check, writes[]} is a consumer-side derive command run from the clone root after the copies (an argument starting with @ is a rendered file here, by absolute path). `node gen-registry.js` runs `node sync-consumers.js` after rendering: it writes the copies into every consumer clone found next to this repo (by registry name, GitHub name or a former name) and prints `consumer not refreshed` for a consumer with no clone (never a failure); committing in the consumer stays a separate, explicit step. `node sync-consumers.js --check` exits 1 when a present clone holds a stale copy.",
+  "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `0_registry/clone.sh --sync`) or a subset it must keep consistent with this file (`node 0_registry/repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know. `copies` (optional, per consumer) declares every file the consumer holds that is rendered here, so all of them live in this one place: {from, to[], pin?} is a byte copy of a rendered file (pin = {file, path}: a JSON field in the consumer that pins the copy by sha256, rewritten in place), {run, check, writes[]} is a consumer-side derive command run from the clone root after the copies (an argument starting with @ is a rendered file here, by absolute path). `node 0_registry/gen-registry.js` runs `node sync-consumers.js` after rendering: it writes the copies into every consumer clone found next to this repo (by registry name, GitHub name or a former name) and prints `consumer not refreshed` for a consumer with no clone (never a failure); committing in the consumer stays a separate, explicit step. `node sync-consumers.js --check` exits 1 when a present clone holds a stale copy.",
   "consumers": [
     {
       "repo": "lecole-42-___",
       "what": "d_lecole project master (hub): repos.json subset + clone/link script",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "_git-repos-master",
-      "what": "clone.sh + committed symlink farm",
-      "reads": "repos.json (itself)",
+      "what": "0_registry/clone.sh + committed symlink farm",
+      "reads": "0_registry/repos.json (itself)",
       "guard": "9_others/test/test-repos-sot.sh"
     },
     {
@@ -866,43 +866,43 @@
       "repo": "CG-___",
       "what": "CG project master subset",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "Capital-___",
       "what": "Capital project master subset (Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal, Capital-Micro-Asset-Management)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "HardTech-___",
       "what": "HardTech project master subset (DeepXTech, Stack-CAD-Simulators)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "DuckPeng-___",
       "what": "DuckPeng project master subset (CG, cloud)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "cloud-me-pub-profiles-___",
       "what": "cloud-me-pub-profiles hub subset (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "cloud-me-pub-___",
       "what": "Cloud-Me-Pub hub subset (public cloud-me family; no private names)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "cloud-me-pvt-___",
       "what": "Cloud-Me-Pvt hub subset (private cloud-me family members; the hub itself is public, its CI is budget-limited)",
       "reads": "repos.json (subset)",
-      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+      "guard": "node 0_registry/repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
       "repo": "Projects-___",
@@ -919,11 +919,11 @@
     {
       "repo": "cloudy-u-android",
       "what": "libs:repos mirror list + v3 outline, cloud-drive Sync > Git list, cloud-drive seed/clone targets, Cloud Me Lnktree > Proj repo tree",
-      "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies of repos.json, pinned by ac_cloud-drive/build.json storage.repos_source.sha256), ab_cloud-libs-shared/libs/repos/repos-github.sot.json (byte copy of repos-github.json) and the outline derived from it: libs/repos/repos.outline.json + ac_cloud-me/data/repos/repos.outline.json",
+      "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies of 0_registry/repos.json, pinned by ac_cloud-drive/build.json storage.repos_source.sha256), ab_cloud-libs-shared/libs/repos/repos-github.sot.json (byte copy of 0_registry/repos-github.json) and the outline derived from it: libs/repos/repos.outline.json + ac_cloud-me/data/repos/repos.outline.json",
       "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt + drive-repos-sot-pin-guard.yml; libs/repos/sync.sh --check-outline + RepoTreeTest.kt",
       "copies": [
         {
-          "from": "repos.json",
+          "from": "0_registry/repos.json",
           "to": [
             "ac_cloud-drive/data/repos.sot.json",
             "ab_cloud-libs-shared/libs/repos/repos.sot.json"
@@ -934,7 +934,7 @@
           }
         },
         {
-          "from": "repos-github.json",
+          "from": "0_registry/repos-github.json",
           "to": [
             "ab_cloud-libs-shared/libs/repos/repos-github.sot.json"
           ]
@@ -958,7 +958,7 @@
             "bash",
             "ab_cloud-libs-shared/libs/repos/sync.sh",
             "--refresh-outline",
-            "@repos-github.json"
+            "@0_registry/repos-github.json"
           ],
           "check": [
             "bash",
@@ -996,7 +996,7 @@
   "base_dir_default": "~/cloud-shared-store/git",
   "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. No entry sets it since 2026-10-23: the d_lecole repos were renamed lecole-42_* and now sit at the root of base_dir, so the old ~/cloud-shared-store/git/lecole-42/ folder is only a stale machine-local directory (owner step: move or re-clone).",
   "_archived_doc": "FairEmail and octocode forks were deleted on GitHub on 2026-08-18 — FairEmail was fully reproduced by unix/aa_cloud-mail/patches, octocode was 0 commits ahead of Muvon/octocode. Nothing else has been archived. The ten d_lecole repos were deregistered the same day and are registered again as of 2026-08-20; they were never gone, only unindexed.",
-  "_fleet_files_doc": "Files that MUST be byte-identical in every repo that has the module they belong to, and where the one authoritative copy lives. `./clone.sh --sync` copies each `from` (resolved under base_dir) to each `to` in every cloned repo that has the entry's `requires` path. `requires` is the OPT-IN and it is explicit on purpose: the obvious shortcut — 'copy where the destination's parent directory exists' — is wrong for any destination at the repo ROOT, because the root always exists. That rule put .mcp.json into all sixteen repos that have no dotfiles module at all (cloud-notes, cloudy-u-linux, every lecole-42 entry) on its first run. `requires` names the directory that proves the module is present, so a root-level file is gated by the module it belongs to rather than by its own location.\n\nThis exists because 'one shared implementation, many callers' was only ever true by hand. It was not: deploy-dotfiles.sh had already drifted in cloud-infra-desktop (missing the whole claude-SoT refresh block) and was MISSING outright in four repos whose build.sh calls it, and .mcp.json's own _doc admitted 'propagated by hand — nothing automates that hop', which is how cloud-vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Every one of those was a file claiming, in its own header, to be the same file as another.\n\nADDING a file here is the whole registration: no code change. `from` is <repo>/<path> under base_dir; a `to` list means one source lands at several destinations (mcp.json is both the dotfiles-module source AND the deployed root file, so a repo is consistent whether or not its build.sh has run).",
+  "_fleet_files_doc": "Files that MUST be byte-identical in every repo that has the module they belong to, and where the one authoritative copy lives. `0_registry/clone.sh --sync` copies each `from` (resolved under base_dir) to each `to` in every cloned repo that has the entry's `requires` path. `requires` is the OPT-IN and it is explicit on purpose: the obvious shortcut — 'copy where the destination's parent directory exists' — is wrong for any destination at the repo ROOT, because the root always exists. That rule put .mcp.json into all sixteen repos that have no dotfiles module at all (cloud-notes, cloudy-u-linux, every lecole-42 entry) on its first run. `requires` names the directory that proves the module is present, so a root-level file is gated by the module it belongs to rather than by its own location.\n\nThis exists because 'one shared implementation, many callers' was only ever true by hand. It was not: deploy-dotfiles.sh had already drifted in cloud-infra-desktop (missing the whole claude-SoT refresh block) and was MISSING outright in four repos whose build.sh calls it, and .mcp.json's own _doc admitted 'propagated by hand — nothing automates that hop', which is how cloud-vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Every one of those was a file claiming, in its own header, to be the same file as another.\n\nADDING a file here is the whole registration: no code change. `from` is <repo>/<path> under base_dir; a `to` list means one source lands at several destinations (mcp.json is both the dotfiles-module source AND the deployed root file, so a repo is consistent whether or not its build.sh has run).",
   "fleet_files": [
     {
       "from": "cloudy-___/repos.json",
@@ -1007,13 +1007,13 @@
       "doc": "#1073/#1224 cloud-infra: byte copy of the CLOUD family file (cloudy-___/repos.json: 2_vault + a_cloud only, full hierarchy), NOT of the full registry; the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
     },
     {
-      "from": "_git-repos-master/repos.json",
+      "from": "_git-repos-master/0_registry/repos.json",
       "to": [
         "ac_cloud-drive/data/repos.sot.json",
         "ab_cloud-libs-shared/libs/repos/repos.sot.json"
       ],
       "requires": "ac_cloud-drive/data",
-      "doc": "#1073 cloudy-u-android: byte copy of THIS registry, baked into cloud-drive at build time (build.json storage.repos_source) and read by libs:repos sync.sh --refresh-list. Guards: ac_cloud-drive/test/test-drive-repos-sot.sh, RepoSotTest.kt."
+      "doc": "#1073 cloudy-u-android: byte copy of THIS registry (0_registry/repos.json), baked into cloud-drive at build time (build.json storage.repos_source) and read by libs:repos sync.sh --refresh-list. Guards: ac_cloud-drive/test/test-drive-repos-sot.sh, RepoSotTest.kt."
     },
     {
       "from": "_git-repos-master/.claude/SESSION-SURVIVAL.md",
@@ -1156,7 +1156,7 @@
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. lean agents build/explore/ops/review/general-purpose."
     }
   ],
-  "_farm_doc": "`farm` is the folder of this repo's committed symlink in _git-repos-master (#1291, #1295): one top folder per area or project, named <code>.<Name> after its node in projects-repos.json (1.1.Cloudy, 2.CG, ...), sub-folders nested by the hub chain (a sub-hub and its members sit one folder deeper than the parent hub), plus the Fin split Corporate / Capital-Markets. The link is <farm>/<name> -> ../ repeated (depth+1) times + <path or name>. Top folders and their order are rendered into `farms` from the source tree. `group` is the LEGACY family key (2_vault, a_cloud, b_projects, c_gh, d_lecole): it no longer places links, it stays only because readers filter on it (cloudy-___ family file, cloudy-u-android libs:repos sync and its test, the d_lecole school rule). Guard: `node repos-sot.js check`.",
+  "_farm_doc": "`farm` is the folder of this repo's committed symlink in _git-repos-master (#1291, #1295): one top folder per area or project, named <code>.<Name> after its node in projects-repos.json (1.1.Cloudy, 2.CG, ...), sub-folders nested by the hub chain (a sub-hub and its members sit one folder deeper than the parent hub), plus the Fin split Corporate / Capital-Markets. The link is <farm>/<name> -> ../ repeated (depth+1) times + <path or name>. Top folders and their order are rendered into `farms` from the source tree. `group` is the LEGACY family key (2_vault, a_cloud, b_projects, c_gh, d_lecole): it no longer places links, it stays only because readers filter on it (cloudy-___ family file, cloudy-u-android libs:repos sync and its test, the d_lecole school rule). Guard: `node 0_registry/repos-sot.js check`.",
   "farms": {
     "1.1.Cloudy": "Cloudy (1.1): hub cloudy-___ and its members. The cloudy project: fleet infrastructure, services, devices, data and docs.",
     "1.2.Cloud-me": "Cloud-Me (1.2): hub cloud-me-___ and its members. The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",

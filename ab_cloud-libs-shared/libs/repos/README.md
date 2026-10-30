@@ -34,7 +34,7 @@ tree.
 
 ## The list is not invented here
 
-`repos.json` is derived from the one registry, `_git-repos-master/repos.json`,
+`repos.json` is derived from the one registry, `_git-repos-master/0_registry/repos.json`,
 vendored byte-for-byte as `repos.sot.json` (refreshed by _git-repos-master's
 `./clone.sh --sync`): every non-`pending_creation` entry of the `a_cloud` and
 `b_front`/`b_projects` groups, minus `exclude`. Regenerate with `./sync.sh --refresh-list`;
@@ -74,7 +74,7 @@ source. This is a data directory that happens to live under `libs/`.
 
 `repos.outline.json` is the registry's hierarchy (areas → projects → [sub-categories →] families → repos, every node
 with its registry code; a repo leaf carries GitHub name, url, private and description). It is DERIVED from
-`_git-repos-master/repos-github.json` (generated there from `repos.v3.json`), vendored byte-for-byte as
+`_git-repos-master/0_registry/repos-github.json` (generated there from `projects-repos.json`), vendored byte-for-byte as
 `repos-github.sot.json`. Nothing in it is typed by hand.
 
 ```sh

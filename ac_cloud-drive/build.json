@@ -43,13 +43,13 @@
       "require_unmetered_network": true
     },
     "repos_source": {
-      "_doc": "#1073 THE REPO LIST COMES FROM ONE PLACE: _git-repos-master/repos.json (cloud-repos/v1). `path` is the byte copy of it that ships in this repo (refreshed by _git-repos-master's ./clone.sh --sync or tools/sync-repos-sot.sh), `url` is where that registry is declared, `sha256` pins the copy. app/build.gradle BAKES the copy (REPOS_SOT_B64) and fails the build if its sha256 differs from this one, if data/drive-git-repos.json is not what tools/gen-drive-git-repos.js makes from data/drive-git-family.json + the copy, or if the family names a repo the registry lists as pending_creation or does not list. Nothing is downloaded at runtime: the APK carries the copy. test/test-drive-repos-sot.sh also compares the copy with `url` when the network answers. `ref` is the branch in the url; flip it to main once _git-repos-master's claude/new-session-vb0job is merged.",
+      "_doc": "#1073 THE REPO LIST COMES FROM ONE PLACE: _git-repos-master/0_registry/repos.json (cloud-repos/v1). `path` is the byte copy of it that ships in this repo (refreshed by _git-repos-master's 0_registry/clone.sh --sync or tools/sync-repos-sot.sh), `url` is where that registry is declared, `sha256` pins the copy. app/build.gradle BAKES the copy (REPOS_SOT_B64) and fails the build if its sha256 differs from this one, if data/drive-git-repos.json is not what tools/gen-drive-git-repos.js makes from data/drive-git-family.json + the copy, or if the family names a repo the registry lists as pending_creation or does not list. Nothing is downloaded at runtime: the APK carries the copy. test/test-drive-repos-sot.sh also compares the copy with `url` when the network answers. `ref` is the branch in the url; flip it to main once _git-repos-master's claude/new-session-vb0job is merged.",
       "path": "data/repos.sot.json",
-      "url": "https://raw.githubusercontent.com/diegonmarcos/_git-repos-master/main/repos.json",
+      "url": "https://raw.githubusercontent.com/diegonmarcos/_git-repos-master/main/0_registry/repos.json",
       "schema": "cloud-repos/v1",
       "refresh_minutes": 30,
       "_doc_refresh": "The baked copy can be older than the live registry (the APK ships a snapshot). When the Git table opens, RepoSotLive asks `url` with a conditional GET (If-None-Match; a 304 transfers nothing) at most every refresh_minutes, caches the body and its ETag in the app's files dir, and the cached copy replaces the baked one at runtime (renames, archived, lfs, visibility).",
-      "sha256": "639bbab38782324a521226b15e5c5f634244bea6986e5b3098ba420cdc8adfc3",
+      "sha256": "9407575ae58ae2adfba9f880230b96e5c42e1f98966dd4eec0ce8c0d74beb050",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
