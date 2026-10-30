@@ -157,7 +157,7 @@ class NavChromeScrollTest {
         assertEquals(1, count(BottomTags.label("mail")))
     }
 
-    @Test fun `scroll-hide on: a downward drag hides every bar and they STAY hidden after the finger lifts, an upward swipe restores all`() {
+    @Test fun `scroll-hide on, a downward drag hides every bar and they STAY hidden after the finger lifts, an upward swipe restores all`() {
         show(policy = null)
         compose.waitForIdle()
         assertEquals(1, count(TopBarTags.BAR_SLOT)); assertEquals(1, count(SecondRowTags.STRIP)); assertEquals(1, count(BottomTags.BAR))
@@ -186,7 +186,7 @@ class NavChromeScrollTest {
         for (id in listOf("p1", "p2", "p3")) assertEquals(1, count(SecondRowTags.label(id)))
     }
 
-    @Test fun `Clean mode: the second row is gone, the first row is only the hamburger, the bottom nav is icons only and the drawer holds the three rows`() {
+    @Test fun `Clean mode, the second row is gone, the first row is only the hamburger, the bottom nav is icons only and the drawer holds the three rows`() {
         show(policy = null, ui = MemoryNavUiStore(mode = NavUiMode.Clean))
         compose.waitForIdle()
         assertEquals("no second row", 0, count(SecondRowTags.STRIP))

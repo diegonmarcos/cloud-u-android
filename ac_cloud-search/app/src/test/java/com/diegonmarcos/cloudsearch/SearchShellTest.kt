@@ -745,6 +745,9 @@ class SearchShellTest {
         assertTrue(synchronized(http.asked) { http.asked.none { it == Decl.config.ai.chatUrl } })
         assertEquals(1, a.runs.all().size)
         assertEquals(1, a.reports.newestFirst().single().items.size)
+        // Scrolling the page hid every bar (scroll-hide, on by default: they stay away until an upward scroll): switch it off for the rest of this walk.
+        com.diegonmarcos.superapp.bottomnav.NavUiPrefs.of(RuntimeEnvironment.getApplication()).setScrollHide(false)
+        compose.waitForIdle()
         // Reports lists it, newest first, and opens the detail.
         compose.onNodeWithTag(Tags.nav("research")).performClick()
         compose.onNodeWithTag(Tags.subpage("reports")).performClick()

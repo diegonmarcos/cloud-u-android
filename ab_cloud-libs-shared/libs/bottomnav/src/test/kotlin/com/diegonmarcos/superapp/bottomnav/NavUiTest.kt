@@ -85,21 +85,21 @@ class NavUiTest {
 
     // ── scroll-hide: down hides ALL bars, up restores ──
 
-    @Test fun `scroll-hide: a downward scroll or drag hides everything, from any state`() {
+    @Test fun `scroll-hide, a downward scroll or drag hides everything, from any state`() {
         for (from in listOf(d, h, s)) for (drag in listOf(true, false)) assertEquals(h, chromeScrollStep(ChromeScrollPolicy.Hide, from, 10f, drag))
     }
 
-    @Test fun `scroll-hide: the release and the fling do not bring the bars back`() {
+    @Test fun `scroll-hide, the release and the fling do not bring the bars back`() {
         assertEquals(h, chromeScrollReleaseStep(ChromeScrollPolicy.Hide, h))
         assertEquals("the settle after the release", h, chromeScrollStep(ChromeScrollPolicy.Hide, h, 40f, dragging = false))
         assertEquals("the older machine would shrink", s, chromeScrollReleaseStep(ChromeScrollPolicy.Shrink, h))
     }
 
-    @Test fun `scroll-hide: any upward scroll restores everything`() {
+    @Test fun `scroll-hide, any upward scroll restores everything`() {
         for (from in listOf(d, h, s)) for (drag in listOf(true, false)) assertEquals(d, chromeScrollStep(ChromeScrollPolicy.Hide, from, -5f, drag))
     }
 
-    @Test fun `scroll-hide: no movement changes nothing`() {
+    @Test fun `scroll-hide, no movement changes nothing`() {
         for (from in listOf(d, h, s)) assertEquals(from, chromeScrollStep(ChromeScrollPolicy.Hide, from, 0f, true))
     }
 
@@ -153,7 +153,7 @@ class NavUiTest {
         assertEquals(NavUiDecl.DEFAULT, NavUiDecl.fromBuildConfig(""))
     }
 
-    @Test fun `Cloud Notes' declaration, ui nav_ui, reads as Clean`() {
+    @Test fun `Cloud Notes declaration ui nav_ui reads as Clean`() {
         val json = """{"mode": "clean", "scroll_hide": true}"""
         assertEquals(NavUiSettings(NavUiMode.Clean, true), NavUiDecl.parse(json))
         val b64 = Base64.getEncoder().encodeToString(json.toByteArray())
