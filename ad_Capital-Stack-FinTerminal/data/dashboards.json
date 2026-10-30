@@ -1,6 +1,6 @@
 {
   "_doc": "THE DASHBOARDS of Capital-Stack-FinTerminal (#1335): one per FinTerm entry (build.json::ui.stacks, kind dashboard, `dashboard` = the id here). A panel names its `source` (an id of data/sources.json whose `feeds` lists this entry) and EITHER a `fetch` (a live connector: the key-free sources) OR a `placeholder` (a dashed layout drawn while the source needs a key / has no connector yet, with 'add your key in Config > Sources'). Providers and derivations are named here and implemented in Kotlin (Providers.kt, Derive.kt); no address is typed anywhere but data/sources.json (endpoint) because a request is endpoint + path + params. Read by Dashboards.kt and by test/test-finterm-sources.sh.",
-  "_doc_fetch": "provider: fred_series (one request per series: id + cosd = today - lookback_days), dbnomics_series (path + params; params.dimensions is JSON-encoded), imf_datamapper (path, params; countries filters the answer), worldbank_indicator (path with {countries} joined by ';'), gdelt_artlist (path + params). derive: how the parsed data becomes rows/chart: latest_curve, forward_grid, latest_per_series, imf_latest, worldbank_latest, level_change, fx_spot, fx_cross, articles. view: curve (line chart), bars (bar chart + table), table, news, alloc (model portfolio legs).",
+  "_doc_fetch": "provider: fred_series (one request per series: id + cosd = today - lookback_days), dbnomics_series (path + params; params.dimensions is JSON-encoded), imf_datamapper (path, params; countries filters the answer), worldbank_indicator (path with {countries} joined by ';'), gdelt_artlist (path + params). derive: how the parsed data becomes rows/chart: latest_curve, forward_grid, latest_per_series, imf_latest, worldbank_latest, level_change, fx_spot, fx_cross, articles. view: curve (line chart), bars (bar chart + table), table, news, alloc (model portfolio legs). fallback (fred_series): {source} names the second-priority public source, tried series by series after the primary and the panel's own source returned nothing; a series carries its code there as `dbnomics` (\"<provider>/<dataset>/<series>\", read at endpoint + /series/<code>); a series with no code has no second source.",
   "dashboards": [
     {
       "id": "yield_curves",
@@ -20,62 +20,76 @@
               {
                 "id": "DGS1MO",
                 "label": "1M",
-                "years": 0.083333
+                "years": 0.083333,
+                "dbnomics": "FED/H15/RIFLGFCM01_N.B"
               },
               {
                 "id": "DGS3MO",
                 "label": "3M",
-                "years": 0.25
+                "years": 0.25,
+                "dbnomics": "FED/H15/RIFLGFCM03_N.B"
               },
               {
                 "id": "DGS6MO",
                 "label": "6M",
-                "years": 0.5
+                "years": 0.5,
+                "dbnomics": "FED/H15/RIFLGFCM06_N.B"
               },
               {
                 "id": "DGS1",
                 "label": "1Y",
-                "years": 1
+                "years": 1,
+                "dbnomics": "FED/H15/RIFLGFCY01_N.B"
               },
               {
                 "id": "DGS2",
                 "label": "2Y",
-                "years": 2
+                "years": 2,
+                "dbnomics": "FED/H15/RIFLGFCY02_N.B"
               },
               {
                 "id": "DGS3",
                 "label": "3Y",
-                "years": 3
+                "years": 3,
+                "dbnomics": "FED/H15/RIFLGFCY03_N.B"
               },
               {
                 "id": "DGS5",
                 "label": "5Y",
-                "years": 5
+                "years": 5,
+                "dbnomics": "FED/H15/RIFLGFCY05_N.B"
               },
               {
                 "id": "DGS7",
                 "label": "7Y",
-                "years": 7
+                "years": 7,
+                "dbnomics": "FED/H15/RIFLGFCY07_N.B"
               },
               {
                 "id": "DGS10",
                 "label": "10Y",
-                "years": 10
+                "years": 10,
+                "dbnomics": "FED/H15/RIFLGFCY10_N.B"
               },
               {
                 "id": "DGS20",
                 "label": "20Y",
-                "years": 20
+                "years": 20,
+                "dbnomics": "FED/H15/RIFLGFCY20_N.B"
               },
               {
                 "id": "DGS30",
                 "label": "30Y",
-                "years": 30
+                "years": 30,
+                "dbnomics": "FED/H15/RIFLGFCY30_N.B"
               }
             ],
             "primary": {
               "source": "cloud_fincept",
               "topic": "econ:fred:{id}"
+            },
+            "fallback": {
+              "source": "dbnomics"
             }
           },
           "x_title": "maturity (years)",
@@ -123,57 +137,68 @@
               {
                 "id": "DGS1MO",
                 "label": "1M",
-                "years": 0.083333
+                "years": 0.083333,
+                "dbnomics": "FED/H15/RIFLGFCM01_N.B"
               },
               {
                 "id": "DGS3MO",
                 "label": "3M",
-                "years": 0.25
+                "years": 0.25,
+                "dbnomics": "FED/H15/RIFLGFCM03_N.B"
               },
               {
                 "id": "DGS6MO",
                 "label": "6M",
-                "years": 0.5
+                "years": 0.5,
+                "dbnomics": "FED/H15/RIFLGFCM06_N.B"
               },
               {
                 "id": "DGS1",
                 "label": "1Y",
-                "years": 1
+                "years": 1,
+                "dbnomics": "FED/H15/RIFLGFCY01_N.B"
               },
               {
                 "id": "DGS2",
                 "label": "2Y",
-                "years": 2
+                "years": 2,
+                "dbnomics": "FED/H15/RIFLGFCY02_N.B"
               },
               {
                 "id": "DGS3",
                 "label": "3Y",
-                "years": 3
+                "years": 3,
+                "dbnomics": "FED/H15/RIFLGFCY03_N.B"
               },
               {
                 "id": "DGS5",
                 "label": "5Y",
-                "years": 5
+                "years": 5,
+                "dbnomics": "FED/H15/RIFLGFCY05_N.B"
               },
               {
                 "id": "DGS7",
                 "label": "7Y",
-                "years": 7
+                "years": 7,
+                "dbnomics": "FED/H15/RIFLGFCY07_N.B"
               },
               {
                 "id": "DGS10",
                 "label": "10Y",
-                "years": 10
+                "years": 10,
+                "dbnomics": "FED/H15/RIFLGFCY10_N.B"
               },
               {
                 "id": "DGS20",
                 "label": "20Y",
-                "years": 20
+                "years": 20,
+                "dbnomics": "FED/H15/RIFLGFCY20_N.B"
               },
               {
                 "id": "DGS30",
                 "label": "30Y",
-                "years": 30
+                "years": 30,
+                "dbnomics": "FED/H15/RIFLGFCY30_N.B"
               }
             ],
             "forward": {
@@ -222,6 +247,9 @@
             "primary": {
               "source": "cloud_fincept",
               "topic": "econ:fred:{id}"
+            },
+            "fallback": {
+              "source": "dbnomics"
             }
           },
           "unit": "%",
@@ -568,54 +596,64 @@
                 "label": "EUR",
                 "ccy": "EUR",
                 "quote": "usd_per",
-                "pair": "EUR/USD"
+                "pair": "EUR/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.EU"
               },
               {
                 "id": "DEXUSUK",
                 "label": "GBP",
                 "ccy": "GBP",
                 "quote": "usd_per",
-                "pair": "GBP/USD"
+                "pair": "GBP/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.UK"
               },
               {
                 "id": "DEXUSAL",
                 "label": "AUD",
                 "ccy": "AUD",
                 "quote": "usd_per",
-                "pair": "AUD/USD"
+                "pair": "AUD/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.AL"
               },
               {
                 "id": "DEXJPUS",
                 "label": "JPY",
                 "ccy": "JPY",
                 "quote": "per_usd",
-                "pair": "USD/JPY"
+                "pair": "USD/JPY",
+                "dbnomics": "FED/H10/RXI_N.B.JA"
               },
               {
                 "id": "DEXSZUS",
                 "label": "CHF",
                 "ccy": "CHF",
                 "quote": "per_usd",
-                "pair": "USD/CHF"
+                "pair": "USD/CHF",
+                "dbnomics": "FED/H10/RXI_N.B.SZ"
               },
               {
                 "id": "DEXCAUS",
                 "label": "CAD",
                 "ccy": "CAD",
                 "quote": "per_usd",
-                "pair": "USD/CAD"
+                "pair": "USD/CAD",
+                "dbnomics": "FED/H10/RXI_N.B.CA"
               },
               {
                 "id": "DEXCHUS",
                 "label": "CNY",
                 "ccy": "CNY",
                 "quote": "per_usd",
-                "pair": "USD/CNY"
+                "pair": "USD/CNY",
+                "dbnomics": "FED/H10/RXI_N.B.CH"
               }
             ],
             "primary": {
               "source": "cloud_fincept",
               "topic": "econ:fred:{id}"
+            },
+            "fallback": {
+              "source": "dbnomics"
             }
           },
           "columns": [
@@ -640,54 +678,64 @@
                 "label": "EUR",
                 "ccy": "EUR",
                 "quote": "usd_per",
-                "pair": "EUR/USD"
+                "pair": "EUR/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.EU"
               },
               {
                 "id": "DEXUSUK",
                 "label": "GBP",
                 "ccy": "GBP",
                 "quote": "usd_per",
-                "pair": "GBP/USD"
+                "pair": "GBP/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.UK"
               },
               {
                 "id": "DEXUSAL",
                 "label": "AUD",
                 "ccy": "AUD",
                 "quote": "usd_per",
-                "pair": "AUD/USD"
+                "pair": "AUD/USD",
+                "dbnomics": "FED/H10/RXI$US_N.B.AL"
               },
               {
                 "id": "DEXJPUS",
                 "label": "JPY",
                 "ccy": "JPY",
                 "quote": "per_usd",
-                "pair": "USD/JPY"
+                "pair": "USD/JPY",
+                "dbnomics": "FED/H10/RXI_N.B.JA"
               },
               {
                 "id": "DEXSZUS",
                 "label": "CHF",
                 "ccy": "CHF",
                 "quote": "per_usd",
-                "pair": "USD/CHF"
+                "pair": "USD/CHF",
+                "dbnomics": "FED/H10/RXI_N.B.SZ"
               },
               {
                 "id": "DEXCAUS",
                 "label": "CAD",
                 "ccy": "CAD",
                 "quote": "per_usd",
-                "pair": "USD/CAD"
+                "pair": "USD/CAD",
+                "dbnomics": "FED/H10/RXI_N.B.CA"
               },
               {
                 "id": "DEXCHUS",
                 "label": "CNY",
                 "ccy": "CNY",
                 "quote": "per_usd",
-                "pair": "USD/CNY"
+                "pair": "USD/CNY",
+                "dbnomics": "FED/H10/RXI_N.B.CH"
               }
             ],
             "primary": {
               "source": "cloud_fincept",
               "topic": "econ:fred:{id}"
+            },
+            "fallback": {
+              "source": "dbnomics"
             }
           },
           "columns": [
@@ -732,7 +780,8 @@
               },
               {
                 "id": "EFFR",
-                "label": "Effective Fed funds"
+                "label": "Effective Fed funds",
+                "dbnomics": "FED/H15/RIFSPFF_N.B"
               },
               {
                 "id": "OBFR",
@@ -740,16 +789,21 @@
               },
               {
                 "id": "IORB",
-                "label": "Interest on reserve balances"
+                "label": "Interest on reserve balances",
+                "dbnomics": "FED/PRATES_PRATES_POLICY_RATES/RESBM_N.D"
               },
               {
                 "id": "DPRIME",
-                "label": "Bank prime loan"
+                "label": "Bank prime loan",
+                "dbnomics": "FED/H15/RIFSPBLP_N.B"
               }
             ],
             "primary": {
               "source": "cloud_fincept",
               "topic": "econ:fred:{id}"
+            },
+            "fallback": {
+              "source": "dbnomics"
             }
           },
           "columns": [

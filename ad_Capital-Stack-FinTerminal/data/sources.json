@@ -1,6 +1,6 @@
 {
   "_doc": "THE SOURCE CATALOG of Capital-Stack-FinTerminal (#1335), modelled on FinceptTerminal (open source, Fincept-Corporation/FinceptTerminal; public feeds + your own API keys, 100+ connectors: FRED, DBnomics, IMF, World Bank, Polygon, Databento, Deribit, news, RSS, geopolitical, AIS). Everything the app knows about a data source is here and nowhere else: Kotlin names no address. Read by Catalog.kt (Config > Sources, the dashboards) and by test/test-finterm-sources.sh, which holds it to build.json::ui.stacks and data/dashboards.json.",
-  "_doc_fields": "id: stable key (also the key slot of the stored API key). name, category (FI-Macro | Equity-Exchange | Options | News-Alt), coverage: one line. endpoint: base address ('' when the user maps it: user_endpoint true). docs: the provider's documentation. auth.type: none | free_key | paid; auth.key_in: where a key goes when the connector is wired (query | header | basic | oauth | message) and its name; auth.signup: where to get a free key. connector: the Kotlin provider that fetches it live (Providers.kt: fred_series, dbnomics_series, imf_datamapper, worldbank_indicator, gdelt_artlist) or null while only the placeholder layout exists. feeds: the FinTerm tab (build.json::ui bottom_nav id) and the entry titles of that tab this source feeds ('*' = every entry of the tab): EVERY entry must be fed by at least one source (the guard). priority: lower is tried first (the source order of a panel: the highest-priority source that feeds the entry and declares a primary route for the panel, then the panel's own source as fallback). primary: true marks THE primary source (Cloud-Fincept, shown first in Config > Sources with its container control). fleet_endpoint: the id in ac_cloud-account/build.json::fleet_endpoints whose MESH base address app/build.gradle bakes (FLEET_MESH_B64), so no mesh address is typed anywhere. paths: the source's declared API paths under that base. container: the id of the container in data/control.json. attribution: shown on the source's card (open-source upstream and its licence).",
+  "_doc_fields": "id: stable key (also the key slot of the stored API key). name, category (FI-Macro | Equity-Exchange | Options | News-Alt), coverage: one line. endpoint: base address ('' when the user maps it: user_endpoint true). docs: the provider's documentation. auth.type: none | free_key | paid; auth.key_in: where a key goes when the connector is wired (query | header | basic | oauth | message) and its name; auth.signup: where to get a free key. connector: the Kotlin provider that fetches it live (Providers.kt: fred_series, dbnomics_series, imf_datamapper, worldbank_indicator, gdelt_artlist) or null while only the placeholder layout exists. feeds: the FinTerm tab (build.json::ui bottom_nav id) and the entry titles of that tab this source feeds ('*' = every entry of the tab): EVERY entry must be fed by at least one source (the guard). priority: lower is tried first (the source order of a panel: the highest-priority source that feeds the entry and declares a primary route for the panel, then the panel's own source as fallback). primary: true marks THE primary source (Cloud-Fincept, shown first in Config > Sources with its container control). fleet_endpoint: the id in ac_cloud-account/build.json::fleet_endpoints whose MESH base address app/build.gradle bakes (FLEET_MESH_B64), so no mesh address is typed anywhere. paths: the source's declared API paths under that base. container: the id of the container in data/control.json. attribution: shown on the source's card (open-source upstream and its licence). cors: false when the source sends no Access-Control-Allow-Origin header, so a BROWSER cannot read it (the web terminal then skips it straight to the next source; the APK is not a browser and ignores the flag); absent or true = readable from a browser.",
   "_doc_keys": "Stored on this phone only, in EncryptedSharedPreferences under an Android Keystore AES-256-GCM key (libs:crash SafeEncryptedPrefs); never logged, never in git, never sent anywhere but this source.",
   "categories": [
     "FI-Macro",
@@ -108,13 +108,15 @@
           ]
         }
       ],
-      "priority": 10
+      "priority": 5,
+      "cors": false,
+      "cors_note": "fred.stlouisfed.org sends no Access-Control-Allow-Origin header: a browser cannot read it, so the web terminal skips it straight to the next source. The APK is not a browser and reads it."
     },
     {
       "id": "dbnomics",
       "name": "DBnomics",
       "category": "FI-Macro",
-      "coverage": "100M+ series from 90+ providers: central bank policy rates (BIS), OECD long-term government yields, international macro",
+      "coverage": "100M+ series from 90+ providers: central bank policy rates (BIS), OECD long-term government yields, international macro; the Federal Reserve H.15 (Treasury constant maturities, effective Fed funds, prime) and H.10 (FX) mirrors, which allow browser (CORS) requests, as the second source behind FRED",
       "endpoint": "https://api.db.nomics.world/v22",
       "docs": "https://api.db.nomics.world/v22/apidocs",
       "auth": {
@@ -129,9 +131,24 @@
             "World Interest Rate Probabilities",
             "World Bonds"
           ]
+        },
+        {
+          "tab": "fi",
+          "entries": [
+            "Yield Curves",
+            "Forward Rates"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "FX",
+            "Onshore USD Rates"
+          ]
         }
       ],
-      "priority": 10
+      "priority": 10,
+      "cors": true
     },
     {
       "id": "imf",

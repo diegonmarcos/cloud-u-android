@@ -29,10 +29,10 @@ data class PanelData(
  */
 object Engine {
     /** Fetches and derives [panel] from [source]. Throws IOException when nothing came back. */
-    fun load(panel: Panel, source: Source, http: Http, today: LocalDate, route: PrimaryRoute? = null): PanelData {
+    fun load(panel: Panel, source: Source, http: Http, today: LocalDate, route: PrimaryRoute? = null, fallback: Source? = null): PanelData {
         val f = panel.fetch ?: throw IOException("panel ${panel.id} has no fetch")
         val data = when (panel.derive) {
-            "latest_curve", "forward_grid", "level_change", "fx_spot", "fx_cross" -> fredPanel(panel, source, f, http, today, route)
+            "latest_curve", "forward_grid", "level_change", "fx_spot", "fx_cross" -> fredPanel(panel, source, f, http, today, route, fallback)
             "latest_per_series" -> perSeries(panel, source, f, http)
             "imf_latest" -> imf(panel, source, f, http)
             "worldbank_latest" -> worldBank(panel, source, f, http)
@@ -51,20 +51,20 @@ object Engine {
 
     // ------------------------------------------------------------------ FRED
 
-    private class FredSeries(val spec: JSONObject, val obs: List<Obs>, val viaPrimary: Boolean = false) {
+    private class FredSeries(val spec: JSONObject, val obs: List<Obs>, val viaPrimary: Boolean = false, val viaFallback: Boolean = false) {
         val label: String get() = Catalog.str(spec, "label")
         val last: Obs get() = obs.last()
         val prev: Obs? get() = obs.getOrNull(obs.size - 2)
     }
 
-    private fun fredPanel(panel: Panel, source: Source, f: JSONObject, http: Http, today: LocalDate, route: PrimaryRoute?): PanelData {
-        val series = fredSeries(source, f, http, today, route)
-        val viaPrimary = series.count { it.viaPrimary }
-        val by = when {
-            route == null || viaPrimary == 0 -> ""
-            viaPrimary == series.size -> route.source.name
-            else -> route.source.name + " + " + source.name
-        }
+    private fun fredPanel(panel: Panel, source: Source, f: JSONObject, http: Http, today: LocalDate, route: PrimaryRoute?, fallback: Source?): PanelData {
+        val series = fredSeries(source, f, http, today, route, fallback)
+        val names = listOfNotNull(
+            route?.source?.name?.takeIf { series.any { it.viaPrimary } },
+            source.name.takeIf { series.any { !it.viaPrimary && !it.viaFallback } },
+            fallback?.name?.takeIf { series.any { it.viaFallback } },
+        )
+        val by = if (names == listOf(source.name)) "" else names.joinToString(" + ")
         val asOf = series.maxOf { it.last.date }
         val missing = (f.getJSONArray("series").length() - series.size).let { if (it > 0) "$it series unavailable" else "" }
         return derived(panel, f, series, asOf, missing).copy(servedBy = by)
@@ -96,7 +96,7 @@ object Engine {
         }
     }
 
-    private fun fredSeries(source: Source, f: JSONObject, http: Http, today: LocalDate, route: PrimaryRoute?): List<FredSeries> {
+    private fun fredSeries(source: Source, f: JSONObject, http: Http, today: LocalDate, route: PrimaryRoute?, fallback: Source?): List<FredSeries> {
         val specs = f.getJSONArray("series")
         val lookback = f.optInt("lookback_days", 30)
         val tasks = (0 until specs.length()).map { i ->
@@ -116,7 +116,13 @@ object Engine {
                 } catch (e: IOException) {
                     emptyList()
                 }
-                if (obs.isEmpty()) null else FredSeries(spec, obs)
+                if (obs.isNotEmpty()) return@Callable FredSeries(spec, obs)
+                val alt = if (fallback == null) emptyList() else try {
+                    dbnomicsObs(fallback, spec, http).filter { it.date >= from }
+                } catch (e: IOException) {
+                    emptyList()
+                }
+                if (alt.isEmpty()) null else FredSeries(spec, alt, viaFallback = true)
             }
         }
         val pool = Executors.newFixedThreadPool(minOf(6, maxOf(1, tasks.size)))
@@ -127,6 +133,17 @@ object Engine {
         } finally {
             pool.shutdown()
         }
+    }
+
+    /**
+     * The second-priority source of a FRED series (the Fed H.15 / H.10 mirror on DBnomics, which allows browser requests): the series declares
+     * its DBnomics code as `dbnomics` ("<provider>/<dataset>/<series>"); a series without one has no second source. Missing values ("NA") are dropped.
+     */
+    fun dbnomicsObs(src: Source, spec: JSONObject, http: Http): List<Obs> {
+        val code = Catalog.str(spec, "dbnomics")
+        if (code.isEmpty()) return emptyList()
+        val s = Providers.dbnomics(http.get(Requests.url(src.endpoint, "/series/$code", listOf("observations" to "1", "metadata" to "0")))).firstOrNull() ?: return emptyList()
+        return s.periods.indices.mapNotNull { i -> s.values.getOrNull(i)?.let { Obs(s.periods[i], it) } }
     }
 
     private fun forwardGrid(panel: Panel, f: JSONObject, series: List<FredSeries>, asOf: String, note: String): PanelData {

@@ -172,7 +172,8 @@ private fun LiveBody(dash: Dashboard, panel: Panel, all: List<Source>, source: S
         state = withContext(Dispatchers.IO) {
             runCatching {
                 val route = Priority.route(panel, dash, all, Decl.fleetMesh) { url -> Net.reachable(url) }
-                Engine.load(panel, source, Net.http, LocalDate.now(ZoneOffset.UTC), route)
+                val fallback = Catalog.byId(all, panel.fetch?.optJSONObject("fallback")?.optString("source").orEmpty())?.takeIf { it.feeds(dash.tab, dash.entry) }
+                Engine.load(panel, source, Net.http, LocalDate.now(ZoneOffset.UTC), route, fallback)
             }
                 .fold({ Load.Ok(it, LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString()) }, { Load.Failed })
         }

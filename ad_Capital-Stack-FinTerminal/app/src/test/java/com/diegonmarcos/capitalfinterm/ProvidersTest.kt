@@ -40,4 +40,15 @@ class ProvidersTest {
         assertTrue(Providers.gdelt("Please limit requests to one every 5 seconds").isEmpty())
         assertEquals("odd", Providers.seen("odd"))
     }
+
+    @Test fun dbnomicsFedH15FixtureParsesToTheLatestNumericObservation() {
+        val s = Providers.dbnomics(DbnomicsH15Fixture.TEN_YEAR).single()
+        assertEquals("RIFLGFCY10_N.B", s.code)
+        assertEquals(6, s.periods.size)
+        assertEquals(listOf(4.97, 5.01, 5.0, 4.99, 5.05, null), s.values)
+        val (period, value, prev) = s.latest()!!
+        assertEquals("2026-10-28", period)
+        assertEquals(5.05, value, 0.0)
+        assertEquals(4.99, prev!!, 0.0)
+    }
 }
