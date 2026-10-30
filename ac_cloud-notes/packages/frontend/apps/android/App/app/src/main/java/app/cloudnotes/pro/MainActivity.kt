@@ -15,6 +15,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.cloudnotes.pro.plugin.CloudNotesThemePlugin
 import app.cloudnotes.pro.plugin.ExternalFilePlugin
+import app.cloudnotes.pro.plugin.VaultPlugin
 import app.cloudnotes.pro.plugin.LocalAIButtonPlugin
 import app.cloudnotes.pro.plugin.LocalAuthPlugin
 import app.cloudnotes.pro.plugin.LocalHashCashPlugin
@@ -58,6 +59,7 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
                 MobileBackPlugin::class.java,
                 PreviewPlugin::class.java,
                 ExternalFilePlugin::class.java,
+                VaultPlugin::class.java,
                 LocalAuthPlugin::class.java,
                 LocalHashCashPlugin::class.java,
                 LocalAIButtonPlugin::class.java,

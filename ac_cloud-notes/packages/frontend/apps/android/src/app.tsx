@@ -80,6 +80,7 @@ import { HashCash } from './plugins/hashcash';
 import { MobileBack } from './plugins/mobile-back';
 import { NbStoreNativeDBApis } from './plugins/nbstore';
 import { Preview } from './plugins/preview';
+import './plugins/vault';
 import {
   authRequestProvider,
   clearEndpointSession,

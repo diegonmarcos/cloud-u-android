@@ -1,0 +1,35 @@
+import type { FileTypeRow, VaultDecl } from './decl-types';
+
+export const extOf = (path: string): string => {
+  const base = path.slice(path.lastIndexOf('/') + 1);
+  const dot = base.lastIndexOf('.');
+  return dot <= 0 ? '' : base.slice(dot + 1).toLowerCase();
+};
+
+export const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
+
+export const stem = (path: string): string => {
+  const b = baseName(path);
+  const dot = b.lastIndexOf('.');
+  return dot <= 0 ? b : b.slice(0, dot);
+};
+
+/** Which viewer handles a file: the row of build.json::vault.file_types its extension is in. */
+export function handlerFor(decl: Pick<VaultDecl, 'file_types'>, path: string): FileTypeRow {
+  const ext = extOf(path);
+  const row = decl.file_types.find(t => t.ext.includes(ext));
+  return (
+    row ??
+    decl.file_types.find(t => t.handler === 'unsupported') ?? {
+      handler: 'unsupported',
+      label: 'Not supported yet',
+      ext: [],
+      views: [],
+      default_view: '',
+      editable: false,
+    }
+  );
+}
+
+/** Handlers whose files are text the editor can load and save. */
+export const isTextHandler = (h: FileTypeRow) => h.views.includes('source');

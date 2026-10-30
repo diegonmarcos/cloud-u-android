@@ -1,0 +1,2 @@
+/* Minimum readable sizes: body 16px floor, readable line width 46rem. */
+body{--font-text-size:max(16px,var(--font-text-size));--file-line-width:46rem;--font-ui-small:max(13px,var(--font-ui-small));}

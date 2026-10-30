@@ -1,0 +1,3 @@
+/* Canvas: keep card text crisp when zoomed to 200%+ (render at device pixel ratio, no placeholder blur). */
+.canvas-node-content{image-rendering:auto;text-rendering:optimizeLegibility;}
+.canvas-wrapper{--canvas-max-zoom:2;}

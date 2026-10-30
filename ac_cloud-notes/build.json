@@ -132,6 +132,11 @@
             "icon": "folder"
           },
           {
+            "id": "vault",
+            "label": "Vault",
+            "icon": "folder"
+          },
+          {
             "id": "new",
             "label": "New page",
             "action": "launch",
@@ -198,6 +203,737 @@
       }
     ]
   },
+  "vault": {
+    "_doc": "Cloud Notes as the fleet's open Obsidian (Notion + Obsidian + Canvas). EVERYTHING the Vault view does is read from here: how a folder is opened, which files open in which viewer, the panes, the commands, the sandbox policy, the default plugin set. The web half reads the generated mirror core/src/mobile/vault/vault-decl.json (written by scripts/gen-vault-decl.py, which also writes docs/vault-plugin-mapping.md; test/test-vault.sh fails on drift). Obsidian config in the opened folder (<folder>/.obsidian) is only READ and SHOWN in this milestone; applying it is next.",
+    "route": "/vault",
+    "open": {
+      "_doc": "Three ways to a folder. saf: ACTION_OPEN_DOCUMENT_TREE with a persisted tree URI (works for any folder the user picks). path: a direct path under direct_roots (needs All files access, like the file explorer). store: a clone in the fleet's shared store, reached through its ContentProvider (the same route Cloud Drive's StoreAccess falls back to when it is not on the shared uid); authority and permission are pinned to ac_cloud-termux/build.json::shared_store.provider by test/test-vault.sh, and the store route is unverified on a device until the phone check.",
+      "saf": true,
+      "direct_roots": [
+        "/storage/emulated/0/"
+      ],
+      "store": {
+        "authority": "cld.termux.sharedstore",
+        "permission": "com.diegonmarcos.cloud.permission.SHARED_STORE",
+        "git_subdir": "git"
+      },
+      "recent_max": 10,
+      "storage_key": "cloud-notes:vault:recent"
+    },
+    "limits": {
+      "max_text_bytes": 5242880,
+      "autosave_ms": 1500,
+      "max_notes": 5000,
+      "max_depth": 16,
+      "index_chunk": 100,
+      "skip_dirs": [
+        ".git",
+        "node_modules",
+        ".trash"
+      ]
+    },
+    "config_dir": ".obsidian",
+    "config_files": [
+      {
+        "id": "app",
+        "file": "app.json",
+        "label": "Editor and files"
+      },
+      {
+        "id": "appearance",
+        "file": "appearance.json",
+        "label": "Appearance"
+      },
+      {
+        "id": "core-plugins",
+        "file": "core-plugins.json",
+        "label": "Core plugins"
+      },
+      {
+        "id": "community-plugins",
+        "file": "community-plugins.json",
+        "label": "Community plugins"
+      },
+      {
+        "id": "hotkeys",
+        "file": "hotkeys.json",
+        "label": "Hotkeys"
+      },
+      {
+        "id": "graph",
+        "file": "graph.json",
+        "label": "Graph"
+      },
+      {
+        "id": "canvas",
+        "file": "canvas.json",
+        "label": "Canvas"
+      }
+    ],
+    "config_dirs": [
+      {
+        "id": "snippets",
+        "dir": "snippets",
+        "ext": ".css",
+        "label": "CSS snippets"
+      },
+      {
+        "id": "plugins",
+        "dir": "plugins",
+        "manifest": "manifest.json",
+        "label": "Installed plugin folders"
+      }
+    ],
+    "layout": {
+      "_doc": "The Obsidian shell inside the content area; the app chrome (top bar, bottom nav) stays the shared nav's. ribbon = the left icon strip, left_panes = tabs of the left sidebar, right_panes = tabs of the right sidebar, status = status bar items. Icons are names the Vault view draws itself.",
+      "ribbon": [
+        {
+          "id": "files",
+          "label": "Files",
+          "icon": "folder",
+          "action": "pane:left:files"
+        },
+        {
+          "id": "search",
+          "label": "Search",
+          "icon": "search",
+          "action": "pane:left:search"
+        },
+        {
+          "id": "switcher",
+          "label": "Quick switcher",
+          "icon": "jump",
+          "action": "command:quick-switcher"
+        },
+        {
+          "id": "graph",
+          "label": "Graph view",
+          "icon": "graph",
+          "action": "command:open-graph"
+        },
+        {
+          "id": "canvas",
+          "label": "New canvas",
+          "icon": "canvas",
+          "action": "command:new-canvas"
+        },
+        {
+          "id": "palette",
+          "label": "Command palette",
+          "icon": "terminal",
+          "action": "command:command-palette"
+        },
+        {
+          "id": "configs",
+          "label": "Vault configs",
+          "icon": "gear",
+          "action": "command:vault-configs"
+        },
+        {
+          "id": "open",
+          "label": "Open another vault",
+          "icon": "vault",
+          "action": "command:open-vault"
+        }
+      ],
+      "left_panes": [
+        "files",
+        "search"
+      ],
+      "right_panes": [
+        "outline",
+        "backlinks",
+        "outgoing",
+        "tags"
+      ],
+      "status": [
+        "backlinks",
+        "words",
+        "chars",
+        "path"
+      ],
+      "tab_max": 12,
+      "wide_breakpoint_px": 900
+    },
+    "commands": [
+      {
+        "id": "command-palette",
+        "label": "Open command palette",
+        "hotkey": "Ctrl+P"
+      },
+      {
+        "id": "quick-switcher",
+        "label": "Open quick switcher",
+        "hotkey": "Ctrl+O"
+      },
+      {
+        "id": "open-vault",
+        "label": "Open vault (folder)"
+      },
+      {
+        "id": "new-note",
+        "label": "New note",
+        "hotkey": "Ctrl+N"
+      },
+      {
+        "id": "new-canvas",
+        "label": "New canvas"
+      },
+      {
+        "id": "save",
+        "label": "Save",
+        "hotkey": "Ctrl+S"
+      },
+      {
+        "id": "toggle-mode",
+        "label": "Toggle edit and preview",
+        "hotkey": "Ctrl+E"
+      },
+      {
+        "id": "close-tab",
+        "label": "Close tab",
+        "hotkey": "Ctrl+W"
+      },
+      {
+        "id": "toggle-left",
+        "label": "Toggle left sidebar"
+      },
+      {
+        "id": "toggle-right",
+        "label": "Toggle right sidebar"
+      },
+      {
+        "id": "search-in-files",
+        "label": "Search in files",
+        "hotkey": "Ctrl+Shift+F"
+      },
+      {
+        "id": "open-graph",
+        "label": "Open graph view"
+      },
+      {
+        "id": "vault-configs",
+        "label": "Show vault configs (.obsidian)"
+      },
+      {
+        "id": "toggle-hidden",
+        "label": "Show or hide hidden files"
+      },
+      {
+        "id": "toggle-cdn",
+        "label": "Allow or block CDN scripts in HTML pages"
+      },
+      {
+        "id": "reindex",
+        "label": "Rebuild the vault index"
+      }
+    ],
+    "file_types": [
+      {
+        "handler": "markdown",
+        "label": "Markdown",
+        "ext": [
+          "md",
+          "markdown"
+        ],
+        "views": [
+          "preview",
+          "source"
+        ],
+        "default_view": "preview",
+        "editable": true
+      },
+      {
+        "handler": "canvas",
+        "label": "JSON Canvas",
+        "ext": [
+          "canvas"
+        ],
+        "views": [
+          "canvas",
+          "source"
+        ],
+        "default_view": "canvas",
+        "editable": true
+      },
+      {
+        "handler": "json",
+        "label": "JSON",
+        "ext": [
+          "json",
+          "jsonc",
+          "geojson"
+        ],
+        "views": [
+          "tree",
+          "source"
+        ],
+        "default_view": "tree",
+        "editable": true
+      },
+      {
+        "handler": "html",
+        "label": "HTML",
+        "ext": [
+          "html",
+          "htm",
+          "xhtml"
+        ],
+        "views": [
+          "render",
+          "source"
+        ],
+        "default_view": "render",
+        "editable": true
+      },
+      {
+        "handler": "mermaid",
+        "label": "Mermaid",
+        "ext": [
+          "mmd",
+          "mermaid"
+        ],
+        "views": [
+          "render",
+          "source"
+        ],
+        "default_view": "render",
+        "editable": true
+      },
+      {
+        "handler": "image",
+        "label": "Image",
+        "ext": [
+          "png",
+          "jpg",
+          "jpeg",
+          "gif",
+          "webp",
+          "bmp",
+          "avif",
+          "svg"
+        ],
+        "views": [
+          "image"
+        ],
+        "default_view": "image",
+        "editable": false
+      },
+      {
+        "handler": "text",
+        "label": "Text",
+        "ext": [
+          "txt",
+          "css",
+          "js",
+          "ts",
+          "yml",
+          "yaml",
+          "csv",
+          "xml",
+          "toml",
+          "ini",
+          "sh",
+          "py",
+          "log"
+        ],
+        "views": [
+          "source"
+        ],
+        "default_view": "source",
+        "editable": true
+      },
+      {
+        "handler": "unsupported",
+        "label": "Not supported yet",
+        "ext": [
+          "pdf"
+        ],
+        "views": [],
+        "default_view": "",
+        "editable": false
+      }
+    ],
+    "html": {
+      "_doc": "A page renders in an iframe with an opaque origin: sandbox has allow-scripts only (no same-origin, forms, popups, top navigation, downloads), and a CSP inside the document. Offline by default: default-src none, so a CDN script or font is blocked. cdn.default false; the toggle (per tab, never remembered across vaults) adds ONLY the hosts listed here, for scripts, styles and fonts. The vault's book (2.1.1) loads Tailwind from cdn.tailwindcss.com and Inter from Google Fonts; both are listed.",
+      "sandbox": "allow-scripts",
+      "csp_default": {
+        "default-src": [
+          "'none'"
+        ],
+        "img-src": [
+          "data:",
+          "blob:"
+        ],
+        "style-src": [
+          "'unsafe-inline'"
+        ],
+        "font-src": [
+          "data:"
+        ],
+        "script-src": [
+          "'unsafe-inline'"
+        ],
+        "connect-src": [
+          "'none'"
+        ],
+        "frame-src": [
+          "'none'"
+        ],
+        "form-action": [
+          "'none'"
+        ],
+        "base-uri": [
+          "'none'"
+        ]
+      },
+      "cdn": {
+        "default": false,
+        "label": "Allow CDN scripts and fonts",
+        "script": [
+          "https://cdn.tailwindcss.com",
+          "https://cdn.jsdelivr.net",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com"
+        ],
+        "style": [
+          "https://fonts.googleapis.com",
+          "https://cdn.jsdelivr.net",
+          "https://unpkg.com",
+          "https://cdnjs.cloudflare.com"
+        ],
+        "font": [
+          "https://fonts.gstatic.com",
+          "https://cdn.jsdelivr.net",
+          "https://cdnjs.cloudflare.com"
+        ],
+        "script_extra": [
+          "'unsafe-eval'"
+        ]
+      }
+    },
+    "plugins_doc": "Obsidian plugin to Cloud Notes feature. status: builtin = delivered in the app now, planned = on the roadmap (the plugin is listed as not yet supported), na = not applicable (hosted service, desktop-only, or owned by another fleet app). The default set is the union of the core and community plugins enabled in cloud-me-pvt-notes and git-repos-master; test/test-vault.sh fails when a plugin enabled in either vault is missing here.",
+    "plugins": [
+      {
+        "id": "file-explorer",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Files pane: folder tree, create, open, show-hidden toggle"
+      },
+      {
+        "id": "global-search",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Search pane: file names and note contents"
+      },
+      {
+        "id": "switcher",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Quick switcher (Ctrl+O): fuzzy file name jump"
+      },
+      {
+        "id": "graph",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Graph view over the vault link index (shared graph canvas)"
+      },
+      {
+        "id": "backlink",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Right sidebar: Backlinks"
+      },
+      {
+        "id": "canvas",
+        "kind": "core",
+        "status": "builtin",
+        "feature": ".canvas files (JSON Canvas) viewed and edited in the canvas pane"
+      },
+      {
+        "id": "outgoing-link",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Right sidebar: Outgoing links, with unresolved links marked"
+      },
+      {
+        "id": "tag-pane",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Right sidebar: Tags, with counts, nested tags"
+      },
+      {
+        "id": "footnotes",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Footnote rendering is not in the Markdown renderer yet"
+      },
+      {
+        "id": "properties",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Frontmatter shown as a Properties block above the note"
+      },
+      {
+        "id": "page-preview",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Hover preview of a linked note"
+      },
+      {
+        "id": "daily-notes",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Vault daily note; the workspace Daily page already exists for app docs"
+      },
+      {
+        "id": "templates",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Insert template command, with the Templater work"
+      },
+      {
+        "id": "note-composer",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Merge and extract notes"
+      },
+      {
+        "id": "command-palette",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Command palette (Ctrl+P), commands declared in build.json::vault.commands"
+      },
+      {
+        "id": "slash-command",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Slash menu in the editor"
+      },
+      {
+        "id": "editor-status",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Status bar: words, characters, backlinks, path"
+      },
+      {
+        "id": "bookmarks",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Bookmarks pane"
+      },
+      {
+        "id": "markdown-importer",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Existing vault import into the workspace (vault-import.ts)"
+      },
+      {
+        "id": "zk-prefixer",
+        "kind": "core",
+        "status": "na",
+        "feature": "Unique-note prefixer: not wanted, notes keep their names"
+      },
+      {
+        "id": "random-note",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Open a random note command"
+      },
+      {
+        "id": "outline",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Right sidebar: Outline from headings"
+      },
+      {
+        "id": "word-count",
+        "kind": "core",
+        "status": "builtin",
+        "feature": "Status bar word and character count"
+      },
+      {
+        "id": "slides",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Presentation from a note"
+      },
+      {
+        "id": "audio-recorder",
+        "kind": "core",
+        "status": "na",
+        "feature": "Cloud Camera and the recorder apps own capture; attach the file instead"
+      },
+      {
+        "id": "workspaces",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Saved pane layouts"
+      },
+      {
+        "id": "file-recovery",
+        "kind": "core",
+        "status": "na",
+        "feature": "The vault is a git clone; history is git, handled in Cloud Drive Git"
+      },
+      {
+        "id": "publish",
+        "kind": "core",
+        "status": "na",
+        "feature": "Obsidian Publish is a hosted service; Cloud Notes is de-clouded"
+      },
+      {
+        "id": "sync",
+        "kind": "core",
+        "status": "na",
+        "feature": "Obsidian Sync is a hosted service; the fleet syncs vaults through Cloud Drive"
+      },
+      {
+        "id": "bases",
+        "kind": "core",
+        "status": "planned",
+        "feature": "Database views over properties, with the dataview work"
+      },
+      {
+        "id": "webviewer",
+        "kind": "core",
+        "status": "na",
+        "feature": "The HTML viewer (sandboxed) covers local pages; no general web browsing in the editor"
+      },
+      {
+        "id": "obsidian-excalidraw-plugin",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Drawing: .canvas covers boards; .excalidraw drawings are not opened yet"
+      },
+      {
+        "id": "templater-obsidian",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Templates with variables, with the templates core plugin"
+      },
+      {
+        "id": "dataview",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Query blocks over frontmatter and tasks, built on the vault index"
+      },
+      {
+        "id": "obsidian-tasks-plugin",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Task queries; checkboxes already render and the index extracts tasks"
+      },
+      {
+        "id": "table-editor-obsidian",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Markdown table editing helpers; tables render now"
+      },
+      {
+        "id": "obsidian-git",
+        "kind": "community",
+        "status": "na",
+        "feature": "Git belongs to Cloud Drive Git (the vault is a clone in the shared store)"
+      },
+      {
+        "id": "calendar",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Calendar pane for daily notes, with the daily-notes core plugin"
+      },
+      {
+        "id": "obsidian-style-settings",
+        "kind": "community",
+        "status": "planned",
+        "feature": "CSS snippet settings; snippets are listed read-only now"
+      },
+      {
+        "id": "obsidian-kanban",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Kanban boards from markdown"
+      },
+      {
+        "id": "remotely-save",
+        "kind": "community",
+        "status": "na",
+        "feature": "Third-party cloud sync; the fleet uses Cloud Drive"
+      },
+      {
+        "id": "quickadd",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Capture macros, with templates and commands"
+      },
+      {
+        "id": "omnisearch",
+        "kind": "community",
+        "status": "builtin",
+        "feature": "Full-text search over note contents in the Search pane (ranked fuzzy search is next)"
+      },
+      {
+        "id": "beautiful-mermaid-renderer",
+        "kind": "community",
+        "status": "builtin",
+        "feature": "Mermaid fences and .mmd files render (mermaid library)"
+      },
+      {
+        "id": "beautiful-mermaid",
+        "kind": "community",
+        "status": "builtin",
+        "feature": "Mermaid fences and .mmd files render (mermaid library)"
+      },
+      {
+        "id": "pdf-plus",
+        "kind": "community",
+        "status": "planned",
+        "feature": "PDF viewer and annotations"
+      },
+      {
+        "id": "obsidian-zotero-desktop-connector",
+        "kind": "community",
+        "status": "na",
+        "feature": "Needs the Zotero desktop app, which the phone does not have"
+      },
+      {
+        "id": "obsidian-html-plugin",
+        "kind": "community",
+        "status": "builtin",
+        "feature": ".html files: sandboxed render plus source, offline unless the CDN toggle is on"
+      },
+      {
+        "id": "json-editor",
+        "kind": "community",
+        "status": "builtin",
+        "feature": ".json files: tree viewer plus text editor"
+      },
+      {
+        "id": "xml-viewer",
+        "kind": "community",
+        "status": "planned",
+        "feature": "XML tree viewer; .xml opens as text now"
+      },
+      {
+        "id": "notebook-navigator",
+        "kind": "community",
+        "status": "planned",
+        "feature": "Alternative file navigator; the Files pane is the plain tree"
+      },
+      {
+        "id": "show-hidden-files",
+        "kind": "community",
+        "status": "builtin",
+        "feature": "Files pane toggle: show dotfiles and the .obsidian folder"
+      },
+      {
+        "id": "new-3d-graph",
+        "kind": "community",
+        "status": "planned",
+        "feature": "3D graph; the 2D graph ships now"
+      }
+    ]
+  },
   "signing": {
     "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
@@ -258,7 +994,8 @@
         "python3",
         "git",
         "curl",
-        "jq"
+        "jq",
+        "node"
       ]
   },
     "root_scope": {

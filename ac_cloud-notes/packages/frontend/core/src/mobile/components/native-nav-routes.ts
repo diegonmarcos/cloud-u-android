@@ -58,6 +58,7 @@ export const NATIVE_NAV_TARGETS: Record<string, NativeNavTarget> = {
   'home/daily': { kind: 'route', to: '/journals' },
   'pages/all': { kind: 'route', to: '/all' },
   'pages/tags': { kind: 'route', to: '/tag' },
+  'pages/vault': { kind: 'route', to: '/vault' },
   'pages/collections': { kind: 'route', to: '/collection' },
   'pages/new': { kind: 'action', action: 'new-page' },
   'canvas/boards': { kind: 'route', to: '/boards' },
@@ -106,6 +107,7 @@ const RESERVED_ROOTS = new Set([
   'trash',
   'graph',
   'boards',
+  'vault',
 ]);
 
 /** `/<docId>` -> docId; any other location -> null. */

@@ -1,0 +1,22 @@
+{
+  "showUnsupportedFiles": true,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "showFrontmatter": true,
+  "livePreview": true,
+  "defaultViewMode": "preview",
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "shortest",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "9_others/obsidian/attachments",
+  "userIgnoreFilters": [
+    "node_modules/",
+    ".git/",
+    "_dotfiles/apps/dist/",
+    "_dotfiles/git/dist/",
+    "repo-folders-tree.json",
+    "repo-folders-tree.html",
+    "repos-tree.json"
+  ],
+  "tabSize": 4
+}

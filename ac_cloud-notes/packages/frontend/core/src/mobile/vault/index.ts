@@ -1,0 +1,1 @@
+export { VaultView } from './VaultView';

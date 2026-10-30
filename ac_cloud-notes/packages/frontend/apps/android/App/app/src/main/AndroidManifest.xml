@@ -5,6 +5,9 @@
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
+        <!-- Vault view, store route: the fleet shared store's ContentProvider
+             (build.json::vault.open.store; pinned to ac_cloud-termux by test-vault.sh). -->
+        <provider android:authorities="cld.termux.sharedstore" />
     </queries>
 
     <application
@@ -61,4 +64,8 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+
+    <!-- Vault view: the fleet shared store's provider (signature permission, granted only
+         to apps signed with the constellation key; build.json::vault.open.store). -->
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.SHARED_STORE" />
 </manifest>

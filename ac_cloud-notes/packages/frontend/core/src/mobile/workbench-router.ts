@@ -10,6 +10,7 @@ import { Component as Journals } from './pages/workspace/journals';
 import { Component as Search } from './pages/workspace/search';
 import { Component as Tag } from './pages/workspace/tag';
 import { Component as TagDetail } from './pages/workspace/tag/detail';
+import { Component as Vault } from './pages/workspace/vault';
 
 export const workbenchRoutes = [
   {
@@ -55,6 +56,10 @@ export const workbenchRoutes = [
   {
     path: '/graph/local',
     Component: LocalGraph,
+  },
+  {
+    path: '/vault',
+    Component: Vault,
   },
   {
     path: '/journals',

@@ -50,6 +50,7 @@ describe('native nav routes', () => {
     expect(docIdFromPath('/tag/xyz')).toBeNull();
     expect(docIdFromPath('/all')).toBeNull();
     expect(docIdFromPath('/boards')).toBeNull();
+    expect(docIdFromPath('/vault')).toBeNull();
     expect(docIdFromPath('/')).toBeNull();
   });
 

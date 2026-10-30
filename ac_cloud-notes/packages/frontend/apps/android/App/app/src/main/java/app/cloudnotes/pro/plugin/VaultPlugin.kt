@@ -1,0 +1,443 @@
+package app.cloudnotes.pro.plugin
+
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.provider.Settings
+import android.util.Base64
+import android.webkit.MimeTypeMap
+import androidx.activity.result.ActivityResult
+import com.getcapacitor.JSArray
+import com.getcapacitor.JSObject
+import com.getcapacitor.Plugin
+import com.getcapacitor.PluginCall
+import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.ActivityCallback
+import com.getcapacitor.annotation.CapacitorPlugin
+import java.io.File
+
+/**
+ * The Vault view's folder access (build.json::vault, web half core/src/mobile/vault).
+ *
+ * A vault root is one of three things, told apart by its first characters:
+ *  - `content://...`  a SAF tree the user picked (ACTION_OPEN_DOCUMENT_TREE); the grant is
+ *    persisted, so the vault opens again after a restart with no prompt;
+ *  - `/storage/emulated/0/...`  a direct path (same All-files access as the file explorer);
+ *  - `store:<relative path>`  a folder in the fleet shared store, reached through its
+ *    ContentProvider (this app is not on the store's shared uid). Unverified on a device.
+ * Entries are addressed by an opaque id the listing returned (SAF document id, path relative
+ * to the root), never by a path the web side made up; the web adapter (vault-fs.ts) keeps the
+ * path to id map.
+ */
+@CapacitorPlugin(name = "Vault")
+class VaultPlugin : Plugin() {
+
+    companion object {
+        /** build.json::vault.open.direct_roots */
+        private val DIRECT_ROOTS = listOf("/storage/emulated/0/")
+        /** build.json::vault.open.store.authority */
+        private const val STORE_AUTHORITY = "cld.termux.sharedstore"
+        /** build.json::vault.limits.max_text_bytes */
+        private const val MAX_TEXT = 5L * 1024 * 1024
+        private const val MAX_BINARY = 25L * 1024 * 1024
+    }
+
+    private class Fail(val code: String, message: String) : Exception(message)
+
+    private interface Backend {
+        fun list(id: String): List<JSObject>
+        fun open(id: String): java.io.InputStream
+        fun sizeOf(id: String): Long
+        fun write(id: String, bytes: ByteArray)
+        fun create(parentId: String, name: String, isDir: Boolean): String
+        fun rename(id: String, name: String): String
+        fun remove(id: String)
+    }
+
+    private fun entry(name: String, id: String, isDir: Boolean, size: Long, mtime: Long) =
+        JSObject().put("name", name).put("id", id).put("isDir", isDir).put("size", size).put("mtime", mtime)
+
+    private fun mimeFor(name: String): String =
+        MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.', "").lowercase())
+            ?: "application/octet-stream"
+
+    // ---------------------------------------------------------------- SAF
+
+    private inner class Saf(root: String) : Backend {
+        private val tree = Uri.parse(root)
+        private fun doc(id: String): Uri =
+            DocumentsContract.buildDocumentUriUsingTree(tree, id.ifEmpty { DocumentsContract.getTreeDocumentId(tree) })
+
+        override fun list(id: String): List<JSObject> {
+            val docId = id.ifEmpty { DocumentsContract.getTreeDocumentId(tree) }
+            val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+            val out = ArrayList<JSObject>()
+            val cols = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_SIZE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+            )
+            context.contentResolver.query(children, cols, null, null, null)?.use { c ->
+                while (c.moveToNext()) {
+                    out.add(
+                        entry(
+                            c.getString(1) ?: continue,
+                            c.getString(0),
+                            c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR,
+                            if (c.isNull(3)) 0L else c.getLong(3),
+                            if (c.isNull(4)) 0L else c.getLong(4),
+                        )
+                    )
+                }
+            }
+            return out
+        }
+
+        override fun open(id: String) =
+            context.contentResolver.openInputStream(doc(id)) ?: throw Fail("READ_ERROR", "Cannot open the document.")
+
+        override fun sizeOf(id: String): Long {
+            context.contentResolver.query(doc(id), arrayOf(DocumentsContract.Document.COLUMN_SIZE), null, null, null)?.use {
+                if (it.moveToFirst() && !it.isNull(0)) return it.getLong(0)
+            }
+            return 0L
+        }
+
+        override fun write(id: String, bytes: ByteArray) {
+            val out = context.contentResolver.openOutputStream(doc(id), "wt")
+                ?: throw Fail("WRITE_ERROR", "Cannot open the document for writing.")
+            out.use { it.write(bytes) }
+        }
+
+        override fun create(parentId: String, name: String, isDir: Boolean): String {
+            val mime = if (isDir) DocumentsContract.Document.MIME_TYPE_DIR else mimeFor(name)
+            val made = DocumentsContract.createDocument(context.contentResolver, doc(parentId), mime, name)
+                ?: throw Fail("WRITE_ERROR", "The folder does not accept new files.")
+            return DocumentsContract.getDocumentId(made)
+        }
+
+        override fun rename(id: String, name: String): String {
+            val renamed = DocumentsContract.renameDocument(context.contentResolver, doc(id), name)
+                ?: throw Fail("WRITE_ERROR", "Rename is not supported here.")
+            return DocumentsContract.getDocumentId(renamed)
+        }
+
+        override fun remove(id: String) {
+            if (!DocumentsContract.deleteDocument(context.contentResolver, doc(id))) {
+                throw Fail("WRITE_ERROR", "Delete failed.")
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- direct path
+
+    private inner class Direct(private val root: String) : Backend {
+        private fun file(id: String): File {
+            val base = File(root).canonicalFile
+            val f = if (id.isEmpty()) base else File(base, id).canonicalFile
+            if (f != base && !f.path.startsWith(base.path + File.separator)) {
+                throw Fail("OUTSIDE_VAULT", "That path leaves the vault.")
+            }
+            return f
+        }
+
+        override fun list(id: String): List<JSObject> {
+            val base = file(id)
+            if (!base.isDirectory) throw Fail("NOT_A_DIRECTORY", "Not a folder.")
+            return (base.listFiles() ?: throw Fail("READ_ERROR", "Cannot list the folder.")).map {
+                entry(it.name, if (id.isEmpty()) it.name else "$id/${it.name}", it.isDirectory, if (it.isDirectory) 0L else it.length(), it.lastModified())
+            }
+        }
+
+        override fun open(id: String) = file(id).inputStream()
+        override fun sizeOf(id: String) = file(id).length()
+        override fun write(id: String, bytes: ByteArray) = file(id).writeBytes(bytes)
+
+        override fun create(parentId: String, name: String, isDir: Boolean): String {
+            if (name.contains('/') || name == ".." || name == ".") throw Fail("BAD_NAME", "Bad file name.")
+            val id = if (parentId.isEmpty()) name else "$parentId/$name"
+            val f = file(id)
+            if (f.exists()) throw Fail("EXISTS", "$name already exists.")
+            if (isDir) f.mkdirs() else f.createNewFile()
+            return id
+        }
+
+        override fun rename(id: String, name: String): String {
+            if (name.contains('/')) throw Fail("BAD_NAME", "Bad file name.")
+            val from = file(id)
+            val newId = id.substringBeforeLast('/', "").let { if (it.isEmpty()) name else "$it/$name" }
+            if (!from.renameTo(file(newId))) throw Fail("WRITE_ERROR", "Rename failed.")
+            return newId
+        }
+
+        override fun remove(id: String) {
+            if (id.isEmpty() || !file(id).deleteRecursively()) throw Fail("WRITE_ERROR", "Delete failed.")
+        }
+    }
+
+    // ---------------------------------------------------------------- shared store (provider)
+
+    private inner class Store(root: String) : Backend {
+        private val base = root.removePrefix("store:").trim('/')
+        private fun rel(id: String) = listOf(base, id).filter { it.isNotEmpty() }.joinToString("/")
+        private fun uri(id: String): Uri = Uri.parse("content://$STORE_AUTHORITY/tree/" + Uri.encode(rel(id), "/"))
+
+        override fun list(id: String): List<JSObject> {
+            val out = ArrayList<JSObject>()
+            context.contentResolver.query(uri(id), null, null, null, null)?.use { c ->
+                val iName = c.getColumnIndex("name")
+                val iDir = c.getColumnIndex("is_dir")
+                val iSize = c.getColumnIndex("size")
+                val iMod = c.getColumnIndex("last_modified")
+                if (iName < 0) throw Fail("READ_ERROR", "The store did not answer with a listing.")
+                while (c.moveToNext()) {
+                    val name = c.getString(iName) ?: continue
+                    out.add(
+                        entry(
+                            name,
+                            if (id.isEmpty()) name else "$id/$name",
+                            iDir >= 0 && c.getInt(iDir) != 0,
+                            if (iSize >= 0 && !c.isNull(iSize)) c.getLong(iSize) else 0L,
+                            if (iMod >= 0 && !c.isNull(iMod)) c.getLong(iMod) else 0L,
+                        )
+                    )
+                }
+            } ?: throw Fail("STORE_UNAVAILABLE", "The shared store is not reachable. Install Cloud Terminal and open it once.")
+            return out
+        }
+
+        override fun open(id: String) =
+            context.contentResolver.openInputStream(uri(id)) ?: throw Fail("READ_ERROR", "Cannot open the file.")
+
+        override fun sizeOf(id: String): Long {
+            context.contentResolver.query(uri(id), null, null, null, null)?.use { c ->
+                val i = c.getColumnIndex("size")
+                if (i >= 0 && c.moveToFirst() && !c.isNull(i)) return c.getLong(i)
+            }
+            return 0L
+        }
+
+        override fun write(id: String, bytes: ByteArray) {
+            val out = context.contentResolver.openOutputStream(uri(id), "wt")
+                ?: throw Fail("WRITE_ERROR", "Cannot open the file for writing.")
+            out.use { it.write(bytes) }
+        }
+
+        override fun create(parentId: String, name: String, isDir: Boolean): String {
+            if (name.contains('/') || name == ".." || name == ".") throw Fail("BAD_NAME", "Bad file name.")
+            val id = if (parentId.isEmpty()) name else "$parentId/$name"
+            if (isDir) {
+                val r = context.contentResolver.call(Uri.parse("content://$STORE_AUTHORITY"), "mkdir", rel(id), null)
+                if (r == null) throw Fail("WRITE_ERROR", "The store did not create the folder.")
+            } else {
+                write(id, ByteArray(0))
+            }
+            return id
+        }
+
+        override fun rename(id: String, name: String): String =
+            throw Fail("NOT_SUPPORTED", "Rename is not available on the store route yet.")
+
+        override fun remove(id: String) {
+            if (id.isEmpty() || context.contentResolver.delete(uri(id), null, null) < 1) throw Fail("WRITE_ERROR", "Delete failed.")
+        }
+    }
+
+    // ---------------------------------------------------------------- plumbing
+
+    private fun hasAllFilesAccess(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true
+
+    private fun backend(root: String): Backend = when {
+        root.startsWith("content://") -> Saf(root)
+        root.startsWith("store:") -> Store(root)
+        else -> {
+            val canon = try { File(root).canonicalPath } catch (e: Exception) { throw Fail("READ_ERROR", "Cannot resolve $root") }
+            if (DIRECT_ROOTS.none { "$canon/".startsWith(File(it).canonicalPath.trimEnd('/') + "/") }) {
+                throw Fail("OUTSIDE_EMULATED_STORAGE", "A vault path must be inside /storage/emulated/0/.")
+            }
+            if (!hasAllFilesAccess()) {
+                throw Fail("PERMISSION_DENIED", "All-files access is not granted. Open Settings, Apps, Cloud Notes, All files access, Allow.")
+            }
+            Direct(canon)
+        }
+    }
+
+    /** Runs [body] for a call and turns every failure into a reject with a code and a message. */
+    private fun guarded(call: PluginCall, body: (root: String, b: Backend) -> Unit) {
+        val root = call.getString("root")?.trim().orEmpty()
+        if (root.isEmpty()) return call.reject("No vault was given.", "NO_ROOT")
+        try {
+            body(root, backend(root))
+        } catch (e: Fail) {
+            call.reject(e.message ?: e.code, e.code)
+        } catch (e: SecurityException) {
+            call.reject("Access to this folder was revoked. Open the vault again.", "PERMISSION_DENIED")
+        } catch (e: Exception) {
+            call.reject("${e.message ?: "unknown error"}", "IO_ERROR")
+        }
+    }
+
+    private fun treeName(tree: Uri): String {
+        val docId = DocumentsContract.getTreeDocumentId(tree)
+        val doc = DocumentsContract.buildDocumentUriUsingTree(tree, docId)
+        context.contentResolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use {
+            if (it.moveToFirst()) return it.getString(0) ?: docId
+        }
+        return docId.substringAfterLast(':').substringAfterLast('/').ifEmpty { docId }
+    }
+
+    // ---------------------------------------------------------------- methods
+
+    @PluginMethod
+    fun pickVault(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+        )
+        startActivityForResult(call, intent, "pickVaultResult")
+    }
+
+    @ActivityCallback
+    private fun pickVaultResult(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        val uri = result.data?.data
+        if (result.resultCode != Activity.RESULT_OK || uri == null) {
+            call.reject("No folder was chosen.", "CANCELLED")
+            return
+        }
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            call.resolve(JSObject().put("root", uri.toString()).put("name", treeName(uri)))
+        } catch (e: Exception) {
+            call.reject("The folder could not be kept open (${e.message ?: "unknown error"}).", "GRANT_ERROR")
+        }
+    }
+
+    @PluginMethod
+    fun persisted(call: PluginCall) {
+        val vaults = JSArray()
+        for (p in context.contentResolver.persistedUriPermissions) {
+            if (!p.isReadPermission || !DocumentsContract.isTreeUri(p.uri)) continue
+            try {
+                vaults.put(JSObject().put("root", p.uri.toString()).put("name", treeName(p.uri)))
+            } catch (e: Exception) {
+                // a tree whose provider is gone is skipped, not fatal
+            }
+        }
+        call.resolve(JSObject().put("vaults", vaults))
+    }
+
+    @PluginMethod
+    fun releaseVault(call: PluginCall) {
+        val root = call.getString("root")?.trim().orEmpty()
+        try {
+            if (root.startsWith("content://")) {
+                context.contentResolver.releasePersistableUriPermission(
+                    Uri.parse(root),
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("${e.message ?: "unknown error"}", "GRANT_ERROR")
+        }
+    }
+
+    /** A direct path or store address typed or remembered: validates it and answers the vault root. */
+    @PluginMethod
+    fun openPath(call: PluginCall) {
+        val path = call.getString("path")?.trim().orEmpty()
+        if (path.isEmpty()) return call.reject("No path was given.", "NO_PATH")
+        try {
+            val b = backend(path)
+            b.list("")
+            val name = path.removePrefix("store:").trimEnd('/').substringAfterLast('/').ifEmpty { path }
+            call.resolve(JSObject().put("root", if (path.startsWith("store:")) path else File(path).canonicalPath).put("name", name))
+        } catch (e: Fail) {
+            call.reject(e.message ?: e.code, e.code)
+        } catch (e: Exception) {
+            call.reject("${e.message ?: "unknown error"}", "IO_ERROR")
+        }
+    }
+
+    @PluginMethod
+    fun list(call: PluginCall) = guarded(call) { _, b ->
+        val entries = JSArray()
+        b.list(call.getString("id").orEmpty()).forEach { entries.put(it) }
+        call.resolve(JSObject().put("entries", entries))
+    }
+
+    @PluginMethod
+    fun readText(call: PluginCall) = guarded(call) { _, b ->
+        val id = call.getString("id").orEmpty()
+        val size = b.sizeOf(id)
+        if (size > MAX_TEXT) throw Fail("TOO_LARGE", "The file is larger than the 5 MiB text limit.")
+        val bytes = b.open(id).use { it.readBytes() }
+        call.resolve(JSObject().put("text", String(bytes, Charsets.UTF_8)).put("size", bytes.size))
+    }
+
+    @PluginMethod
+    fun readBinary(call: PluginCall) = guarded(call) { _, b ->
+        val id = call.getString("id").orEmpty()
+        if (b.sizeOf(id) > MAX_BINARY) throw Fail("TOO_LARGE", "The file is larger than the 25 MiB limit.")
+        val bytes = b.open(id).use { it.readBytes() }
+        call.resolve(JSObject().put("data", Base64.encodeToString(bytes, Base64.NO_WRAP)).put("size", bytes.size))
+    }
+
+    @PluginMethod
+    fun writeText(call: PluginCall) = guarded(call) { _, b ->
+        val id = call.getString("id").orEmpty()
+        val text = call.getString("text") ?: throw Fail("NO_TEXT", "No text was given.")
+        if (id.isEmpty()) throw Fail("IS_DIRECTORY", "The vault root is a folder.")
+        b.write(id, text.toByteArray(Charsets.UTF_8))
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun create(call: PluginCall) = guarded(call) { _, b ->
+        val name = call.getString("name")?.trim().orEmpty()
+        if (name.isEmpty()) throw Fail("BAD_NAME", "Give the new file a name.")
+        val id = b.create(call.getString("parentId").orEmpty(), name, call.getBoolean("isDir") ?: false)
+        call.resolve(JSObject().put("id", id))
+    }
+
+    @PluginMethod
+    fun rename(call: PluginCall) = guarded(call) { _, b ->
+        val name = call.getString("name")?.trim().orEmpty()
+        if (name.isEmpty()) throw Fail("BAD_NAME", "Give the file a name.")
+        call.resolve(JSObject().put("id", b.rename(call.getString("id").orEmpty(), name)))
+    }
+
+    @PluginMethod
+    fun remove(call: PluginCall) = guarded(call) { _, b ->
+        b.remove(call.getString("id").orEmpty())
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun openSettings(call: PluginCall) {
+        val ctx = activity ?: context
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+        } else {
+            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+        }
+        try {
+            ctx.startActivity(intent)
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Cannot open the settings screen. Grant the storage permission in Android Settings.", "SETTINGS_ERROR")
+        }
+    }
+}

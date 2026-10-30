@@ -1,0 +1,10 @@
+{
+  "id": "json-editor",
+  "name": "JSON Editor",
+  "version": "1.20.1",
+  "minAppVersion": "1.11.4",
+  "description": "View and edit JSON and JSONC files in a tree or source view. Comments and formatting in JSONC survive editing. Renders JSON code blocks in Markdown notes.",
+  "author": "Johannes Kaindl",
+  "authorUrl": "https://github.com/johannes-kaindl",
+  "isDesktopOnly": false
+}

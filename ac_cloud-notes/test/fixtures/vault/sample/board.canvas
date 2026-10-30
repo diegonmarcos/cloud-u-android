@@ -1,0 +1,12 @@
+{
+	"nodes":[
+		{"id":"g1","type":"group","x":-20,"y":-20,"width":560,"height":320,"label":"Plan","color":"4"},
+		{"id":"n1","type":"text","text":"# Start\nSee [[Home]]","x":0,"y":0,"width":250,"height":120},
+		{"id":"n2","type":"file","file":"notes/Ideas.md","x":300,"y":0,"width":240,"height":200,"customField":{"keep":true}},
+		{"id":"n3","type":"link","url":"https://jsoncanvas.org","x":0,"y":400,"width":250,"height":100}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"n1","fromSide":"right","toNode":"n2","toSide":"left","toEnd":"arrow","label":"leads to","color":"2"}
+	],
+	"extra":{"viewport":1}
+}
