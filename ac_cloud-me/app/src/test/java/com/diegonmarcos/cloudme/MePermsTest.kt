@@ -76,7 +76,7 @@ class MePermsTest {
         ), MePermPlan.grantAll(rows))
     }
 
-    @Test fun `a row's button: dialog, settings page, Health Connect, or none`() {
+    @Test fun `a row button opens the dialog, a settings page, Health Connect, or nothing`() {
         val h1 = hc("READ_STEPS", PermState.DENIED); val h2 = hc("READ_SLEEP", PermState.DENIED)
         val all = listOf(h1, h2)
         assertEquals(PermStep.Runtime(listOf("android.permission.A")), MePermPlan.forRow(rt("A", PermState.DENIED), all))
