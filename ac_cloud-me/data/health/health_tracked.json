@@ -1,0 +1,13 @@
+{
+  "_doc": "Health > Tracked, declared: the today cards, in order, drawn like Google Fit and Samsung Health (a ring toward `goal` when there is one, the value, the unit). Tapping a card opens its detail: a Day (hourly) / Week / Month (daily) chart from Health Connect's aggregate API, the history list, and a manual entry written back to Health Connect. `agg` = sum (buckets add up) or avg (heart rate, weight); `entry_label`/`entry_unit` = the manual entry field; `entry_minutes` = how long a manual interval record lasts, ending now (active minutes and sleep take their length from the value itself). Kotlin (TrackedHc.kt) maps each id to its Health Connect record and aggregate; test/test-me-health-tracked.sh pins the ids to that mapping and every write to build.json::ui.permissions.health.write.",
+  "metrics": [
+    {"id": "steps", "label": "Steps", "unit": "steps", "goal": 8000, "decimals": 0, "agg": "sum", "entry_label": "Steps", "entry_unit": "steps", "entry_minutes": 30},
+    {"id": "active", "label": "Active minutes", "unit": "min", "goal": 30, "decimals": 0, "agg": "sum", "entry_label": "Workout length", "entry_unit": "min", "entry_minutes": 0},
+    {"id": "calories", "label": "Calories", "unit": "kcal", "goal": 500, "decimals": 0, "agg": "sum", "entry_label": "Active calories", "entry_unit": "kcal", "entry_minutes": 30},
+    {"id": "distance", "label": "Distance", "unit": "km", "goal": 5, "decimals": 2, "agg": "sum", "entry_label": "Distance", "entry_unit": "km", "entry_minutes": 30},
+    {"id": "heart", "label": "Heart rate", "unit": "bpm", "goal": 0, "decimals": 0, "agg": "avg", "entry_label": "Heart rate", "entry_unit": "bpm", "entry_minutes": 1},
+    {"id": "sleep", "label": "Sleep", "unit": "h", "goal": 8, "decimals": 1, "agg": "sum", "entry_label": "Hours slept (ending now)", "entry_unit": "h", "entry_minutes": 0},
+    {"id": "weight", "label": "Weight", "unit": "kg", "goal": 0, "decimals": 1, "agg": "avg", "entry_label": "Weight", "entry_unit": "kg", "entry_minutes": 0},
+    {"id": "water", "label": "Water", "unit": "mL", "goal": 2000, "decimals": 0, "agg": "sum", "entry_label": "Water", "entry_unit": "mL", "entry_minutes": 1}
+  ]
+}

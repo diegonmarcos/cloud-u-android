@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -28,6 +29,12 @@ import androidx.compose.ui.res.colorResource
 import com.diegonmarcos.superapp.themebg.themeBackground
 import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.health.HealthConnectGateway
+import com.diegonmarcos.superapp.perms.PermAskLog
+import com.diegonmarcos.superapp.perms.Perms
+import com.diegonmarcos.superapp.perms.PermsSettings
+import kotlinx.coroutines.launch
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
@@ -71,8 +78,38 @@ class MainActivity : AppCompatActivity() {
      * key per composition and bloat the saved state). The Configs rows and the start-up prompt both go through it.
      */
     private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { answers ->
-        Permissions.markAsked(this, answers.keys)
+        PermAskLog.markAsked(this, answers.keys)
         permTick++
+        walkNext()
+    }
+
+    /** Health Connect's own request screen (the Health rows, and the Health step of a walk). */
+    private val healthRequest = registerForActivityResult(HealthConnectGateway.requestPermissionsContract()) {
+        MePerms.noteHealthAsked(this)
+        permTick++
+        walkNext()
+    }
+
+    /** The steps of the walk in progress (start-up, Grant all, or one row); a settings step resumes it in onResume. */
+    private val walk = ArrayDeque<PermStep>()
+    private var awaitingSettings = false
+
+    private fun walkStart(steps: List<PermStep>) {
+        walk.clear(); walk.addAll(steps); awaitingSettings = false
+        walkNext()
+    }
+
+    private fun walkNext() {
+        val step = walk.removeFirstOrNull() ?: return
+        when (step) {
+            is PermStep.Runtime -> permissionRequest.launch(step.perms.toTypedArray())
+            is PermStep.Health -> runCatching { healthRequest.launch(step.perms) }.onFailure { walkNext() }
+            is PermStep.Settings -> {
+                MePerms.noteSpecialOpened(this, step.id)
+                val entry = Perms.catalogue(this).byId(step.id)
+                if (entry != null && PermsSettings.open(this, entry)) awaitingSettings = true else walkNext()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,11 +137,7 @@ class MainActivity : AppCompatActivity() {
                 tileInk = colorResource(R.color.me_on_primary),
             )
             CloudKitTheme(palette) {
-                val hooks = MePermissions(
-                    request = { permissionRequest.launch(arrayOf(it)) },
-                    openSettings = { Permissions.openSettings(this@MainActivity) },
-                    tick = permTick,
-                )
+                val hooks = MePermissions(run = { walkStart(it) }, tick = permTick)
                 // #1323 the Lnktree pages' WebViews and scroll states, alive as long as this activity's composition (build.json::ui.lnktree_cache).
                 val lnktree = remember { LnktreeCacheConfig.baked.takeIf { it.enabled }?.let { LnktreeHolder(it.holderMaxWebViews) } }
                 androidx.compose.runtime.DisposableEffect(lnktree) { onDispose { lnktree?.destroy() } }
@@ -114,10 +147,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Required permissions: ONE system prompt for those never asked for; the rest get the banner (Permissions.gate).
+        // On open: ask for what is missing (MePermPlan.startup: first launch, and whenever a needed one is missing,
+        // never again at start for one denied for good). The banner and Configs > Perms > Grant all cover the rest.
         if (savedInstanceState == null) {
-            Permissions.gate(Permissions.states(this)).ask.takeIf { it.isNotEmpty() }
-                ?.let { permissionRequest.launch(it.toTypedArray()) }
+            lifecycleScope.launch {
+                val (hcOk, hcGranted) = MePerms.health(this@MainActivity)
+                walkStart(MePermPlan.startup(MePerms.rows(this@MainActivity, this@MainActivity, hcOk, hcGranted), MePerms.memory(this@MainActivity)))
+            }
         }
 
         // Self-update from GHCR: the periodic check plus a one-shot shortly
@@ -162,6 +198,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         permTick++ // back from the app settings: re-read what is granted
+        if (awaitingSettings) { awaitingSettings = false; walkNext() }
     }
 
     override fun onDestroy() {
@@ -181,7 +218,9 @@ class MainActivity : AppCompatActivity() {
         }
         // The left menu opens by tapping the hamburger only; there is no edge-swipe handler anywhere in this
         // shell (ticket #1144: a small downward scroll on Profile used to open it). The page owns every touch.
-        val missing = remember(permTick) { Permissions.gate(Permissions.states(this)).banner }
+        val health by produceState<Pair<Boolean, Set<String>?>>(false to null, permTick) { value = MePerms.health(this@MainActivity) }
+        val rows = remember(permTick, health) { MePerms.rows(this, this, health.first, health.second) }
+        val missing = MePermPlan.banner(rows)
         MeShell(
             title = Sections.byId(currentSection)?.label ?: stringResource(R.string.app_name),
             selectedSectionId = currentSection,
@@ -191,7 +230,7 @@ class MainActivity : AppCompatActivity() {
             onOpenPage = { section, page -> open(section, page) },
             modifier = Modifier.fillMaxSize().themeBackground(dark = true)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-            banner = { PermissionBanner(missing) },
+            banner = { PermissionBanner(missing) { walkStart(MePermPlan.grantAll(rows)) } },
         ) {
             currentSection?.let { id -> key(id, openSeq) { SectionScreen(id, currentPage) } }
         }

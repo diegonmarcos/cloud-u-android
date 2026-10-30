@@ -44,8 +44,10 @@ class HealthContentTest {
         val flat = s.getJSONArray("pages").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
         val groups = groupPages()
         assertEquals(listOf("plan", "trackers"), groups.keys.toList())
-        assertEquals(listOf("bio", "circadian", "biomarkers", "timeline", "objectives", "matrix", "culinary", "clash", "thermal", "hemo", "shop", "dossier"), groups.getValue("plan").drop(1))
-        assertEquals(listOf("workout", "activities", "bodycomp", "hr", "sleep"), groups.getValue("trackers"))
+        assertEquals(listOf("bio", "circadian", "biomarkers", "timeline", "objectives", "matrix", "culinary", "clash", "thermal", "hemo", "shop", "dossier", "workout"), groups.getValue("plan").drop(1))
+        // The Workout Plan is a plan (a programme to follow), not a tracker: it sits on the Plan line.
+        assertEquals("workout", groups.getValue("plan").last())
+        assertEquals(listOf("tracked", "activities", "bodycomp", "hr", "sleep"), groups.getValue("trackers"))
         val all = groups.values.flatten()
         assertEquals("a page is in two groups", all.size, all.toSet().size)
         assertEquals("every flat page is in exactly one group", flat.toSet(), all.toSet())

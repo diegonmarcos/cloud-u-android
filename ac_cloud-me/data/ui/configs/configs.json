@@ -1,8 +1,8 @@
 [
   {
     "kind": "permissions",
-    "title": "Runtime permissions",
-    "subtitle": "Declared in build.json::ui.permissions.runtime"
+    "title": "Perms",
+    "subtitle": "Every permission Cloud Me needs (build.json::ui.permissions): runtime, special access, Health Connect and install-time, each with its state and a grant button."
   },
   {
     "kind": "nav_modes",

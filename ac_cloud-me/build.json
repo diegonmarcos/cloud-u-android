@@ -49,6 +49,7 @@
         "libs:updater",
         "libs:analytics",
         "libs:health",
+        "libs:perms",
         "libs:fin",
         "libs:bottomnav",
         "libs:ui-icons",
@@ -89,6 +90,11 @@
     },
     "libs:health": {
       "dir": "../ab_cloud-libs-shared/libs/health",
+      "type": "library"
+    },
+    "libs:perms": {
+      "_doc": "Configs > Perms: the shared permission catalogue, live status reader and settings intents (#1274), the same ones the SuperApp's Perms page uses. build.json::ui.permissions names the entries Cloud Me needs.",
+      "dir": "../ab_cloud-libs-shared/libs/perms",
       "type": "library"
     },
     "libs:fin": {
@@ -132,20 +138,77 @@
   "ui": {
     "_doc": "Cloud Me's whole navigation is this block: seven bottom-nav sections (`ui.bottom_nav`, in order: Health, Study, Achieves, Profile, Duties, Buro, LLC), the Settings entries at the top right (`ui.settings`: the sections the top bar's Profile and Configs icons open; the left side menu opens by tapping the hamburger only, there is no swipe gesture), and the page tabs of every section drawn as Samsung-Health icon pills (icon-only, the selected tab also shows its name). A section's `pages` are its tab strip, and a page may declare `pages` of its own. A page with an `action` is a launch tab: it hands that `extapp:`/`page:` target to MainActivity.onTarget instead of showing content (Buro > Account launches Cloud Account). Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json, shipped as an asset. The same `page:<section>/<page>` grammar arrives from OUTSIDE the app too: the SuperApp's Dashboard icons launch Cloud Me with a `shortcut_action` extra carrying one of these strings.",
     "permissions": {
-      "runtime": [
-        {
-          "label": "Notifications",
-          "perm": "android.permission.POST_NOTIFICATIONS",
-          "required": true,
-          "min_sdk": 33
-        },
-        {
-          "label": "Calendar",
-          "perm": "android.permission.READ_CALENDAR",
-          "required": true
-        }
+      "_doc": "Configs > Perms, declared: EVERY permission Cloud Me needs. `entries` are ids of the shared libs:perms catalogue (ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json), which owns each one's label, kind (runtime dialog, special settings page, app-op, OEM guide), live check and settings intents; `why` is Cloud Me's reason. `install` are install-time permissions, listed as granted. `health` is the Health Connect set: `read` is the SuperApp's exact set (libs:health's manifest), `write` what Health > Tracked's manual entry writes. MePerms.kt holds no permission name. The start-up rule (MePermPlan.startup): runtime permissions never asked are asked, a denied one is asked again until Android stops showing its dialog (permanently denied: never again at start), Health Connect is asked until it has been declined twice (Health Connect's own limit), a special access is opened once on first launch and then only from the banner or Grant all. test/test-me-perms.sh pins this list to AndroidManifest.xml both ways.",
+      "entries": [
+        {"id": "notifications", "why": "Update progress and the fleet updater's notices."},
+        {"id": "calendar_read", "why": "Agenda reads CalDAV events and todos through the cal engine."},
+        {"id": "activity_recognition", "why": "Health: the phone's own step and activity detection, so Tracked has steps and active minutes without a watch."},
+        {"id": "body_sensors", "why": "Health: heart rate from a connected wearable's sensors."},
+        {"id": "install_unknown", "why": "The in-app updater installs new Cloud Me builds from GHCR."},
+        {"id": "exact_alarm", "why": "On the owner's Cloud Me permission list (Agenda and Duties reminders); no Cloud Me code schedules an exact alarm yet."},
+        {"id": "all_files", "why": "On the owner's Cloud Me permission list (documents in shared storage); today the Dossier PDF goes out through a FileProvider and needs no storage access."},
+        {"id": "usage_access", "why": "On the owner's Cloud Me permission list (screen time for the circadian and sleep pages); no page reads usage stats yet."},
+        {"id": "notification_listener", "why": "On the owner's Cloud Me permission list. Cloud Me ships no listener service, so the row reads not applicable until one exists."},
+        {"id": "overlay", "why": "On the owner's Cloud Me permission list; no Cloud Me screen draws over other apps yet."},
+        {"id": "battery_opt", "why": "Background updater, Lnktree prefetch and Health Connect sync are throttled by Doze without the exemption."},
+        {"id": "background_run", "why": "The same background work on One UI, where the app-op is separate from the exemption."},
+        {"id": "samsung_never_sleeping", "why": "Samsung's battery manager stops background apps even with the Android exemption."}
       ],
-      "roles": []
+      "install": [
+        {"perm": "android.permission.INTERNET", "label": "Internet", "why": "Everything the app reads from the cloud."},
+        {"perm": "android.permission.ACCESS_NETWORK_STATE", "label": "Network state", "why": "Waits for a network before syncing."},
+        {"perm": "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION", "label": "Silent self-update", "why": "Makes the updater's install silent on Android 12+."},
+        {"perm": "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", "label": "Battery exemption request", "why": "Lets the battery_opt row open the one-tap exemption dialog."}
+      ],
+      "health": {
+        "rationale": "Cloud Me reads your activity, heart, sleep, body, nutrition and cycle records from Health Connect to draw the Health section, and writes only the entries you add by hand on Health > Tracked (steps, distance, active calories, workouts, heart rate, sleep, weight, water). Nothing leaves the phone: Health Connect data is never uploaded.",
+        "read": [
+          "android.permission.health.READ_STEPS",
+          "android.permission.health.READ_DISTANCE",
+          "android.permission.health.READ_FLOORS_CLIMBED",
+          "android.permission.health.READ_ELEVATION_GAINED",
+          "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+          "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+          "android.permission.health.READ_EXERCISE",
+          "android.permission.health.READ_POWER",
+          "android.permission.health.READ_SPEED",
+          "android.permission.health.READ_HEART_RATE",
+          "android.permission.health.READ_RESTING_HEART_RATE",
+          "android.permission.health.READ_HEART_RATE_VARIABILITY",
+          "android.permission.health.READ_VO2_MAX",
+          "android.permission.health.READ_BLOOD_PRESSURE",
+          "android.permission.health.READ_BLOOD_GLUCOSE",
+          "android.permission.health.READ_OXYGEN_SATURATION",
+          "android.permission.health.READ_BODY_TEMPERATURE",
+          "android.permission.health.READ_BASAL_BODY_TEMPERATURE",
+          "android.permission.health.READ_RESPIRATORY_RATE",
+          "android.permission.health.READ_SLEEP",
+          "android.permission.health.READ_WEIGHT",
+          "android.permission.health.READ_HEIGHT",
+          "android.permission.health.READ_BODY_FAT",
+          "android.permission.health.READ_LEAN_BODY_MASS",
+          "android.permission.health.READ_BONE_MASS",
+          "android.permission.health.READ_BODY_WATER_MASS",
+          "android.permission.health.READ_BASAL_METABOLIC_RATE",
+          "android.permission.health.READ_NUTRITION",
+          "android.permission.health.READ_HYDRATION",
+          "android.permission.health.READ_MENSTRUATION",
+          "android.permission.health.READ_OVULATION_TEST",
+          "android.permission.health.READ_CERVICAL_MUCUS",
+          "android.permission.health.READ_SEXUAL_ACTIVITY",
+          "android.permission.health.READ_INTERMENSTRUAL_BLEEDING"
+        ],
+        "write": [
+          "android.permission.health.WRITE_STEPS",
+          "android.permission.health.WRITE_DISTANCE",
+          "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
+          "android.permission.health.WRITE_EXERCISE",
+          "android.permission.health.WRITE_HEART_RATE",
+          "android.permission.health.WRITE_SLEEP",
+          "android.permission.health.WRITE_WEIGHT",
+          "android.permission.health.WRITE_HYDRATION"
+        ]
+      }
     },
     "profile_default": {
       "name": "Diego Coelho Marcos",
@@ -215,7 +278,7 @@
     "configs_ui": ["nav_ui"],
     "sections": [
       {
-        "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Two page groups (Plan: index and 12 plan pages; Trackers: 5) on the many_rows nav mode, the groups referencing the flat pages list by id. Every page is drawn by the app's own Compose HealthPage from data/health/*.json (the declared plan, formulas and workout) and the user's entries (SharedPreferences health_user, a declared fleet-config store); the trackers read Health Connect live and say so when it is empty. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
+        "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Two page groups (Plan: index, 12 plan pages and the workout plan; Trackers: Tracked, the Google Fit / Samsung Health style today dashboard over Health Connect, and 4 more) on the many_rows nav mode, the groups referencing the flat pages list by id. Every page is drawn by the app's own Compose HealthPage from data/health/*.json (the declared plan, formulas and workout) and the user's entries (SharedPreferences health_user, a declared fleet-config store); the trackers read Health Connect live and say so when it is empty. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
         "_doc_metrics": "Data-driven metric taxonomy \u2014 read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
         "id": "health",
         "nav_mode": "horizontal_two_rows",
@@ -417,6 +480,11 @@
             "icon": "ic_gym"
           },
           {
+            "id": "tracked",
+            "label": "Tracked",
+            "icon": "monitor_heart"
+          },
+          {
             "id": "activities",
             "label": "Activities",
             "icon": "ic_p_health_activity"
@@ -455,7 +523,8 @@
               "thermal",
               "hemo",
               "shop",
-              "dossier"
+              "dossier",
+              "workout"
             ]
           },
           {
@@ -463,7 +532,7 @@
             "label": "Trackers",
             "icon": "monitor_heart",
             "pages": [
-              "workout",
+              "tracked",
               "activities",
               "bodycomp",
               "hr",

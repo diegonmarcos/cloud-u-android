@@ -323,7 +323,7 @@ if "extapp:cloud-wallet" in blob:
 
 # ---- N8 the new section pages
 want_pages = {
-    "health": ["Index", "Anthropometrics", "Circadian", "Biomarkers", "Timeline", "Objectives", "Matrix", "Culinary", "Absorption clash", "Thermal", "Hemodynamics", "Supermarket", "Dossier", "Workout plan", "Activities", "Body comp", "HR & HRV", "Sleep"],
+    "health": ["Index", "Anthropometrics", "Circadian", "Biomarkers", "Timeline", "Objectives", "Matrix", "Culinary", "Absorption clash", "Thermal", "Hemodynamics", "Supermarket", "Dossier", "Workout plan", "Tracked", "Activities", "Body comp", "HR & HRV", "Sleep"],
     "study": ["CV", "Roadmap"],
     "llc": ["Employed", "Side hustles", "Assets", "Portfolio", "Calendar"],
     "buro": ["IDs", "Personal DD", "Wallet", "Account", "Assets", "Services", "Liabilities & Taxes", "Budgeting", "Accounts vs Cashflow", "Calendar"],

@@ -92,7 +92,8 @@ def uiSettings        = (buildJson.ui.settings ?: []).join(',')
     }
 }
 def uiExternalAppsB64 = b64(buildJson.ui.external_apps ?: [])
-def uiPermsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])
+// Configs > Perms: the whole ui.permissions declaration (catalogue ids, install-time list, Health Connect set), read by MePerms.
+def uiPermissionsB64  = b64(buildJson.ui.permissions ?: [:])
 def profile           = buildJson.ui.profile_default ?: [:]
 // THE cal ENGINE this app binds instead of compiling libs:cal (build.json::engines.cal,
 // engine-apk-split move 3). Its package comes from the constellation fleet manifest, for the
@@ -186,7 +187,7 @@ android {
         buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_SETTINGS",          "\"${uiSettings}\""
         buildConfigField "String", "UI_EXTERNAL_APPS_B64", "\"${uiExternalAppsB64}\""
-        buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermsRuntimeB64}\""
+        buildConfigField "String", "UI_PERMISSIONS_B64", "\"${uiPermissionsB64}\""
         buildConfigField "String", "UI_REPO_TREE_B64",     "\"${uiRepoTreeB64}\""
         buildConfigField "String", "UI_LNKTREE_CACHE_B64", "\"${uiLnktreeCacheB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",  "\"${profile.name ?: ''}\""
@@ -283,6 +284,7 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:analytics')
     implementation project(':libs:health')   // Health section (Health Connect)
+    implementation project(':libs:perms')    // Configs > Perms: the shared catalogue, status reader and settings intents
     implementation project(':libs:fin')      // Buro → Accounting
     implementation project(':libs:ui-kit')   // CloudKitTheme: libs:fin's dashboard is Compose under it
     // libs:cal is NOT linked: Agenda binds Cloud-Lib-Cal.apk (CalEngineClient, build.json::engines.cal).

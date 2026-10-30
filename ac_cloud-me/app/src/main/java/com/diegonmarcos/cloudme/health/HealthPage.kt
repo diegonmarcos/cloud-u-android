@@ -55,6 +55,7 @@ fun HealthPage(pageId: String, modifier: Modifier = Modifier) {
             "shop" -> ShopPage(env)
             "dossier" -> DossierPage(env)
             "workout" -> WorkoutPage(env)
+            "tracked" -> TrackedPage(env)
             "activities" -> ActivitiesPage(env)
             "bodycomp" -> BodyCompPage(env)
             "hr" -> HrPage(env)
