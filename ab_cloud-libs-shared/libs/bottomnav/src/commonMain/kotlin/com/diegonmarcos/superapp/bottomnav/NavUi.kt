@@ -138,12 +138,13 @@ public interface NavUiStore {
 
 /** An in-memory [NavUiStore] (tests, previews); its reads are Compose state, so a change redraws. */
 public class MemoryNavUiStore(mode: NavUiMode? = null, scrollHide: Boolean? = null) : NavUiStore {
-    private var mode: NavUiMode? by mutableStateOf(mode)
-    private var scrollHide: Boolean? by mutableStateOf(scrollHide)
-    override fun mode(): NavUiMode? = mode
-    override fun setMode(mode: NavUiMode?) { this.mode = mode }
-    override fun scrollHide(): Boolean? = scrollHide
-    override fun setScrollHide(on: Boolean?) { this.scrollHide = on }
+    // not named like the accessors: a private `mode` property and `fun setMode` would clash on the JVM
+    private var chosenMode: NavUiMode? by mutableStateOf(mode)
+    private var chosenScrollHide: Boolean? by mutableStateOf(scrollHide)
+    override fun mode(): NavUiMode? = chosenMode
+    override fun setMode(mode: NavUiMode?) { chosenMode = mode }
+    override fun scrollHide(): Boolean? = chosenScrollHide
+    override fun setScrollHide(on: Boolean?) { chosenScrollHide = on }
 }
 
 /** The settings in force: the user's choice in [store], else the app's declared [default]. */

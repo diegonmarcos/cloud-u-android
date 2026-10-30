@@ -17,20 +17,20 @@ import androidx.compose.ui.platform.LocalContext
  */
 public class NavUiPrefs private constructor(context: Context) : NavUiStore {
     private val prefs = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
-    private var mode: NavUiMode? by mutableStateOf(NavUiMode.entries.firstOrNull { it.declared == prefs.getString(KEY_MODE, null) })
-    private var scrollHide: Boolean? by mutableStateOf(if (prefs.contains(KEY_SCROLL_HIDE)) prefs.getBoolean(KEY_SCROLL_HIDE, true) else null)
+    private var chosenMode: NavUiMode? by mutableStateOf(NavUiMode.entries.firstOrNull { it.declared == prefs.getString(KEY_MODE, null) })
+    private var chosenScrollHide: Boolean? by mutableStateOf(if (prefs.contains(KEY_SCROLL_HIDE)) prefs.getBoolean(KEY_SCROLL_HIDE, true) else null)
 
-    override fun mode(): NavUiMode? = mode
+    override fun mode(): NavUiMode? = chosenMode
 
     override fun setMode(mode: NavUiMode?) {
-        this.mode = mode
+        chosenMode = mode
         prefs.edit().apply { if (mode == null) remove(KEY_MODE) else putString(KEY_MODE, mode.declared) }.apply()
     }
 
-    override fun scrollHide(): Boolean? = scrollHide
+    override fun scrollHide(): Boolean? = chosenScrollHide
 
     override fun setScrollHide(on: Boolean?) {
-        this.scrollHide = on
+        chosenScrollHide = on
         prefs.edit().apply { if (on == null) remove(KEY_SCROLL_HIDE) else putBoolean(KEY_SCROLL_HIDE, on) }.apply()
     }
 
