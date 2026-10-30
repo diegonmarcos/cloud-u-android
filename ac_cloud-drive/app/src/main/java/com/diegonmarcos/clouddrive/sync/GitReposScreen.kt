@@ -148,7 +148,6 @@ enum class GitPart { TABLE, SETUP }
 /** One row of THE table, whatever listing it came from; [onClone] clones it from the leg that listed it, [note] is a line under it. */
 private class TableEntry(
     val key: String, val label: String, val name: String, val owner: String, val isPrivate: Boolean?, val fork: Boolean, val source: String,
-    /** #1315 how many folders hold this repository (the inventory's count; 1 = one clone, the rule). */ val copies: Int = 1,
     val row: RepoTableRow, val cloned: ManagedRepo?, val onClone: () -> Unit, val note: String, val cloneUrl: String = "",
 )
 
