@@ -15,7 +15,7 @@ import org.junit.Test
 /** #1313 stale temp pack cleanup: what goes, what stays, when the pass is skipped, the bytes, the declaration. */
 class StalePackCleanerTest {
     private lateinit var git: File
-    private val now = 1_800_000_000_000L
+    private val now = System.currentTimeMillis()
     private val hour = 3_600_000L
     private val patterns = StalePackCleaner.DEFAULT_PATTERNS
     private val root = File(System.getProperty("user.dir")).let { if (File(it, "build.json").isFile) it else it.parentFile }
