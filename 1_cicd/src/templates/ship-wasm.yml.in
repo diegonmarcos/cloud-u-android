@@ -120,7 +120,7 @@ jobs:
           echo "$names" | grep -qxF "$(basename "$ASSET")" \
             || { echo "::error::gh-release: $(basename "$ASSET") missing on $TAG after upload"; exit 1; }
 
-      # The portal (diegonmarcos.github.io, a-Portals/cloud-web) fetches the zip from
+      # The portal (diegonmarcos.github.io Pages deploy; sources: cloudy-h-webapps-2 a_Portals/cloud-web) fetches the zip from
       # the release at ITS build time, so it has to be told. repository_dispatch to
       # another repo needs a token with access to it; GITHUB_TOKEN cannot. Without the
       # secret the release is still correct and the portal picks the page up on its
