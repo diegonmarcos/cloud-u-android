@@ -356,31 +356,13 @@
         {
          "code": "1.2.2.4",
          "kind": "family",
-         "name": "Containers",
-         "label": "Containers",
-         "icon": "",
-         "description": "",
-         "repos": [
-          {
-           "code": "1.2.2.4.1",
-           "name": "cloud-me-pvt-containers",
-           "registry_name": "cloud-me-pvt-containers",
-           "url": "https://github.com/diegonmarcos/cloud-me-pvt-containers",
-           "private": true,
-           "description": "Superseded by cloud-me-pvt-configs Linux-Containers (to archive, owner)"
-          }
-         ]
-        },
-        {
-         "code": "1.2.2.5",
-         "kind": "family",
          "name": "Data",
          "label": "Data",
          "icon": "",
          "description": "",
          "repos": [
           {
-           "code": "1.2.2.5.1",
+           "code": "1.2.2.4.1",
            "name": "cloud-me-pvt-data",
            "registry_name": "cloud-me-pvt-data",
            "url": "https://github.com/diegonmarcos/cloud-me-pvt-data",
@@ -390,7 +372,7 @@
          ]
         },
         {
-         "code": "1.2.2.6",
+         "code": "1.2.2.5",
          "kind": "family",
          "name": "Notes",
          "label": "Notes",
@@ -398,7 +380,7 @@
          "description": "",
          "repos": [
           {
-           "code": "1.2.2.6.1",
+           "code": "1.2.2.5.1",
            "name": "cloud-me-pvt-notes",
            "registry_name": "cloud-me-pvt-notes",
            "url": "https://github.com/diegonmarcos/cloud-me-pvt-notes",
@@ -408,7 +390,7 @@
          ]
         },
         {
-         "code": "1.2.2.7",
+         "code": "1.2.2.6",
          "kind": "family",
          "name": "Vault",
          "label": "Vault",
@@ -416,7 +398,7 @@
          "description": "",
          "repos": [
           {
-           "code": "1.2.2.7.1",
+           "code": "1.2.2.6.1",
            "name": "cloud-me-pvt-vault",
            "registry_name": "cloud-me-pvt-vault",
            "url": "https://github.com/diegonmarcos/cloud-me-pvt-vault",
@@ -1197,6 +1179,14 @@
          "url": "https://github.com/diegonmarcos/z-archived_cloud-me-pvt-legacy",
          "private": true,
          "description": "cloud-me — cloud-me family"
+        },
+        {
+         "code": "8.1.1.4",
+         "name": "z-archived_cloud-me-pvt-containers",
+         "registry_name": "z-archived_cloud-me-pvt-containers",
+         "url": "https://github.com/diegonmarcos/z-archived_cloud-me-pvt-containers",
+         "private": true,
+         "description": "Superseded by cloud-me-pvt-configs Linux-Containers (archived)"
         }
        ]
       },

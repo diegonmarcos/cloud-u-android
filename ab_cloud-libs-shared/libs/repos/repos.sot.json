@@ -18,6 +18,14 @@
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
     {
+      "from": "cloud-me-pvt-containers",
+      "to": "z-archived_cloud-me-pvt-containers",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1323",
+      "doc": "Content merged into cloud-me-pvt-configs Linux-Containers/ (#1310); archived. The old name keeps working through the GitHub redirect."
+    },
+    {
       "from": "My-ai-memory",
       "to": "z-archived_My-ai-memory",
       "kind": "repo",
@@ -1531,18 +1539,6 @@
       "doc": "Deployable configs, no secrets. The one config repo (#1310): top folders Apks, Linux-Desktop, Linux-Terminal, Linux-Containers, Shared; twin of cloud-me-pvt-vault (same folders plus Identity; renamed from Desktop-GUI/Terminal/Containers, Linux-Server/b3-cloud-fleet moved into Linux-Containers). cloud-me-pvt-containers merged into Linux-Containers/ 2026-10-30 (non-secret files, history kept; its sops files stay only in the vault). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
     },
     {
-      "name": "cloud-me-pvt-containers",
-      "farm": "1.2.Cloud-me/Pvt",
-      "group": "a_cloud",
-      "hub": "cloud-me-pvt-___",
-      "url": "git@github.com:diegonmarcos/cloud-me-pvt-containers.git",
-      "private": true,
-      "renamed_from": [
-        "cloud-me-containers"
-      ],
-      "doc": "Superseded: merged into cloud-me-pvt-configs Linux-Containers/ 2026-10-30 (#1310, non-secret files with history); its sops files live only in cloud-me-pvt-vault Linux-Containers/ (#1253). Contents left intact. To archive (owner) as z-archived_cloud-me-pvt-containers: the rename is refused by the session proxy."
-    },
-    {
       "name": "cloud-me-pvt-data",
       "farm": "1.2.Cloud-me/Pvt",
       "group": "a_cloud",
@@ -2115,6 +2111,19 @@
         "cloud-me-pvt-legacy"
       ],
       "doc": "The original cloud-me repo (cloud-me family, near empty), kept as is under the pvt family. Registered 2026-10-28 (was unregistered_ok since #1073)."
+    },
+    {
+      "name": "z-archived_cloud-me-pvt-containers",
+      "farm": "8.Archived",
+      "group": "a_cloud",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pvt-containers.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me-containers",
+        "cloud-me-pvt-containers"
+      ],
+      "doc": "Merged into cloud-me-pvt-configs Linux-Containers/ 2026-10-30 (#1310, non-secret files with history); its sops files live only in cloud-me-pvt-vault Linux-Containers/ (#1253). Contents left intact. Archived 2026-10-30: renamed z-archived_cloud-me-pvt-containers on GitHub by the owner."
     },
     {
       "name": "z-archived_front-data",

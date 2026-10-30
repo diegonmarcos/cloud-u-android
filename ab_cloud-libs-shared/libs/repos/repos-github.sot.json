@@ -520,9 +520,9 @@
       "description": "cloud-me_configs — cloud-me family"
     },
     {
-      "family": "Containers",
-      "name": "cloud-me-pvt-containers",
-      "url": "https://github.com/diegonmarcos/cloud-me-pvt-containers",
+      "family": "Data",
+      "name": "cloud-me-pvt-data",
+      "url": "https://github.com/diegonmarcos/cloud-me-pvt-data",
       "role": "",
       "visibility": "private",
       "project": "Cloud-Me",
@@ -533,25 +533,6 @@
       "area_code": "1",
       "project_code": "1.2",
       "family_code": "1.2.2.4",
-      "registry_name": "cloud-me-pvt-containers",
-      "hub": "cloud-me-pvt-___",
-      "farm": "1.2.Cloud-me/Pvt",
-      "description": "Superseded by cloud-me-pvt-configs Linux-Containers (to archive, owner)"
-    },
-    {
-      "family": "Data",
-      "name": "cloud-me-pvt-data",
-      "url": "https://github.com/diegonmarcos/cloud-me-pvt-data",
-      "role": "",
-      "visibility": "private",
-      "project": "Cloud-Me",
-      "field": "Unix",
-      "developer": "Leaf.y",
-      "subcategory": "Pvt",
-      "code": "1.2.2.5.1",
-      "area_code": "1",
-      "project_code": "1.2",
-      "family_code": "1.2.2.5",
       "registry_name": "cloud-me-pvt-data",
       "hub": "cloud-me-pvt-___",
       "farm": "1.2.Cloud-me/Pvt",
@@ -567,10 +548,10 @@
       "field": "Unix",
       "developer": "Leaf.y",
       "subcategory": "Pvt",
-      "code": "1.2.2.6.1",
+      "code": "1.2.2.5.1",
       "area_code": "1",
       "project_code": "1.2",
-      "family_code": "1.2.2.6",
+      "family_code": "1.2.2.5",
       "registry_name": "cloud-me-pvt-notes",
       "hub": "cloud-me-pvt-___",
       "farm": "1.2.Cloud-me/Pvt",
@@ -586,10 +567,10 @@
       "field": "Unix",
       "developer": "Leaf.y",
       "subcategory": "Pvt",
-      "code": "1.2.2.7.1",
+      "code": "1.2.2.6.1",
       "area_code": "1",
       "project_code": "1.2",
-      "family_code": "1.2.2.7",
+      "family_code": "1.2.2.6",
       "registry_name": "cloud-me-pvt-vault",
       "hub": "cloud-me-pvt-___",
       "farm": "1.2.Cloud-me/Pvt",
@@ -1222,6 +1203,24 @@
       "description": "cloud-me — cloud-me family"
     },
     {
+      "family": "Cloud-Me",
+      "name": "z-archived_cloud-me-pvt-containers",
+      "url": "https://github.com/diegonmarcos/z-archived_cloud-me-pvt-containers",
+      "role": "",
+      "visibility": "private",
+      "project": "Z-archived",
+      "field": "Archived",
+      "developer": "Z-archived",
+      "code": "8.1.1.4",
+      "area_code": "8",
+      "project_code": "8.1",
+      "family_code": "8.1.1",
+      "registry_name": "z-archived_cloud-me-pvt-containers",
+      "hub": "z-archived-___",
+      "farm": "8.Archived",
+      "description": "Superseded by cloud-me-pvt-configs Linux-Containers (archived)"
+    },
+    {
       "family": "Front",
       "name": "z-archived_front-data",
       "url": "https://github.com/diegonmarcos/z-archived_front-data",
@@ -1456,7 +1455,7 @@
       "description": "The Unix estate: the cloudy fleet and the owner's personal cloud.",
       "hub": null,
       "farm": null,
-      "repos_count": 30,
+      "repos_count": 29,
       "children": [
         {
           "code": "1.1",
@@ -1600,7 +1599,7 @@
           "description": "The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",
           "hub": "cloud-me-___",
           "farm": "1.2.Cloud-me",
-          "repos_count": 17,
+          "repos_count": 16,
           "children": [
             {
               "code": "1.2.1",
@@ -1656,7 +1655,7 @@
               "description": "Private half of Cloud-Me (the hub itself is public).",
               "hub": "cloud-me-pvt-___",
               "farm": "1.2.Cloud-me/Pvt",
-              "repos_count": 8,
+              "repos_count": 7,
               "children": [
                 {
                   "code": "1.2.2.1",
@@ -1703,20 +1702,6 @@
                 {
                   "code": "1.2.2.4",
                   "kind": "family",
-                  "name": "Containers",
-                  "label": "Containers",
-                  "developer": "Leaf.y",
-                  "description": "",
-                  "hub": null,
-                  "farm": "1.2.Cloud-me/Pvt",
-                  "repos_count": 1,
-                  "repos": [
-                    "cloud-me-pvt-containers"
-                  ]
-                },
-                {
-                  "code": "1.2.2.5",
-                  "kind": "family",
                   "name": "Data",
                   "label": "Data",
                   "developer": "Leaf.y",
@@ -1729,7 +1714,7 @@
                   ]
                 },
                 {
-                  "code": "1.2.2.6",
+                  "code": "1.2.2.5",
                   "kind": "family",
                   "name": "Notes",
                   "label": "Notes",
@@ -1743,7 +1728,7 @@
                   ]
                 },
                 {
-                  "code": "1.2.2.7",
+                  "code": "1.2.2.6",
                   "kind": "family",
                   "name": "Vault",
                   "label": "Vault",
@@ -2581,7 +2566,7 @@
       "description": "Every z-archived_* repo, under the hub z-archived-___.",
       "hub": "z-archived-___",
       "farm": "8.Archived",
-      "repos_count": 15,
+      "repos_count": 16,
       "children": [
         {
           "code": "8.1",
@@ -2593,7 +2578,7 @@
           "description": "Archived repos, grouped by where they came from.",
           "hub": null,
           "farm": "8.Archived",
-          "repos_count": 14,
+          "repos_count": 15,
           "children": [
             {
               "code": "8.1.1",
@@ -2604,11 +2589,12 @@
               "description": "",
               "hub": null,
               "farm": "8.Archived",
-              "repos_count": 3,
+              "repos_count": 4,
               "repos": [
                 "z-archived_cloud-me-pub-data",
                 "z-archived_cloud-me-pvt-data-private",
-                "z-archived_cloud-me-pvt-legacy"
+                "z-archived_cloud-me-pvt-legacy",
+                "z-archived_cloud-me-pvt-containers"
               ]
             },
             {

@@ -183,12 +183,6 @@
       "doc": "Deployable configs, no secrets. The one config repo (#1310): top folders Apks, Linux-Desktop, Linux-Terminal, Linux-Containers, Shared; twin of cloud-me-pvt-vault (same folders plus Identity; renamed from Desktop-GUI/Terminal/Containers, Linux-Server/b3-cloud-fleet moved into Linux-Containers). cloud-me-pvt-containers merged into Linux-Containers/ 2026-10-30 (non-secret files, history kept; its sops files stay only in the vault). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
     },
     {
-      "name": "cloud-me-pvt-containers",
-      "repo": "diegonmarcos/cloud-me-pvt-containers",
-      "private": true,
-      "doc": "Superseded: merged into cloud-me-pvt-configs Linux-Containers/ 2026-10-30 (#1310, non-secret files with history); its sops files live only in cloud-me-pvt-vault Linux-Containers/ (#1253). Contents left intact. To archive (owner) as z-archived_cloud-me-pvt-containers: the rename is refused by the session proxy."
-    },
-    {
       "name": "cloud-me-pvt-data",
       "repo": "diegonmarcos/cloud-me-pvt-data",
       "private": true,
@@ -222,13 +216,13 @@
       "name": "cloudy-h-webapps",
       "repo": "diegonmarcos/cloudy-h-webapps",
       "private": false,
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
+      "doc": "The Cloud web apps (#1320): one npm workspace with @cloudy/ui (tokens, icons and nav GENERATED from cloudy-u-android), @cloudy/c3-data, and two SvelteKit static sites: cloudy-webapps at /cloud-webapps/ (the SuperApp shell and every fleet app, embedded by the APK with ?embed=1) and cloudy-c3 at /cloudy-c3/ (the Cloud C3 console; the old /cloud/ portal redirects there). Also the 89 service fallback pages at /cloud-webapps/<slug>/. Created 2026-10-21 out of front-diegonmarcos (c__Cloud)."
     },
     {
       "name": "cloudy-h-webapps-2",
       "repo": "diegonmarcos/cloudy-h-webapps-2",
       "private": false,
-      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204; and the portals a_Portals/{cloud,cloud-superapp,cloud-web}, #1319), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloudy-t-infra",
@@ -301,6 +295,12 @@
       "repo": "diegonmarcos/z-archived_cloud-me-pub-data",
       "private": false,
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+    },
+    {
+      "name": "z-archived_cloud-me-pvt-containers",
+      "repo": "diegonmarcos/z-archived_cloud-me-pvt-containers",
+      "private": true,
+      "doc": "Merged into cloud-me-pvt-configs Linux-Containers/ 2026-10-30 (#1310, non-secret files with history); its sops files live only in cloud-me-pvt-vault Linux-Containers/ (#1253). Contents left intact. Archived 2026-10-30: renamed z-archived_cloud-me-pvt-containers on GitHub by the owner."
     },
     {
       "name": "z-archived_cloud-me-pvt-data-private",
