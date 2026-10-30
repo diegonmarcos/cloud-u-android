@@ -51,8 +51,8 @@ def uiDefaultSection = (buildJson.ui.default_section ?: buildJson.ui.bottom_nav[
 // Kotlin: an entry names a linktree label (site), a registry code (registry) or a repo under repo_base, and this script resolves each from the
 // SuperApp's own declarations at build time (a source that does not resolve fails the build, loudly) and bakes the result as UI_TARGETS_B64.
 def uiStacks         = buildJson.ui.stacks ?: [:]
-def superappBuild    = new groovy.json.JsonSlurper().parse(file('../aa_cloud-superapp/build.json'))
-def linktreeSnapshot = new groovy.json.JsonSlurper().parse(file('../aa_cloud-superapp/data/linktree.json'))
+def superappBuild    = new groovy.json.JsonSlurper().parse(file('../../aa_cloud-superapp/build.json'))
+def linktreeSnapshot = new groovy.json.JsonSlurper().parse(file('../../aa_cloud-superapp/data/linktree.json'))
 def appUrls          = superappBuild.ui?.app_urls ?: [:]
 def siteUrlOf = { String label ->
     def found = new TreeSet<String>()
