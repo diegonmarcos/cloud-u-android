@@ -1,26 +1,28 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
-import com.diegonmarcos.cloudlib.sharedstore.StoreExec
-import com.diegonmarcos.cloudlib.sharedstore.StoreExec.Companion.q
-import com.diegonmarcos.cloudlib.sharedstore.StorePaths
+import com.diegonmarcos.clouddrive.sync.store.StoreShell
+import com.diegonmarcos.clouddrive.sync.store.StoreShell.Companion.q
 
 /**
  * [StoreLegs.Copier] over CLOUD_EXEC: the copy runs inside cld.termux, where the store is
  * `/root/<dir>` and shared storage is `/storage/emulated/<u>`. Used whenever the caller is not the
  * store's own uid, and for engine staging in every mode that reaches cld.termux.
+ * #1315 the guest form comes from the ONE [StoreShell.route]; a path outside the store passes through unchanged.
  */
-class ExecCopier(private val ctx: Context, private val paths: StorePaths, private val userId: Int) : StoreLegs.Copier {
+class ExecCopier(ctx: Context) : StoreLegs.Copier {
 
-    private fun guest(p: String) = paths.guestPath(p, userId) ?: p
+    private val shell: StoreShell = StoreShell.of(ctx)
+
+    private fun guest(p: String) = shell.route.guest(p) ?: p
 
     override fun copy(from: String, to: String, replace: Boolean): String? {
-        val r = StoreExec(ctx).run(copyScript(guest(from), guest(to), replace), timeoutMs = 110_000)
+        val r = shell.run(copyScript(guest(from), guest(to), replace), timeoutMs = 110_000)
         return if (r.ok) null else (r.err.ifBlank { r.out }.ifBlank { "exit ${r.exit}" })
     }
 
     override fun remove(path: String): String? {
-        val r = StoreExec(ctx).run(removeScript(guest(path)), timeoutMs = 60_000)
+        val r = shell.run(removeScript(guest(path)), timeoutMs = 60_000)
         return if (r.ok) null else (r.err.ifBlank { "exit ${r.exit}" })
     }
 

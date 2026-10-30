@@ -2,6 +2,8 @@ package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
 import android.os.Looper
+import com.diegonmarcos.clouddrive.sync.store.StoreRoute
+import com.diegonmarcos.clouddrive.sync.store.StoreShell
 import com.diegonmarcos.cloudlib.gitsync.GitBranchInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCommitInfo
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
@@ -10,9 +12,6 @@ import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.GitTransport
 import com.diegonmarcos.cloudlib.gitsync.GitTransports
 import com.diegonmarcos.cloudlib.gitsync.GitWire
-import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
-import com.diegonmarcos.cloudlib.sharedstore.StoreExec
-import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import org.json.JSONObject
@@ -25,11 +24,14 @@ import java.io.IOException
  * pull, branches, remotes, conflicts) and the workers get the same models whichever side runs git.
  * The git engine APK is another uid and cannot open the store, so this is the only path to it.
  * Installed by [install]; a directory outside the store still goes to the engine APK.
+ * #1315 the route and the runner are the ONE [StoreRoute] / [StoreShell].
  */
 class TermuxGitTransport(private val ctx: Context) : GitTransport {
 
+    private val shell: StoreShell = StoreShell.of(ctx)
+
     override fun unavailable(): String? =
-        if (StorePaths.viaOwner(StoreAccess.mode(ctx))) null
+        if (shell.route.viaTermux) null
         else "the shared store is in Cloud Terminal Termux (cld.termux), which is not installed or does not allow this app: open it once, then retry"
 
     override fun session(): GitTransport.Session {
@@ -49,13 +51,11 @@ class TermuxGitTransport(private val ctx: Context) : GitTransport {
     private fun answer(req: JSONObject): String {
         val verb = req.optString("verb")
         val host = req.optString("dir")
-        val guest = StoreAccess.paths.guestPath(host, StoreAccess.userId()) ?: return fail("$host is not inside the shared store")
+        val guest = shell.route.guest(host) ?: return fail("$host is not inside the shared store")
         val (plan, refusal) = TermuxGitWire.plan(verb, guest, req.optJSONObject("args") ?: JSONObject(), req.optJSONObject("auth"))
         if (plan == null) return fail(refusal ?: "git $verb refused")
-        val exec = StoreExec(ctx)
-        val r = try {
-            if (plan.network) exec.job(plan.script, stdin = plan.stdin) else exec.run(plan.script, stdin = plan.stdin.ifEmpty { null })
-        } catch (e: Exception) { return fail(e.message ?: e.javaClass.simpleName) }
+        val r = if (plan.network) shell.job(plan.script, stdin = plan.stdin) else shell.run(plan.script, stdin = plan.stdin.ifEmpty { null })
+        if (r.exit == StoreShell.REFUSED) return fail(r.err.ifBlank { "git $verb could not run in cld.termux" })
         val text = (r.out + (if (r.err.isNotBlank()) "\n" + r.err else "")).trim().takeLast(4000)
         if (verb in TermuxGitWire.OPS) return ok(enc(GitOpResult.serializer(), GitOpResult(r.ok, if (r.ok) "$verb done (in cld.termux)" else "$verb failed in cld.termux (exit ${r.exit})", text)))
         if (!r.ok) {
@@ -74,14 +74,12 @@ class TermuxGitTransport(private val ctx: Context) : GitTransport {
     }
 
     companion object {
-        private fun inStore(dir: File) = StoreAccess.paths.inStore(dir.absolutePath, StoreAccess.userId())
-
         /** Route every GitEngine for a directory in the store through cld.termux; idempotent. */
         fun install(ctx: Context) {
             val app = ctx.applicationContext
-            GitTransports.router = { c, dir -> if (inStore(dir) && StorePaths.viaOwner(StoreAccess.mode(c))) TermuxGitTransport(c.applicationContext) else null }
+            GitTransports.router = { c, dir -> StoreRoute.of(c).let { r -> if (r.inStore(dir.absolutePath) && r.viaTermux) TermuxGitTransport(c.applicationContext) else null } }
             GitEngine.repositoryProbe = { dir ->
-                if (!inStore(dir) || Looper.myLooper() == Looper.getMainLooper()) null else StoreGit.isRepository(app, dir)
+                if (!StoreRoute.of(app).inStore(dir.absolutePath) || Looper.myLooper() == Looper.getMainLooper()) null else StoreGit.isRepository(app, dir)
             }
         }
     }

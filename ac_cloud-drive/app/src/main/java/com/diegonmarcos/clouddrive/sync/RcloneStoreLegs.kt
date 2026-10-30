@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.clouddrive.sync.store.StoreRoute
 import com.diegonmarcos.cloudlib.rclone.RcloneRunner
 import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
 import com.diegonmarcos.cloudlib.sharedstore.StorePaths
@@ -18,16 +19,17 @@ object RcloneStoreLegs {
         val app = ctx.applicationContext
         RcloneRunner.legStaging = object : RcloneRunner.LegStaging {
             private fun legs(): StoreLegs? {
-                val mode = StoreAccess.mode(app)
-                if (!StorePaths.viaOwner(mode)) return null
-                val copier = if (mode == StorePaths.Mode.DIRECT) StoreLegs.FileCopier()
-                    else ExecCopier(app, StoreAccess.paths, StoreAccess.userId())
-                return StoreLegs(StoreAccess.paths, StoreAccess.userId(), copier)
+                val route = StoreRoute.of(app)
+                if (!route.viaTermux) return null
+                val copier = if (route.mode == StorePaths.Mode.DIRECT) StoreLegs.FileCopier()
+                    else ExecCopier(app)
+                return StoreLegs(StoreAccess.paths, route.userId, copier)
             }
 
             override fun refusal(args: List<String>): String? {
                 val l = legs()
-                val touches = args.drop(1).take(2).any { StoreAccess.paths.inStore(it, StoreAccess.userId()) }
+                val route = StoreRoute.of(app)
+                val touches = args.drop(1).take(2).any { route.inStore(it) }
                 return when {
                     !touches -> null
                     l == null -> "the shared store is in Cloud Terminal Termux (cld.termux), which is not installed or does not allow this app: open it once, then retry"

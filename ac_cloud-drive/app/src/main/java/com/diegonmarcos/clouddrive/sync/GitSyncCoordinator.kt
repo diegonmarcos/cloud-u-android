@@ -15,8 +15,7 @@ import com.diegonmarcos.cloudlib.gitsync.GitOpResult
 import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
-import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
-import com.diegonmarcos.cloudlib.sharedstore.StoreExec
+import com.diegonmarcos.clouddrive.sync.store.StoreShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +36,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     private val registry = RepoRegistry(File(ctx.filesDir, GitSyncWorker.REGISTRY_FILE))
     private val credentials = GitCredentialStore(ctx)
+    /** #1315 the ONE runner of store scripts and the ONE host<->guest translation (sync/store). */
+    private val shell: StoreShell = StoreShell.of(ctx)
 
     init { engineContext = ctx.applicationContext }
 
@@ -885,7 +886,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             return@startDepth
         }
         val plan = withContext(Dispatchers.IO) { BareClones.plan(targets.map { BareClones.Target(it.name, it.url) }, listMirrors(), canonical) }
-        val gitGuest = withContext(Dispatchers.IO) { runCatching { StoreGit.guestOf(SharedStore.gitRoot()) }.getOrNull() }
+        val gitGuest = withContext(Dispatchers.IO) { shell.route.guest(SharedStore.gitRoot().absolutePath) }
         val work = targets.filter { t -> t.name in plan.toUpdate || plan.toClone.any { it.name == t.name } }
         depthRun.update { it?.copy(total = work.size) }
         val fallbackToken = lazy { runCatching { declaredToken() }.getOrDefault("") }
@@ -951,7 +952,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     fun archiveDir(): File? = FolderActions.archiveDir(SharedStore.gitRoot(), Declarations.sync.git.archiveRoot)
 
     /** The guest path when the store is reached through cld.termux, else null (java.io on the folder itself). */
-    private fun execGuest(dir: File): String? = runCatching { if (StoreGit.useExec(ctx)) StoreGit.guestOf(dir) else null }.getOrNull()
+    private fun execGuest(dir: File): String? = shell.route.let { r -> if (r.viaTermux) r.guest(dir.absolutePath) else null }
 
     /** What Delete must show before it runs: uncommitted changes and unpushed commits read from the clone (blocking: call on IO). */
     fun deleteGuard(path: String): FolderActions.Guard {
@@ -959,7 +960,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         return runCatching {
             val g = execGuest(dir)
             if (g != null) {
-                val r = StoreExec(ctx).run(FolderActions.guardScript(g) { StoreExec.q(it) }, timeoutMs = 30_000)
+                val r = shell.run(FolderActions.guardScript(g) { StoreShell.q(it) }, timeoutMs = 30_000)
                 if (r.exit == 2) FolderActions.Guard(emptyList(), null, "not readable in cld.termux") else FolderActions.parseGuard(r.out)
             } else GitEngine(ctx, dir).use { e ->
                 val st = e.status()
@@ -974,7 +975,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         // #1317 through cld.termux java.io cannot see the store: only the script (exit 17) decides an existing destination.
         if (gf == null && to.exists()) return GitOpResult(false, "refused: ${to.name} already exists")
         if (gf != null && gt != null) {
-            val r = StoreExec(ctx).run(FolderActions.moveScript(gf, gt) { StoreExec.q(it) }, timeoutMs = 120_000)
+            val r = shell.run(FolderActions.moveScript(gf, gt) { StoreShell.q(it) }, timeoutMs = 120_000)
             return GitOpResult(r.ok, when (r.exit) { 0 -> "moved"; 16 -> "the folder is gone"; 17 -> "refused: ${to.name} already exists"; else -> "move in cld.termux failed (exit ${r.exit})" }, (r.out + "\n" + r.err).trim().takeLast(2000))
         }
         to.parentFile?.mkdirs()
@@ -983,7 +984,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     /** #1317 which of [candidates] exist under [parent] in cld.termux (ONE probe); null = the probe failed. */
     private fun takenInExec(parent: File, candidates: List<String>): Set<String>? = runCatching {
-        val r = StoreExec(ctx).run(FolderActions.takenScript(StoreGit.guestOf(parent), candidates) { StoreExec.q(it) }, timeoutMs = 60_000)
+        val r = shell.run(FolderActions.takenScript(shell.route.guestOrThrow(parent.absolutePath), candidates) { StoreShell.q(it) }, timeoutMs = 60_000)
         if (r.exit == 0) r.out.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toSet() else null
     }.getOrNull()
 
@@ -1016,7 +1017,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val note = FolderActions.fixNote(t.origin, names)
         val g = execGuest(dir)
         if (g != null) {
-            val r = StoreExec(ctx).run(FolderActions.setOriginScript(g, fixed) { StoreExec.q(it) }, timeoutMs = 60_000)
+            val r = shell.run(FolderActions.setOriginScript(g, fixed) { StoreShell.q(it) }, timeoutMs = 60_000)
             return when (r.exit) { 0 -> Outcome.OK to note; 16 -> Outcome.FAIL to "the folder is gone"; 19 -> Outcome.FAIL to "no origin remote to fix"; else -> Outcome.FAIL to "set-url in cld.termux failed (exit ${r.exit})" }
         }
         return if (LocalRepos.setOrigin(dir, fixed)) Outcome.OK to note else Outcome.FAIL to "could not rewrite the origin in ${dir.name}/.git/config"
@@ -1027,7 +1028,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         if (found.isEmpty()) return found
         val guests = found.associateBy { f -> execGuest(f.dir) }.filterKeys { it != null }
         if (guests.isEmpty()) return found
-        val seen = runCatching { FolderActions.parseOrigins(StoreExec(ctx).run(FolderActions.originsScript(guests.keys.filterNotNull()) { StoreExec.q(it) }, timeoutMs = 60_000).out) }.getOrDefault(emptyMap())
+        val seen = runCatching { FolderActions.parseOrigins(shell.run(FolderActions.originsScript(guests.keys.filterNotNull()) { StoreShell.q(it) }, timeoutMs = 60_000).out) }.getOrDefault(emptyMap())
         return found.map { f -> val g = execGuest(f.dir); if (g != null && g in seen) LocalRepos.found(f.dir, seen.getValue(g), RegistryNames.live()) else f }
     }
 
@@ -1066,7 +1067,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val guard = deleteGuard(t.path)
         if (guard.strict && t.path !in typed) return Outcome.SKIP to "not deleted, needs the typed confirm: " + guard.reasons().joinToString("; ")
         val g = execGuest(dir)
-        val ok = if (g != null) StoreExec(ctx).run(FolderActions.deleteScript(g) { StoreExec.q(it) }, timeoutMs = 300_000).ok
+        val ok = if (g != null) shell.run(FolderActions.deleteScript(g) { StoreShell.q(it) }, timeoutMs = 300_000).ok
         else File(dir, ".git").exists() && dir.deleteRecursively()
         return if (ok) Outcome.OK to "deleted the local folder (the remote is untouched)" + (if (guard.strict) "; discarded: " + guard.reasons().joinToString("; ") else "")
         else Outcome.FAIL to "the delete failed or was refused (not a git folder)"
@@ -1254,9 +1255,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e -> e.log(max = Declarations.sync.git.status.logWindow).map { it.sha } }
             }
             val ctx = engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with")
-            if (StoreGit.useExec(ctx) && StoreAccess.paths.inStore(dir.absolutePath, StoreAccess.userId())) {
-                val guest = StoreAccess.paths.guestPath(dir.absolutePath, StoreAccess.userId()) ?: error("${dir.absolutePath} is not inside the store")
-                val r = StoreExec(ctx).run(RepoCheap.lightScript(StoreExec.q(guest)), timeoutMs = 15_000)
+            val sh = StoreShell.of(ctx)
+            if (sh.route.viaTermux && sh.route.inStore(dir.absolutePath)) {
+                val guest = sh.route.guestOrThrow(dir.absolutePath)
+                val r = sh.run(RepoCheap.lightScript(StoreShell.q(guest)), timeoutMs = 15_000)
                 if (!r.ok) error("git in cld.termux failed (exit ${r.exit}) reading ${dir.absolutePath}: ${r.err.trim().takeLast(300)}")
                 return RepoCheap.parseLight(r.out)
             }

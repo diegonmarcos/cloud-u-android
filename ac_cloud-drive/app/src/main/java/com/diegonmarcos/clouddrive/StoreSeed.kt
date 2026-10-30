@@ -79,7 +79,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         val imported = runCatching {
             val items = LegacyImport.plan(File(SharedStore.legacyRoot(), BuildConfig.GIT_SUBDIR), SharedStore.gitRoot(), storeIsRepo)
             val copier = if (com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(applicationContext) == com.diegonmarcos.cloudlib.sharedstore.StorePaths.Mode.DIRECT) com.diegonmarcos.clouddrive.sync.StoreLegs.FileCopier()
-                else com.diegonmarcos.clouddrive.sync.ExecCopier(applicationContext, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.paths, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.userId())
+                else com.diegonmarcos.clouddrive.sync.ExecCopier(applicationContext)
             LegacyImport.run(items, copier, storeIsRepo)
         }.getOrElse { listOf(LegacyImport.Outcome("-", false, it.message ?: it.javaClass.simpleName)) }
         imported.forEach { o ->
