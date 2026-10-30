@@ -25,8 +25,8 @@ def code(t): return re.sub(r'/\*.*?\*/|//[^\n]*', '', t, flags=re.S)
 sb = json.load(open(f"{app}/build.json", encoding="utf-8")).get("home_status_bar", {})
 els = sb.get("elements", [])
 ok(len(els) >= 14, f"S1: {len(els)} elements declared", f"S1: only {len(els)} elements declared")
-need = {"id", "label", "kind", "position", "order", "visible", "pet", "opens"}
-ok(all(need <= set(e) for e in els), "S1: every element carries id, label, kind, position, order, visible, pet, opens", "S1: an element lacks one of " + str(sorted(need)))
+need = {"id", "label", "short", "kind", "position", "order", "visible", "pet", "opens"}
+ok(all(need <= set(e) for e in els), "S1: every element carries id, label, short, kind, position, order, visible, pet, opens", "S1: an element lacks one of " + str(sorted(need)))
 ok(len({e["id"] for e in els}) == len(els), "S1: ids are unique", "S1: duplicate element id")
 ok(all(e["position"] in ("left", "centre", "right") for e in els), "S1: positions are left|centre|right", "S1: an element has an unknown position")
 dup = [p for p in ("left", "centre", "right") if len({e["order"] for e in els if e["position"] == p}) != len([e for e in els if e["position"] == p])]
