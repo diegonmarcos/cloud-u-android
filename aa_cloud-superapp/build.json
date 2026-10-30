@@ -779,6 +779,57 @@
       ]
     }
   },
+  "home_status_bar": {
+    "_doc": "THE HOME STATUS BAR, DECLARED (Configs > Launcher > One-Hand > Status Bar). The top row of the home screen, drawn by launcher/LauncherStatusStrip.kt, RENDERS FROM THIS LIST: each element is placed in the cluster named by `position` (left | centre | right), in `order`, and only when `visible`; moving an element, changing its order or hiding it here changes the bar and nothing else has to be edited. `kind` picks the drawing (network = label over four signal dots, clock = the date and time, metric = a load figure, battery = the battery icon); `id` of a network element is the NetworkSections key, so the tap target stays the popup section of the same name; `pet` is the Zoomies animal row above it (status_pets), null for none; `opens` is what a tap does (network_popup | system_popup | battery_popup | tasks_popup). The clock's `format` is a SimpleDateFormat pattern. The Status Bar section of the One-Hand page lists these elements and stores the owner's runtime overrides (a visibility switch per element, an order per cluster) in status_bar_prefs; the declaration is the default. `row_height_dp` is the 26 dp the strip leaves above the toolbar island (res/values/dimens.xml::shell_top_row_margin; test-status-bar-declared.sh holds them equal). `toolbar_row` lists, read-only, the two pills of the toolbar island drawn right under the strip: they are not strip elements and the strip does not render them.",
+    "row_height_dp": 26,
+    "positions": ["left", "centre", "right"],
+    "elements": [
+      {"id": "cellular", "label": "Mobile data (5G / Call / SOS)", "kind": "network", "position": "left", "order": 1, "visible": true, "pet": "cellular", "opens": "network_popup"},
+      {"id": "wifi", "label": "WiFi", "kind": "network", "position": "left", "order": 2, "visible": true, "pet": "wifi", "opens": "network_popup"},
+      {"id": "bluetooth", "label": "Bluetooth (BT)", "kind": "network", "position": "left", "order": 3, "visible": true, "pet": "bluetooth", "opens": "network_popup"},
+      {"id": "mesh", "label": "Cloud Mesh (WG)", "kind": "network", "position": "left", "order": 4, "visible": true, "pet": "vpn", "opens": "network_popup"},
+      {"id": "kde", "label": "Peer Control (KDE)", "kind": "network", "position": "left", "order": 5, "visible": true, "pet": "kde", "opens": "network_popup"},
+      {"id": "adb", "label": "Debugging (ADB)", "kind": "network", "position": "left", "order": 6, "visible": true, "pet": "adb", "opens": "network_popup"},
+      {"id": "data", "label": "USB data", "kind": "network", "position": "left", "order": 7, "visible": true, "pet": "usb", "opens": "network_popup"},
+      {"id": "hotspot", "label": "Hotspot (HS)", "kind": "network", "position": "left", "order": 8, "visible": true, "pet": "hotspot", "opens": "network_popup"},
+      {"id": "gps", "label": "Location (GPS)", "kind": "network", "position": "left", "order": 9, "visible": true, "pet": "gps", "opens": "network_popup"},
+      {"id": "clock", "label": "Date and time", "kind": "clock", "position": "centre", "order": 1, "visible": true, "pet": null, "opens": "tasks_popup", "format": "dd-MM-yyyy HH:mm EEE"},
+      {"id": "ram", "label": "RAM load (R)", "kind": "metric", "position": "right", "order": 1, "visible": true, "pet": "ram", "opens": "system_popup"},
+      {"id": "storage", "label": "Storage load (S)", "kind": "metric", "position": "right", "order": 2, "visible": true, "pet": "storage", "opens": "system_popup"},
+      {"id": "cpu", "label": "CPU load (C)", "kind": "metric", "position": "right", "order": 3, "visible": true, "pet": "cpu", "opens": "system_popup"},
+      {"id": "battery", "label": "Battery", "kind": "battery", "position": "right", "order": 4, "visible": true, "pet": "battery", "opens": "battery_popup"}
+    ],
+    "toolbar_row": [
+      {"id": "music_pill", "label": "Music pill (now playing)", "position": "centre", "order": 1, "render": "shell", "source": "ShellActivity: the first pill of the toolbar island; its target is the package that owns the live media session, discovered at runtime"},
+      {"id": "dynamic_island", "label": "Dynamic island (initials and mode)", "position": "centre", "order": 2, "render": "shell", "source": "ui.dynamic_island_action"}
+    ]
+  },
+  "tasks_popup": {
+    "_doc": "THE TASKS POPUP (was 'Agenda | Calendar'): what the status bar's clock opens (home_status_bar.elements[clock].opens = tasks_popup). cal/TasksPopup.kt reads this block (BuildConfig.TASKS_POPUP_B64) for its title, its default view, the number of months and every size. `label` is the one name, also the string tasks_label in values and values-es. `default_view` is the view it opens on (calendar | agenda). `views`: calendar = the months on top with the Agenda and Todo tables under them; agenda = the two tables alone, in the larger table height. `months`: previous, current and next, stacked, so count = before + 1 + after (the parser refuses anything else); today is a filled disc and a day with an event carries a dot. Tapping a day filters the Agenda table to that day, tapping it again clears the filter. `tables`: agenda = upcoming dated items (date, time, title) from the cal ENGINE's events (Cloud-Lib-Cal.apk, build.json::engines.cal, the same one Cloud Tasks and Cloud Me read); todo = the open items of the engine's VTODO mirror (the same one Cloud Tasks writes). `complete` is false for todo: completing a task writes to the CalDAV server and the engine takes the account from the app that owns the credentials (Cloud Tasks), which this app does not hold, so the checkbox is drawn but disabled and a tap on the row opens Cloud Tasks. Sizes are dp.",
+    "label": "Tasks",
+    "default_view": "calendar",
+    "views": [
+      {"id": "calendar", "label": "Calendar"},
+      {"id": "agenda", "label": "Agenda"}
+    ],
+    "months": {"count": 3, "before": 1, "after": 1},
+    "layout": {"width_dp": 340, "max_height_dp": 640, "month_cell_dp": 22, "table_height_dp": 150, "table_height_agenda_view_dp": 240},
+    "tables": {
+      "agenda": {"label": "Agenda", "source": "cal engine: events", "columns": ["date", "time", "title"], "window_days": 60, "max_rows": 40},
+      "todo": {"label": "Todo", "source": "cal engine: todos", "columns": ["done", "title", "due"], "max_rows": 40, "complete": false}
+    },
+    "opens_app_on_row_tap": "com.diegonmarcos.cloudagenda"
+  },
+  "onehand_page": {
+    "_doc": "THE INDEX OF Configs > Launcher > One-Hand: a sticky row of icon anchors at the top of the page, one per section, in the page's order; a tap scrolls to that section. OneHandFragment draws the sections AND the index from this one list (BuildConfig.ONEHAND_PAGE_B64), so an anchor cannot point at a section the page does not have, nor a section lack an anchor (test-onehand-index.sh). `label` is the anchor caption, `heading` the section heading on the page, `icon` a name of the libs:ui-icons catalog (the only icons a declaration may name).",
+    "sections": [
+      {"id": "stars", "label": "Stars", "heading": "Home-Screen Stars", "icon": "star"},
+      {"id": "edge_menu", "label": "Edge menu", "heading": "Edge Menu", "icon": "vertical_split"},
+      {"id": "floating_menu", "label": "Floating menu", "heading": "Floating menu", "icon": "layers"},
+      {"id": "home_gestures", "label": "Home Gestures", "heading": "Home-Screen Gestures", "icon": "home"},
+      {"id": "status_bar", "label": "Status Bar", "heading": "Status Bar", "icon": "devices"}
+    ]
+  },
   "_doc_wifi_analyzer": "#1263 the WiFi page's host config, baked into BuildConfig.WIFI_ANALYZER_B64 and deep-merged by libs:wifi over its assets/wifi/wifi-config.json (any key of that file may be overridden here). throughput = the endpoint Tools > Throughput downloads from / uploads to ({bytes} becomes the byte budget); ping.default_host = the public host of the latency test; scan = the auto-scan interval and Android's foreground throttle (4 scans / 2 min); rssi = the signal thresholds the page colours by.",
   "wifi_analyzer": {
     "throughput": {"download_url": "https://speed.cloudflare.com/__down?bytes={bytes}", "upload_url": "https://speed.cloudflare.com/__up", "bytes": 25000000, "upload_bytes": 10000000, "max_seconds": 15},
@@ -1310,6 +1361,12 @@
     "feed": {
       "_doc": "engine-apk-split move 4: the RSS pane (rss/RemoteFeed.kt) binds Cloud-Lib-Feed.apk; libs:feed is in no module map here, so a feed change republishes that APK and not this app.",
       "fleet": "lib-feed",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    },
+    "cal": {
+      "_doc": "The Tasks popup (cal/TasksFeed.kt) binds Cloud-Lib-Cal.apk for its Agenda (events) and Todo (todos) tables, the engine Cloud Tasks and Cloud Me already read; libs:cal is in no module map here. min_contract 1 answers events and todos.",
+      "fleet": "lib-cal",
       "action": "{package}.ENGINE",
       "min_contract": 1
     }
@@ -3060,7 +3117,7 @@
                 "_doc": "Omniverse: page:cloud/omniverse (Galaxy, Game Store, VR Store).",
                 "id": "omniverse",
                 "label": "Omniverse",
-                "icon": "ic_world",
+                "icon": "ic_p_sol_other",
                 "target": "page:cloud/omniverse"
               },
               {
@@ -3073,7 +3130,7 @@
                 "_doc": "FinTerm: section:finterm, the FI | EQ | EX | NW | PM | MY-PM tab strip.",
                 "id": "finterm",
                 "label": "FinTerm",
-                "icon": "ic_fin",
+                "icon": "ic_p_markets_terminal",
                 "target": "section:finterm"
               },
               {
@@ -3086,14 +3143,14 @@
                 "_doc": "CAD: page:cloud/cad (MCAD, BIM, SolWrk).",
                 "id": "cad",
                 "label": "CAD",
-                "icon": "ic_p_c3_stack",
+                "icon": "ic_p_sol_pro",
                 "target": "page:cloud/cad"
               },
               {
                 "_doc": "Sim2Real: page:cloud/sim2real (SAP2000, MATLAB, Ansys).",
                 "id": "sim2real",
                 "label": "Sim2Real",
-                "icon": "ic_robot",
+                "icon": "ic_p_sol_tools",
                 "target": "page:cloud/sim2real"
               }
             ]

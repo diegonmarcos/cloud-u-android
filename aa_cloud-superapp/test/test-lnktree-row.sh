@@ -40,6 +40,7 @@ if not reg_p:
     for c in ("/home/user/git-repos-master/0_registry/projects-repos.json",
               os.path.join(os.path.dirname(build_p), "../../_git-repos-master/0_registry/projects-repos.json")):
         if os.path.isfile(c): reg_p = c; break
+res_dir = os.path.join(os.path.dirname(build_p), "app/src/main/res/drawable")
 SOURCES = ("site", "registry", "repo")
 TABS = [("fi", "FI"), ("eq", "EQ"), ("ex", "EX"), ("nw", "NW"), ("pm", "PM"), ("my-portfolio", "MY-PM")]
 PAGES = {  # page -> (where its stack lives, the entry titles in order)
@@ -81,8 +82,14 @@ def problems(bj, lt, reg, panels, sections, targets, icons):
     for t in tiles:
         if t.get("target") != want_t.get(t.get("label")): out.append("T1 tile %s targets %r" % (t.get("label"), t.get("target")))
     catalog = set(re.findall(r'"([a-z0-9_]+)"\s+to\s', icons))
-    for t in tiles + [p for p in cloud.get("pages", []) if p.get("id") in PAGES] + ft.get("pages", []) + [ft]:
+    # nav declarations (the FinTerm section and its tabs, the three hidden pages) take catalog names; a Cloud tile takes a drawable
+    for t in [p for p in cloud.get("pages", []) if p.get("id") in PAGES] + ft.get("pages", []) + [ft]:
         if t.get("icon") not in catalog: out.append("T1 icon %r of %s is not in the libs:ui-icons catalog" % (t.get("icon"), t.get("id")))
+    for t in tiles:
+        if not os.path.isfile(os.path.join(res_dir, t.get("icon", "") + ".xml")): out.append("T1 tile icon %r of %s has no drawable" % (t.get("icon"), t.get("id")))
+    icons_seen = [t.get("icon") for g in groups for t in g.get("tiles", []) if t.get("icon")]
+    for t in tiles:
+        if icons_seen.count(t.get("icon")) > 1: out.append("T1 tile icon %r of %s is shared with another Cloud tile" % (t.get("icon"), t.get("id")))
     for t in row["tiles"]:
         if t.get("separator") and t.get("target"): out.append("T1 a separator carries a target")
     # T2
@@ -205,7 +212,11 @@ mut("Omniverse and FinTerm swapped", "T1", swap)
 def fifth(b, l, r, a): row(b)["tiles"].append({"id": "x", "label": "Extra", "icon": "ic_robot", "target": "page:cloud/cad"})
 mut("a fifth tile", "T1", fifth)
 def baticon(b, l, r, a): row(b)["tiles"][0]["icon"] = "ic_not_in_catalog"
-mut("icon outside the catalog", "T1", baticon)
+mut("tile icon with no drawable", "T1", baticon)
+def dupicon(b, l, r, a): row(b)["tiles"][0]["icon"] = "ic_robot"
+mut("tile icon shared with another Cloud tile", "T1", dupicon)
+def batnav(b, l, r, a): sec(b, "finterm")["icon"] = "ic_not_in_catalog"
+mut("FinTerm icon outside the catalog", "T1", batnav)
 def dropvr(b, l, r, a): sec(b, "cloud")["stack_omniverse"] = [e for e in sec(b, "cloud")["stack_omniverse"] if e["title"] != "VR Store"]
 mut("VR Store dropped", "T2", dropvr)
 def renmatlab(b, l, r, a): ent(b, "cloud/sim2real", "MATLAB")["title"] = "Matlab"
