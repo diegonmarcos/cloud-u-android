@@ -2737,7 +2737,9 @@
      "kind": "provider",
      "name": "SharedStoreProvider",
      "authority": "<pkg>.sharedstore",
-     "callers": []
+     "callers": [
+      "notes"
+     ]
     },
     {
      "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
@@ -3485,7 +3487,9 @@
      "kind": "provider",
      "name": "SharedStoreProvider",
      "authority": "cld.termux.sharedstore",
-     "callers": []
+     "callers": [
+      "notes"
+     ]
     },
     {
      "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
