@@ -186,11 +186,13 @@
       ]
     },
     "wasm-purity-guard.yml": {
-      "_doc": "#876: reads every lib's src/commonMain and every web root's Kotlin, the web.json lib list (under ab_cloud-libs-shared/web), each commonMain lib's build.gradle, and its own data file.",
+      "_doc": "#876: reads every lib's src/commonMain and every web root's Kotlin, the web.json lib list (under ab_cloud-libs-shared/web), each commonMain lib's build.gradle, and its own data file; #1335: the ad_ app families (app-families.json) decide which folders count as app web roots.",
       "paths": [
         "*/web/**",
+        "1_cicd/src/data/app-families.json",
         "1_cicd/src/data/wasm-migration.json",
         "1_cicd/src/scripts/cloud-android-wasm-purity-guard.py",
+        "1_cicd/src/scripts/cloud_android_app_families.py",
         "1_cicd/src/scripts/test/wasm-purity-guard.test.sh",
         "ab_cloud-libs-shared/libs/*/build.gradle",
         "ab_cloud-libs-shared/libs/*/src/commonMain/**",
