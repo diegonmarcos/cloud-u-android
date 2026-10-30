@@ -728,7 +728,7 @@ Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -741,11 +741,12 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `health_user` | prefs | config | yes | #1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live). |
 | `llc_user` | prefs | config | yes | Cloud Me > LLC user data (the former Work section), one JSON string under 'data' (collections of typed records): employment contracts, side-hustle income, company assets and portfolio holdings. Your own entries, so they move with the phone; gain, allocation and income totals are derived and never stored. |
+| `me_perm_walk` | prefs | device | no | Cloud Me Configs > Perms walk: how many times Health Connect was asked (it stops showing its request after two declines) and which special-access settings pages the start-up walk already opened once. Runtime asks live in libs:perms' perm_ask_tracker. The new phone asks afresh, so it never migrates. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
 | `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
-| `permissions_asked` | prefs | device | no | Cloud Me: one boolean per runtime permission, set once the system dialog has been shown for it, so the start-up prompt is never repeated; the new phone asks afresh, so it never migrates. |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `profile_dd_user` | prefs | config | yes | Cloud Me > Profile > DD (due diligence) dossier values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset. |
 | `profile_health_user` | prefs | config | yes | Cloud Me > Profile > Health record values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset. |
 | `repo_tree` | prefs | config | yes | Cloud Me > Lnktree > Proj (#1298): which nodes of the repository tree are expanded, one string set under 'expanded' (registry node codes such as 1.2 or 1.2.1). A view preference of the owner: it migrates so the tree reopens as it was left. |

@@ -93,7 +93,7 @@ class MeTabsTest {
 
     @Test
     fun `every tab is an icon and only the selected tab shows its name`() {
-        assertEquals(18, health.size)
+        assertEquals(19, health.size)
         showTabs(health[2].id)
         for (p in health) {
             compose.onAllNodesWithTag(PageTabsTags.icon(p.id), useUnmergedTree = true).assertCountEquals(1)
