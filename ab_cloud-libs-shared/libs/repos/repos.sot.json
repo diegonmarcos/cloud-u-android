@@ -9,6 +9,14 @@
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
     {
+      "from": "My-ai-memory",
+      "to": "z-archived_My-ai-memory",
+      "kind": "repo",
+      "since": "2026-10-29",
+      "ticket": "#1291",
+      "doc": "GitHub repo renamed when it was archived (#1291); the registry entry missed the old name, so clones whose origin still says My-ai-memory showed as Unlisted in Cloud Drive."
+    },
+    {
       "from": "Fin-___",
       "to": "Capital-___",
       "kind": "repo",
@@ -2178,6 +2186,9 @@
       "hub": "z-archived-___",
       "url": "git@github.com:diegonmarcos/z-archived_My-ai-memory.git",
       "private": true,
+      "renamed_from": [
+        "My-ai-memory"
+      ],
       "doc": "Archived AI memory repo. Registered 2026-10-29 (#1291) so 09.Archived holds every z-archived_*."
     },
     {
