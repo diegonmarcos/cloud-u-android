@@ -222,6 +222,7 @@
     ],
     "aidl": [],
     "callers": [
+     "aa_cloud-superapp",
      "mail",
      "me",
      "tasks"
