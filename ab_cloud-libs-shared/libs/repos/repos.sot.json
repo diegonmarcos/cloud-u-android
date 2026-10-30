@@ -9,13 +9,68 @@
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
     {
+      "from": "Fin-___",
+      "to": "Capital-___",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Area 3 hub renamed after the area (Capital)."
+    },
+    {
+      "from": "Fin-CM-mqpm",
+      "to": "Capital-Macro-Central-Bank",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Member 3.1 renamed to the registry project name, prefixed with the area."
+    },
+    {
+      "from": "Fin-Corporate",
+      "to": "Capital-Micro-Asset-Management",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Member 3.2 renamed to the registry project name, prefixed with the area."
+    },
+    {
+      "from": "Fin-CM-Blmbrg",
+      "to": "Capital-Stack-Fin-Terminal",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Member 3.3 renamed to the registry project name, prefixed with the area."
+    },
+    {
+      "from": "DeepSc-___",
+      "to": "HardTech-___",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Area 4 hub renamed after the area (HardTech)."
+    },
+    {
+      "from": "DeepSc-X",
+      "to": "HardTech-DeepXTech",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Member 4.2 renamed to the registry project name, prefixed with the area."
+    },
+    {
+      "from": "CAD-Simulators",
+      "to": "HardTech-Stack-CAD-Simulators",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1313",
+      "doc": "Member 4.3 renamed to the registry project name, prefixed with the area."
+    },
+    {
       "from": "Projects-labtools",
       "to": "z-archived_Projects-labtools",
       "kind": "repo",
       "since": "2026-10-30",
       "ticket": "#1311",
-      "status": "pending owner GitHub rename",
-      "doc": "Emptied (its four projects moved to Fin-CM-Blmbrg, Fin-CM-mqpm, CG-circus, CAD-Simulators on 2026-10-29; only pointer READMEs remain); archived. The GitHub rename is the owner's step; the old name keeps working through the GitHub redirect."
+      "doc": "Emptied (its four projects moved to Capital-Stack-Fin-Terminal, Capital-Macro-Central-Bank, CG-circus, HardTech-Stack-CAD-Simulators on 2026-10-29; only pointer READMEs remain); archived. GitHub repo renamed 2026-10-30."
     },
     {
       "from": "DeepSc-Tools",
@@ -797,14 +852,14 @@
       "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
-      "repo": "Fin-___",
-      "what": "Fin project master subset (Fin-CM-mqpm, Fin-CM-Blmbrg, Fin-Corporate)",
+      "repo": "Capital-___",
+      "what": "Capital project master subset (Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal, Capital-Micro-Asset-Management)",
       "reads": "repos.json (subset)",
       "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
     },
     {
-      "repo": "DeepSc-___",
-      "what": "DeepSc project master subset (X)",
+      "repo": "HardTech-___",
+      "what": "HardTech project master subset (DeepXTech, Stack-CAD-Simulators)",
       "reads": "repos.json (subset)",
       "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
     },
@@ -1089,8 +1144,8 @@
     "1.1.Cloudy": "Cloudy (1.1): hub cloudy-___ and its members. The cloudy project: fleet infrastructure, services, devices, data and docs.",
     "1.2.Cloud-me": "Cloud-Me (1.2): hub cloud-me-___ and its members. The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",
     "2.CG": "CG (2): hub CG-___ and its members. Computer graphics: 3D worlds, engines and media production.",
-    "3.Capital": "Capital (3): hub Fin-___ and its members. Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
-    "4.HardTech": "HardTech (4): hub DeepSc-___ and its members. HardTech: deep science projects and CAD / simulation tools.",
+    "3.Capital": "Capital (3): hub Capital-___ and its members. Capital: capital markets and corporate finance. The hub Capital-___ is the area home (3.0).",
+    "4.HardTech": "HardTech (4): hub HardTech-___ and its members. HardTech: deep science projects and CAD / simulation tools.",
     "5.Lecole-42": "42 (5): hub lecole-42-___ and its members. 42 school coursework (a school, not a project): one project per curriculum repo.",
     "6.Projects": "Projects (6): hub Projects-___ and its members. Projects (formerly Front): endeavours, lab tools and DuckPeng.",
     "7.Others": "Others (7): no hub. Loose GitHub repos with no project hub (profile README, GitHub Pages site).",
@@ -1556,77 +1611,92 @@
       "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
-      "name": "Fin-___",
+      "name": "Capital-___",
       "farm": "3.Capital",
       "group": "b_projects",
       "parent_hub": "_git-repos-master",
-      "url": "git@github.com:diegonmarcos/Fin-___.git",
+      "url": "git@github.com:diegonmarcos/Capital-___.git",
       "private": false,
       "renamed_from": [
         "Fin-CM",
         "Fin-CM___",
-        "Fin-CM-___"
+        "Fin-CM-___",
+        "Fin-___"
       ],
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the Capital family (Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
-      "name": "Fin-CM-mqpm",
+      "name": "Capital-Macro-Central-Bank",
       "farm": "3.Capital/Capital-Markets",
       "group": "b_projects",
-      "hub": "Fin-___",
-      "url": "git@github.com:diegonmarcos/Fin-CM-mqpm.git",
+      "hub": "Capital-___",
+      "url": "git@github.com:diegonmarcos/Capital-Macro-Central-Bank.git",
       "private": false,
+      "renamed_from": [
+        "Fin-CM-mqpm"
+      ],
       "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
     },
     {
-      "name": "Fin-Corporate",
+      "name": "Capital-Micro-Asset-Management",
       "farm": "3.Capital/Corporate",
       "group": "b_projects",
-      "hub": "Fin-___",
-      "url": "git@github.com:diegonmarcos/Fin-Corporate.git",
+      "hub": "Capital-___",
+      "url": "git@github.com:diegonmarcos/Capital-Micro-Asset-Management.git",
       "private": false,
-      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28."
+      "renamed_from": [
+        "Fin-Corporate"
+      ],
+      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Capital-___ hub. Created 2026-10-28."
     },
     {
-      "name": "Fin-CM-Blmbrg",
+      "name": "Capital-Stack-Fin-Terminal",
       "farm": "3.Capital/Capital-Markets",
       "group": "b_projects",
-      "hub": "Fin-___",
-      "url": "git@github.com:diegonmarcos/Fin-CM-Blmbrg.git",
+      "hub": "Capital-___",
+      "url": "git@github.com:diegonmarcos/Capital-Stack-Fin-Terminal.git",
       "private": false,
+      "renamed_from": [
+        "Fin-CM-Blmbrg"
+      ],
       "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
     },
     {
-      "name": "DeepSc-___",
+      "name": "HardTech-___",
       "farm": "4.HardTech",
       "group": "b_projects",
       "parent_hub": "_git-repos-master",
-      "url": "git@github.com:diegonmarcos/DeepSc-___.git",
+      "url": "git@github.com:diegonmarcos/HardTech-___.git",
       "private": false,
       "renamed_from": [
         "DeepSc",
-        "DeepSc___"
+        "DeepSc___",
+        "DeepSc-___"
       ],
-      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the HardTech family (HardTech-DeepXTech; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
-      "name": "DeepSc-X",
+      "name": "HardTech-DeepXTech",
       "farm": "4.HardTech",
       "group": "b_projects",
-      "hub": "DeepSc-___",
-      "url": "git@github.com:diegonmarcos/DeepSc-X.git",
-      "private": false,
-      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
-    },
-    {
-      "name": "CAD-Simulators",
-      "farm": "4.HardTech",
-      "group": "b_projects",
-      "hub": "DeepSc-___",
-      "url": "git@github.com:diegonmarcos/CAD-Simulators.git",
+      "hub": "HardTech-___",
+      "url": "git@github.com:diegonmarcos/HardTech-DeepXTech.git",
       "private": false,
       "renamed_from": [
-        "DeepSc-Tools"
+        "DeepSc-X"
+      ],
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to HardTech-Stack-CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
+    },
+    {
+      "name": "HardTech-Stack-CAD-Simulators",
+      "farm": "4.HardTech",
+      "group": "b_projects",
+      "hub": "HardTech-___",
+      "url": "git@github.com:diegonmarcos/HardTech-Stack-CAD-Simulators.git",
+      "private": false,
+      "renamed_from": [
+        "DeepSc-Tools",
+        "CAD-Simulators"
       ],
       "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255."
     },
@@ -1908,31 +1978,31 @@
         },
         {
           "name": "a-Lfy_C3",
-          "path": "Projects-labtools",
+          "path": "z-archived_Projects-labtools",
           "status": "split",
           "ticket": "#1218",
           "doc": "README only for now."
         },
         {
           "name": "b-Nxs_PA",
-          "path": "Fin-CM-mqpm",
+          "path": "Capital-Macro-Central-Bank",
           "status": "split",
           "ticket": "#1218",
-          "doc": "Central bank, moved with history 2026-10-28 into Fin-CM-mqpm (src/central_bank, 92b18a0); labtools removed it in 741bb8b."
+          "doc": "Central bank, moved with history 2026-10-28 into Capital-Macro-Central-Bank (src/central_bank, 92b18a0); labtools removed it in 741bb8b."
         },
         {
           "name": "b-Nxs_Blmmbrg",
-          "path": "Fin-CM-Blmbrg",
+          "path": "Capital-Stack-Fin-Terminal",
           "status": "split",
           "ticket": "#1218",
-          "doc": "fin-terminal, market_watch, news, moved with history 2026-10-28 into Fin-CM-Blmbrg (src/, 47950ae), then laid out as FIN TERMINAL 2026-10-29 (#1279): src/{CentralBank, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal}; labtools removed it in 741bb8b."
+          "doc": "fin-terminal, market_watch, news, moved with history 2026-10-28 into Capital-Stack-Fin-Terminal (src/, 47950ae), then laid out as FIN TERMINAL 2026-10-29 (#1279): src/{CentralBank, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal}; labtools removed it in 741bb8b."
         },
         {
           "name": "c-Stk_DsX",
-          "path": "CAD-Simulators",
+          "path": "HardTech-Stack-CAD-Simulators",
           "status": "split",
           "ticket": "#1218",
-          "doc": "sailytics, moved with history 2026-10-28 into CAD-Simulators (457f89f), now Simulators/sailytics (#1279, was tools/sailytics); labtools removed it in 741bb8b."
+          "doc": "sailytics, moved with history 2026-10-28 into HardTech-Stack-CAD-Simulators (457f89f), now Simulators/sailytics (#1279, was tools/sailytics); labtools removed it in 741bb8b."
         },
         {
           "name": "c_Suite",
@@ -2121,7 +2191,7 @@
         "Projects-labtools",
         "front-labtools"
       ],
-      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28). Archived 2026-10-30: empty except pointer READMEs; renamed z-archived_Projects-labtools, to be archived on GitHub (owner click)."
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal, HardTech-Stack-CAD-Simulators (labtools 741bb8b, 2026-10-28). Archived 2026-10-30: empty except pointer READMEs; renamed z-archived_Projects-labtools, to be archived on GitHub (owner click)."
     }
   ]
 }

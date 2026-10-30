@@ -574,7 +574,7 @@
    "name": "Capital",
    "label": "Capital",
    "icon": "💹",
-   "description": "Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
+   "description": "Capital: capital markets and corporate finance. The hub Capital-___ is the area home (3.0).",
    "show_in": [
     "lnktree"
    ],
@@ -597,9 +597,9 @@
        "repos": [
         {
          "code": "3.1.1.1",
-         "name": "Fin-CM-mqpm",
-         "registry_name": "Fin-CM-mqpm",
-         "url": "https://github.com/diegonmarcos/Fin-CM-mqpm",
+         "name": "Capital-Macro-Central-Bank",
+         "registry_name": "Capital-Macro-Central-Bank",
+         "url": "https://github.com/diegonmarcos/Capital-Macro-Central-Bank",
          "private": false,
          "description": "MQPM — StochBates and quant projects"
         }
@@ -613,7 +613,7 @@
      "name": "Micro-Asset-Management",
      "label": "Micro-Asset-Management",
      "icon": "🏢",
-     "description": "Corporate finance (WACC). Fin-Corporate holds only a README so far: no WACC material inside it yet.",
+     "description": "Corporate finance (WACC). Capital-Micro-Asset-Management holds only a README so far: no WACC material inside it yet.",
      "children": [
       {
        "code": "3.2.1",
@@ -625,9 +625,9 @@
        "repos": [
         {
          "code": "3.2.1.1",
-         "name": "Fin-Corporate",
-         "registry_name": "Fin-Corporate",
-         "url": "https://github.com/diegonmarcos/Fin-Corporate",
+         "name": "Capital-Micro-Asset-Management",
+         "registry_name": "Capital-Micro-Asset-Management",
+         "url": "https://github.com/diegonmarcos/Capital-Micro-Asset-Management",
          "private": false,
          "description": "Fin: Corporate finance"
         }
@@ -653,9 +653,9 @@
        "repos": [
         {
          "code": "3.3.1.1",
-         "name": "Fin-CM-Blmbrg",
-         "registry_name": "Fin-CM-Blmbrg",
-         "url": "https://github.com/diegonmarcos/Fin-CM-Blmbrg",
+         "name": "Capital-Stack-Fin-Terminal",
+         "registry_name": "Capital-Stack-Fin-Terminal",
+         "url": "https://github.com/diegonmarcos/Capital-Stack-Fin-Terminal",
          "private": false,
          "description": "Blmbrg — fin-term, market watch and news"
         }
@@ -682,7 +682,7 @@
      "name": "Structural",
      "label": "Structural",
      "icon": "🏗️",
-     "description": "Structural design (planned): the content lives in CAD-Simulators/Structural-Designer until it gets its own repo."
+     "description": "Structural design (planned): the content lives in HardTech-Stack-CAD-Simulators/Structural-Designer until it gets its own repo."
     },
     {
      "code": "4.2",
@@ -702,11 +702,11 @@
        "repos": [
         {
          "code": "4.2.1.1",
-         "name": "DeepSc-X",
-         "registry_name": "DeepSc-X",
-         "url": "https://github.com/diegonmarcos/DeepSc-X",
+         "name": "HardTech-DeepXTech",
+         "registry_name": "HardTech-DeepXTech",
+         "url": "https://github.com/diegonmarcos/HardTech-DeepXTech",
          "private": false,
-         "description": "DeepSc-X — deep science projects"
+         "description": "HardTech-DeepXTech — deep science projects"
         }
        ]
       }
@@ -730,9 +730,9 @@
        "repos": [
         {
          "code": "4.3.1.1",
-         "name": "CAD-Simulators",
-         "registry_name": "CAD-Simulators",
-         "url": "https://github.com/diegonmarcos/CAD-Simulators",
+         "name": "HardTech-Stack-CAD-Simulators",
+         "registry_name": "HardTech-Stack-CAD-Simulators",
+         "url": "https://github.com/diegonmarcos/HardTech-Stack-CAD-Simulators",
          "private": false,
          "description": "DeepSc tools: agentic CAD (MCP) and more"
         }

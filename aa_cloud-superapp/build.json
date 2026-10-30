@@ -3071,14 +3071,14 @@
                 "id": "nx-cm-mqpm",
                 "label": "Nx.z-CM-MQPM",
                 "icon": "ic_p_markets_prices",
-                "target": "https://github.com/diegonmarcos/Fin-CM-mqpm"
+                "target": "https://github.com/diegonmarcos/Capital-Macro-Central-Bank"
               },
               {
                 "_doc": "Nx.z-CM-Blmbrg (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "nx-cm-blmbrg",
                 "label": "Nx.z-CM-Blmbrg",
                 "icon": "ic_p_markets_terminal",
-                "target": "https://github.com/diegonmarcos/Fin-CM-Blmbrg"
+                "target": "https://github.com/diegonmarcos/Capital-Stack-Fin-Terminal"
               },
               {
                 "_doc": "Owner-ordered group divider in Projects W (#1212): a bare character, not a control; Sections.TileGroup.destinations drops it.",
@@ -3091,7 +3091,7 @@
                 "id": "st-deepsc-x",
                 "label": "St.x-DeepSc-X",
                 "icon": "ic_p_sol_tools",
-                "target": "https://github.com/diegonmarcos/DeepSc-X"
+                "target": "https://github.com/diegonmarcos/HardTech-DeepXTech"
               }
             ]
           },

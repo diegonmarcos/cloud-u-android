@@ -727,8 +727,8 @@
     },
     {
       "family": "Hub",
-      "name": "Fin-___",
-      "url": "https://github.com/diegonmarcos/Fin-___",
+      "name": "Capital-___",
+      "url": "https://github.com/diegonmarcos/Capital-___",
       "role": "hub",
       "visibility": "public",
       "project": "—",
@@ -738,15 +738,15 @@
       "area_code": "3",
       "project_code": null,
       "family_code": null,
-      "registry_name": "Fin-___",
+      "registry_name": "Capital-___",
       "hub": "_git-repos-master",
       "farm": "3.Capital",
-      "description": "Fin-CM — hub: capital markets (NexusZ, MQPM, Blmbrg)"
+      "description": "Capital — hub: capital markets and corporate finance (Macro-Central-Bank, Micro-Asset-Management, Stack-Fin-Terminal)"
     },
     {
       "family": "MQPM",
-      "name": "Fin-CM-mqpm",
-      "url": "https://github.com/diegonmarcos/Fin-CM-mqpm",
+      "name": "Capital-Macro-Central-Bank",
+      "url": "https://github.com/diegonmarcos/Capital-Macro-Central-Bank",
       "role": "",
       "visibility": "public",
       "project": "Macro-Central-Bank",
@@ -756,15 +756,15 @@
       "area_code": "3",
       "project_code": "3.1",
       "family_code": "3.1.1",
-      "registry_name": "Fin-CM-mqpm",
-      "hub": "Fin-___",
+      "registry_name": "Capital-Macro-Central-Bank",
+      "hub": "Capital-___",
       "farm": "3.Capital/Capital-Markets",
       "description": "MQPM — StochBates and quant projects"
     },
     {
       "family": "Corporate",
-      "name": "Fin-Corporate",
-      "url": "https://github.com/diegonmarcos/Fin-Corporate",
+      "name": "Capital-Micro-Asset-Management",
+      "url": "https://github.com/diegonmarcos/Capital-Micro-Asset-Management",
       "role": "",
       "visibility": "public",
       "project": "Micro-Asset-Management",
@@ -774,15 +774,15 @@
       "area_code": "3",
       "project_code": "3.2",
       "family_code": "3.2.1",
-      "registry_name": "Fin-Corporate",
-      "hub": "Fin-___",
+      "registry_name": "Capital-Micro-Asset-Management",
+      "hub": "Capital-___",
       "farm": "3.Capital/Corporate",
       "description": "Fin: Corporate finance"
     },
     {
       "family": "Terminal",
-      "name": "Fin-CM-Blmbrg",
-      "url": "https://github.com/diegonmarcos/Fin-CM-Blmbrg",
+      "name": "Capital-Stack-Fin-Terminal",
+      "url": "https://github.com/diegonmarcos/Capital-Stack-Fin-Terminal",
       "role": "",
       "visibility": "public",
       "project": "Stack-Fin-Terminal",
@@ -792,15 +792,15 @@
       "area_code": "3",
       "project_code": "3.3",
       "family_code": "3.3.1",
-      "registry_name": "Fin-CM-Blmbrg",
-      "hub": "Fin-___",
+      "registry_name": "Capital-Stack-Fin-Terminal",
+      "hub": "Capital-___",
       "farm": "3.Capital/Capital-Markets",
       "description": "Blmbrg — fin-term, market watch and news"
     },
     {
       "family": "Hub",
-      "name": "DeepSc-___",
-      "url": "https://github.com/diegonmarcos/DeepSc-___",
+      "name": "HardTech-___",
+      "url": "https://github.com/diegonmarcos/HardTech-___",
       "role": "hub",
       "visibility": "public",
       "project": "—",
@@ -810,15 +810,15 @@
       "area_code": "4",
       "project_code": null,
       "family_code": null,
-      "registry_name": "DeepSc-___",
+      "registry_name": "HardTech-___",
       "hub": "_git-repos-master",
       "farm": "4.HardTech",
-      "description": "DeepSc — hub: deep science (StarkX, X)"
+      "description": "HardTech — hub: deep science and CAD / simulators (DeepXTech, Stack-CAD-Simulators)"
     },
     {
       "family": "Sailytics",
-      "name": "DeepSc-X",
-      "url": "https://github.com/diegonmarcos/DeepSc-X",
+      "name": "HardTech-DeepXTech",
+      "url": "https://github.com/diegonmarcos/HardTech-DeepXTech",
       "role": "",
       "visibility": "public",
       "project": "DeepXTech",
@@ -828,15 +828,15 @@
       "area_code": "4",
       "project_code": "4.2",
       "family_code": "4.2.1",
-      "registry_name": "DeepSc-X",
-      "hub": "DeepSc-___",
+      "registry_name": "HardTech-DeepXTech",
+      "hub": "HardTech-___",
       "farm": "4.HardTech",
-      "description": "DeepSc-X — deep science projects"
+      "description": "HardTech-DeepXTech — deep science projects"
     },
     {
       "family": "CAD",
-      "name": "CAD-Simulators",
-      "url": "https://github.com/diegonmarcos/CAD-Simulators",
+      "name": "HardTech-Stack-CAD-Simulators",
+      "url": "https://github.com/diegonmarcos/HardTech-Stack-CAD-Simulators",
       "role": "",
       "visibility": "public",
       "project": "Stack-CAD-Simulators",
@@ -846,8 +846,8 @@
       "area_code": "4",
       "project_code": "4.3",
       "family_code": "4.3.1",
-      "registry_name": "CAD-Simulators",
-      "hub": "DeepSc-___",
+      "registry_name": "HardTech-Stack-CAD-Simulators",
+      "hub": "HardTech-___",
       "farm": "4.HardTech",
       "description": "DeepSc tools: agentic CAD (MCP) and more"
     },
@@ -1954,8 +1954,8 @@
         "lnktree"
       ],
       "developer": "Nexus.z",
-      "description": "Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
-      "hub": "Fin-___",
+      "description": "Capital: capital markets and corporate finance. The hub Capital-___ is the area home (3.0).",
+      "hub": "Capital-___",
       "farm": "3.Capital",
       "repos_count": 4,
       "children": [
@@ -1982,7 +1982,7 @@
               "farm": "3.Capital/Capital-Markets",
               "repos_count": 1,
               "repos": [
-                "Fin-CM-mqpm"
+                "Capital-Macro-Central-Bank"
               ]
             }
           ]
@@ -1994,7 +1994,7 @@
           "label": "Micro-Asset-Management",
           "icon": "🏢",
           "developer": "Nexus.z",
-          "description": "Corporate finance (WACC). Fin-Corporate holds only a README so far: no WACC material inside it yet.",
+          "description": "Corporate finance (WACC). Capital-Micro-Asset-Management holds only a README so far: no WACC material inside it yet.",
           "hub": null,
           "farm": "3.Capital/Corporate",
           "repos_count": 1,
@@ -2010,7 +2010,7 @@
               "farm": "3.Capital/Corporate",
               "repos_count": 1,
               "repos": [
-                "Fin-Corporate"
+                "Capital-Micro-Asset-Management"
               ]
             }
           ]
@@ -2038,7 +2038,7 @@
               "farm": "3.Capital/Capital-Markets",
               "repos_count": 1,
               "repos": [
-                "Fin-CM-Blmbrg"
+                "Capital-Stack-Fin-Terminal"
               ]
             }
           ]
@@ -2057,7 +2057,7 @@
       ],
       "developer": "Stark.x",
       "description": "HardTech: deep science projects and CAD / simulation tools.",
-      "hub": "DeepSc-___",
+      "hub": "HardTech-___",
       "farm": "4.HardTech",
       "repos_count": 3,
       "children": [
@@ -2068,7 +2068,7 @@
           "label": "Structural",
           "icon": "🏗️",
           "developer": "Stark.x",
-          "description": "Structural design (planned): the content lives in CAD-Simulators/Structural-Designer until it gets its own repo.",
+          "description": "Structural design (planned): the content lives in HardTech-Stack-CAD-Simulators/Structural-Designer until it gets its own repo.",
           "hub": null,
           "farm": "4.HardTech",
           "repos_count": 0,
@@ -2097,7 +2097,7 @@
               "farm": "4.HardTech",
               "repos_count": 1,
               "repos": [
-                "DeepSc-X"
+                "HardTech-DeepXTech"
               ]
             }
           ]
@@ -2125,7 +2125,7 @@
               "farm": "4.HardTech",
               "repos_count": 1,
               "repos": [
-                "CAD-Simulators"
+                "HardTech-Stack-CAD-Simulators"
               ]
             }
           ]

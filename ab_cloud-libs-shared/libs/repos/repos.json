@@ -15,12 +15,6 @@
   },
   "repos": [
     {
-      "name": "CAD-Simulators",
-      "repo": "diegonmarcos/CAD-Simulators",
-      "private": false,
-      "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255."
-    },
-    {
       "name": "CG-___",
       "repo": "diegonmarcos/CG-___",
       "private": false,
@@ -57,16 +51,28 @@
       "doc": "Voxel engine in Rust (vox-rust build plan under docs/)."
     },
     {
-      "name": "DeepSc-X",
-      "repo": "diegonmarcos/DeepSc-X",
+      "name": "Capital-Macro-Central-Bank",
+      "repo": "diegonmarcos/Capital-Macro-Central-Bank",
       "private": false,
-      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
+      "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
     },
     {
-      "name": "DeepSc-___",
-      "repo": "diegonmarcos/DeepSc-___",
+      "name": "Capital-Micro-Asset-Management",
+      "repo": "diegonmarcos/Capital-Micro-Asset-Management",
       "private": false,
-      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Capital-___ hub. Created 2026-10-28."
+    },
+    {
+      "name": "Capital-Stack-Fin-Terminal",
+      "repo": "diegonmarcos/Capital-Stack-Fin-Terminal",
+      "private": false,
+      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
+    },
+    {
+      "name": "Capital-___",
+      "repo": "diegonmarcos/Capital-___",
+      "private": false,
+      "doc": "Project master for the Capital family (Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
       "name": "DuckPeng-___",
@@ -75,28 +81,22 @@
       "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the cloud-me-pub-profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
     },
     {
-      "name": "Fin-CM-Blmbrg",
-      "repo": "diegonmarcos/Fin-CM-Blmbrg",
+      "name": "HardTech-DeepXTech",
+      "repo": "diegonmarcos/HardTech-DeepXTech",
       "private": false,
-      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to HardTech-Stack-CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
     },
     {
-      "name": "Fin-CM-mqpm",
-      "repo": "diegonmarcos/Fin-CM-mqpm",
+      "name": "HardTech-Stack-CAD-Simulators",
+      "repo": "diegonmarcos/HardTech-Stack-CAD-Simulators",
       "private": false,
-      "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
+      "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255."
     },
     {
-      "name": "Fin-Corporate",
-      "repo": "diegonmarcos/Fin-Corporate",
+      "name": "HardTech-___",
+      "repo": "diegonmarcos/HardTech-___",
       "private": false,
-      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28."
-    },
-    {
-      "name": "Fin-___",
-      "repo": "diegonmarcos/Fin-___",
-      "private": false,
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the HardTech family (HardTech-DeepXTech; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
       "name": "Projects-___",
@@ -109,12 +109,6 @@
       "repo": "diegonmarcos/Projects-endeavours",
       "private": false,
       "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
-    },
-    {
-      "name": "Projects-labtools",
-      "repo": "diegonmarcos/Projects-labtools",
-      "private": false,
-      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28)."
     },
     {
       "name": "cloud-me-___",
@@ -295,6 +289,12 @@
       "repo": "diegonmarcos/diegonmarcos.github.io",
       "private": false,
       "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud."
+    },
+    {
+      "name": "z-archived_Projects-labtools",
+      "repo": "diegonmarcos/z-archived_Projects-labtools",
+      "private": false,
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Capital-Macro-Central-Bank, Capital-Stack-Fin-Terminal, HardTech-Stack-CAD-Simulators (labtools 741bb8b, 2026-10-28). Archived 2026-10-30: empty except pointer READMEs; renamed z-archived_Projects-labtools, to be archived on GitHub (owner click)."
     },
     {
       "name": "z-archived_cloud-me-pub-data",
