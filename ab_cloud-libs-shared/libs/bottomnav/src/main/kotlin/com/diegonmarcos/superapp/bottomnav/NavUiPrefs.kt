@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.bottomnav
 
 import android.content.Context
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -20,7 +21,13 @@ public class NavUiPrefs private constructor(context: Context) : NavUiStore {
     private var chosenMode: NavUiMode? by mutableStateOf(NavUiMode.entries.firstOrNull { it.declared == prefs.getString(KEY_MODE, null) })
     private var chosenScrollHide: Boolean? by mutableStateOf(if (prefs.contains(KEY_SCROLL_HIDE)) prefs.getBoolean(KEY_SCROLL_HIDE, true) else null)
 
-    override fun mode(): NavUiMode? = chosenMode
+    // The runtime nav walk (cloud-android-nav-walk.py) drives the pages through the Classic title dropdown: it pins the mode with the global
+    // setting `cloud_nav_ui_mode` (only adb or the system can write it). Unset on a phone: the user's choice stands.
+    private val pinned: NavUiMode? = runCatching {
+        Settings.Global.getString(context.applicationContext.contentResolver, GLOBAL_PIN)?.let { v -> NavUiMode.entries.firstOrNull { it.declared == v } }
+    }.getOrNull()
+
+    override fun mode(): NavUiMode? = pinned ?: chosenMode
 
     override fun setMode(mode: NavUiMode?) {
         chosenMode = mode
@@ -38,6 +45,7 @@ public class NavUiPrefs private constructor(context: Context) : NavUiStore {
         public const val NAME: String = "nav_ui"
         public const val KEY_MODE: String = "nav_mode"
         public const val KEY_SCROLL_HIDE: String = "scroll_hide"
+        public const val GLOBAL_PIN: String = "cloud_nav_ui_mode"
 
         @Volatile private var instance: NavUiPrefs? = null
 

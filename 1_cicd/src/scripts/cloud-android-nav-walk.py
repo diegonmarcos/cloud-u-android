@@ -8,10 +8,11 @@ for each, checks what the owner keeps finding by hand:
   P1 no crash: the process is alive, the app owns the foreground and logcat holds no FATAL EXCEPTION for it.
   P2 the first row's title dropdown (the breadcrumb) opens, lists the page, and closes again.
   P3 drag up on the content and HOLD the finger down: if the page scrolled the chrome MUST be HIDDEN (first row, second
-     row and bottom bar all gone: the three-state scroll machine's HIDDEN). Lift the finger: SHRUNK (the first row stays
-     gone, every non-selected bottom label is gone, the bottom bar is shorter, and so are the second row's tabs when the
-     page has one). Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved, nothing collapsed) is reported
-     `fixed` and only has to leave the chrome intact: a page that scrolls but leaves the chrome expanded FAILS.
+     row and bottom bar all gone). SCROLL-HIDE (Configs > UI, on by default): lifting the finger changes nothing, every
+     bar STAYS gone until an upward scroll. Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved,
+     nothing hidden) is reported `fixed` and only has to leave the chrome intact: a page that scrolls but leaves the chrome
+     showing FAILS. The walk pins the nav mode to Classic (the global setting cloud_nav_ui_mode, read by the lib's NavUiPrefs):
+     it drives the pages through the Classic title dropdown, which Clean mode (Cloud Notes' default) replaces by the drawer.
   P5 a section declared vertical_side_menu shows the side menu and its toggle flips expanded <-> rail.
   P4 the pick landed: after choosing the page in the dropdown the title path ends in its label.
 
@@ -258,6 +259,7 @@ class Walk:
         # responding" dialog then covers whichever app is walked. The dialogs are switched off; an ANR of the app under test is
         # still found, in the events log (app_anr), and fails its page with the emulator's load beside it.
         shell("settings put global hide_error_dialogs 1")
+        shell("settings put global cloud_nav_ui_mode classic")
         shell("logcat -b all -c")
         self.seed()
         view = self.start_page()
@@ -678,8 +680,8 @@ class Walk:
             return checks, fails
         after = self.chrome(nodes2)
         # a fling over a heavy embedded site (me/leafy, run 40790949210) keeps the page scrolling after the finger lifts, and the bar
-        # returns in its shrunk form only when that scroll settles: poll for it (same end state asserted: row away, bottom bar back)
-        for _ in range(6):
+        # keeps scrolling after the finger lifts: give it a moment to settle (the end state asserted is: every bar still away)
+        for _ in range(2):
             if after["row"] or after["items"]:
                 break
             settle(1.2)
@@ -693,15 +695,11 @@ class Walk:
             h = self.chrome(held)
             if h["row"] or find(held, ISLAND) is not None or h["items"] or find(held, STRIP) is not None or h["tabs"]:
                 fails.append("P3 hidden: while the finger is down every bar must be away (first row %s, bottom items %d, second-row tabs %d)" % (h["row"], h["items"], h["tabs"]))
-            checks["states"] = "default>hidden>shrunk"
-            if not after["items"]:
-                fails.append("P3 shrunk: after the finger lifted the bottom bar did not come back")
-            if len(after["labels"]) > 1:
-                fails.append("P3 scrolled: the first row hid but non-selected bottom labels stayed (%s)" % ", ".join(sorted(after["labels"])))
-            if after["bar_h"] >= before["bar_h"]:
-                fails.append("P3 scrolled: the bottom bar did not shrink (%d -> %d px)" % (before["bar_h"], after["bar_h"]))
-            if before["tab_h"] and after["tab_h"] and after["tab_h"] >= before["tab_h"]:
-                fails.append("P3 scrolled: the second row's tabs did not shrink (%d -> %d px)" % (before["tab_h"], after["tab_h"]))
+            checks["states"] = "default>hidden>hidden>default"
+            if after["items"]:
+                fails.append("P3 scroll-hide: after the finger lifted the bottom bar came back (every bar stays away until an upward scroll)")
+            if find(nodes2, STRIP) is not None or after["tabs"]:
+                fails.append("P3 scroll-hide: after the finger lifted the second row came back (every bar stays away until an upward scroll)")
             for _ in range(3):
                 swipe(x, y2, y1)
                 settle(0.5)
