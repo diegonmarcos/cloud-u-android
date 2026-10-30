@@ -440,6 +440,8 @@ object Declarations {
     val topBar: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
     val webserver: WebserverDecl? by lazy { parseWebserver(decode(BuildConfig.UI_WEBSERVER_B64)) }
     val configs: ConfigsDecl by lazy { ConfigsDecl(pagesOf(nav, "configs")) }
+    /** #1333 Configs > General: the anchor row and the Perms list (ui.general), parsed by configs/GeneralDecl. */
+    val general: com.diegonmarcos.clouddrive.configs.GeneralDecl.General by lazy { com.diegonmarcos.clouddrive.configs.GeneralDecl.parse(decode(BuildConfig.UI_GENERAL_B64)) }
     /** #1149 the former Sync pages are bottom-nav sections now: [SYNC_SECTIONS], in nav order. */
     val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64), nav.sections.filter { it.id in SYNC_SECTIONS }.map { PageDecl(it.id, it.label, it.icon) }) }
     /** #1149 Git > Cloud's public list (ui.sync.cloud_list) and Git > Me's extra hosts (ui.sync.git_hosts). */

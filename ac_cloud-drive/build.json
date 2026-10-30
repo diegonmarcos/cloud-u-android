@@ -250,6 +250,261 @@
         ]
       }
     ],
+    "general": {
+      "_doc": "#1333 CONFIGS > GENERAL, declared. `anchors` = the icon row pinned at the top of the page, one per section, IN PAGE ORDER: tapping one scrolls to that section (GeneralPage renders the sections by dispatching on the anchor id, so the order here IS the page order; test-drive-general-perms.sh diffs the ids against GeneralPage in both directions). Every `icon` is an IconCatalog name. `perms` = EVERY permission or special access Cloud Drive needs, the section called Perms. Entry fields: `label`; `why` = the Drive feature that needs it; `permissions` = the manifest names it covers (a `${x}` manifest placeholder is written `{x}` and resolved by GeneralPerms.vars; the Gradle test diffs this list against AndroidManifest.xml <uses-permission> in BOTH directions); `check` = how the live status is read (permission = every listed permission granted, all_files, battery_opt, install_unknown, appop with `appop`, declared = shown as info, oem = a guide whose state the OS cannot read); `grant` = runtime (system dialog, falling back to the intents once denied for good) | settings (the intents) | none; `intents` = what the button tries IN ORDER until one starts (component 'pkg/cls', or action + package_uri / extra_package); `min_sdk`/`max_sdk` = outside it the status is not-applicable; `oem` = only on that manufacturer; `requires_package` = not-applicable while that app is not installed. Kotlin (GeneralPerms.kt) dispatches on `check` and `grant` and holds no permission name, no reason and no intent. NOT NEEDED, so not declared (and absent from the manifest on purpose): exact alarms (scheduled sync is WorkManager, GitSyncWorker/UnisonSyncWorker, which are inexact by design and exempt from Doze through the battery entry), scoped media permissions (the Files tab holds all-files access instead), overlay, accessibility.",
+      "anchors": [
+        {
+          "id": "explorer",
+          "label": "Explorer",
+          "icon": "folder"
+        },
+        {
+          "id": "manage",
+          "label": "Manage",
+          "icon": "storage"
+        },
+        {
+          "id": "agents",
+          "label": "Agents",
+          "icon": "smart_toy"
+        },
+        {
+          "id": "perms",
+          "label": "Perms",
+          "icon": "lock"
+        },
+        {
+          "id": "device",
+          "label": "Device",
+          "icon": "smartphone"
+        }
+      ],
+      "perms": [
+        {
+          "id": "battery_opt",
+          "label": "Battery optimisation exemption",
+          "why": "Background sync: Git auto-sync and Fsync (WorkManager) and the mount keeper foreground service are throttled or killed by Doze and OEM battery managers unless the app is exempt.",
+          "permissions": [
+            "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+          ],
+          "check": "battery_opt",
+          "grant": "settings",
+          "intents": [
+            {
+              "action": "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+              "package_uri": true
+            },
+            {
+              "action": "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS"
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "oem_samsung",
+          "label": "Samsung: Never sleeping apps",
+          "why": "Samsung's own battery manager kills background apps even when Android's exemption is granted (#1256 mounts). Add Cloud Drive to Never sleeping apps, then App info > Battery > Unrestricted. The OS cannot say whether it is done.",
+          "permissions": [],
+          "check": "oem",
+          "oem": "samsung",
+          "grant": "settings",
+          "intents": [
+            {
+              "component": "com.samsung.android.lool/com.samsung.android.sm.ui.battery.BatteryActivity"
+            },
+            {
+              "component": "com.samsung.android.lool/com.samsung.android.sm.battery.ui.BatteryActivity"
+            },
+            {
+              "action": "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS"
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "notifications",
+          "label": "Notifications",
+          "why": "Sync, mount keeper and transfer status (the foreground service notification; Git and rclone results).",
+          "permissions": [
+            "android.permission.POST_NOTIFICATIONS"
+          ],
+          "min_sdk": 33,
+          "check": "permission",
+          "grant": "runtime",
+          "intents": [
+            {
+              "action": "android.settings.APP_NOTIFICATION_SETTINGS",
+              "extra_package": true
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "all_files",
+          "label": "All files access",
+          "why": "Files tab (a real file manager over shared storage), the shared store, Fsync folders and the rclone mounts read and write anywhere. Below Android 11 the legacy storage pair is asked instead.",
+          "permissions": [
+            "android.permission.MANAGE_EXTERNAL_STORAGE",
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE"
+          ],
+          "check": "all_files",
+          "grant": "settings",
+          "intents": [
+            {
+              "action": "android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION",
+              "package_uri": true
+            },
+            {
+              "action": "android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "termux_run_command",
+          "label": "Run commands in cld.termux",
+          "why": "Git sync store route: git runs inside the terminal app through its RunCommandService when the shared uid is not in effect (Sync > Git).",
+          "permissions": [
+            "{terminalPackage}.permission.RUN_COMMAND"
+          ],
+          "requires_package": "{terminalPackage}",
+          "check": "permission",
+          "grant": "runtime",
+          "intents": [
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "fleet_auth",
+          "label": "Fleet sign-in (browser mission)",
+          "why": "Sign in rides the fleet browser; the signature permission is granted automatically to apps signed with the constellation key.",
+          "permissions": [
+            "{authMissionPermission}"
+          ],
+          "check": "permission",
+          "grant": "none",
+          "intents": []
+        },
+        {
+          "id": "install_unknown",
+          "label": "Install unknown apps",
+          "why": "Updating and installing fleet APKs (Apps tab and Store route) goes through the system installer; Android asks per app.",
+          "permissions": [
+            "android.permission.REQUEST_INSTALL_PACKAGES",
+            "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"
+          ],
+          "check": "install_unknown",
+          "grant": "settings",
+          "intents": [
+            {
+              "action": "android.settings.MANAGE_UNKNOWN_APP_SOURCES",
+              "package_uri": true
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "usage_access",
+          "label": "Usage access",
+          "why": "Manage > Apps ranks every installed app by size and running state (StorageStatsManager).",
+          "permissions": [
+            "android.permission.PACKAGE_USAGE_STATS"
+          ],
+          "check": "appop",
+          "appop": "android:get_usage_stats",
+          "grant": "settings",
+          "intents": [
+            {
+              "action": "android.settings.USAGE_ACCESS_SETTINGS",
+              "package_uri": true
+            },
+            {
+              "action": "android.settings.USAGE_ACCESS_SETTINGS"
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true
+            }
+          ]
+        },
+        {
+          "id": "query_all",
+          "label": "See all installed apps",
+          "why": "Manage > Apps and the Home app grid list every installed app. Granted at install.",
+          "permissions": [
+            "android.permission.QUERY_ALL_PACKAGES"
+          ],
+          "check": "permission",
+          "grant": "none",
+          "intents": []
+        },
+        {
+          "id": "fgs",
+          "label": "Foreground service (specialUse)",
+          "why": "The mount keeper keeps rclone and sshfs mounts alive past the UI as a foreground service of type specialUse. Info: declared in the manifest, nothing to grant.",
+          "permissions": [
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
+          ],
+          "check": "declared",
+          "grant": "none",
+          "intents": []
+        },
+        {
+          "id": "boot",
+          "label": "Start after reboot",
+          "why": "Mounts are restored after a reboot and after an update. Granted at install.",
+          "permissions": [
+            "android.permission.RECEIVE_BOOT_COMPLETED"
+          ],
+          "check": "permission",
+          "grant": "none",
+          "intents": []
+        },
+        {
+          "id": "wake_lock",
+          "label": "Keep the CPU awake during transfers",
+          "why": "A partial wake lock is held only while a transfer or sync runs. Granted at install.",
+          "permissions": [
+            "android.permission.WAKE_LOCK"
+          ],
+          "check": "permission",
+          "grant": "none",
+          "intents": []
+        },
+        {
+          "id": "network",
+          "label": "Network and network state",
+          "why": "Git, rclone, sign-in and the unmetered-only sync condition (WorkManager) need the network and to read its state. Granted at install.",
+          "permissions": [
+            "android.permission.INTERNET",
+            "android.permission.ACCESS_NETWORK_STATE"
+          ],
+          "check": "permission",
+          "grant": "none",
+          "intents": []
+        }
+      ]
+    },
     "files": {
       "_doc_sections": "#603 THE TWO SECTIONS of the Files navigator, in order, each a header in the Places sheet with the declared places that name it. `emulated` is Android shared storage itself (/storage/emulated/0); `cloud-drive-storage` is the ONE shared store of #575 (storage.shared_root), a top-level section of its own and not one place among many, because every fleet app holding all-files access reads and writes it and it is seeded by default with the PUBLIC cloud repositories (storage.seed). Removable volumes and mesh mounts are NOT here: they are the Volumes tab. The label is 'Drive store', NOT 'Cloud-Drive-Storage': the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) refuses any label that spells an application's name outside the sanctioned pattern, and 'Cloud-Drive-Storage' normalises to a prefix of cloud-drive. The section's ID still reads cloud-drive-storage, which is what this file's description names; ids are not user-facing text.",
       "sections": [
