@@ -39,7 +39,8 @@ PY
 }
 c2() { # $1 Mifare.kt, $2 NfcReader.kt
     if grep -E -q '"[0-9A-Fa-f]{12}"' "$1" "$2"; then echo "    a 12-hex key literal in Kotlin"; return 1; fi
-    if grep -h -v -E '^\s*(/?\*|//)' "$1" "$2" | grep -E -i -q 'writeBlock|\.increment\(|\.decrement\(|\.transfer\(|\.restore\(|darkside|nested|hardnested|mfkey|crypto1'; then echo "    a write / clone / crack verb in the Classic code"; return 1; fi
+    local code; code="$(grep -h -v -E '^\s*(/?\*|//)' "$1" "$2")"
+    if grep -E -i -q 'writeBlock|\.increment\(|\.decrement\(|\.transfer\(|\.restore\(|darkside|nested|hardnested|mfkey|crypto1' <<<"$code"; then echo "    a write / clone / crack verb in the Classic code"; return 1; fi
     for t in 'key recovery' 'leaked or vendor keys' 'writing to, cloning or emulating' 'locked (private key)'; do grep -qF -- "$t" "$1" || { echo "    KDoc/scope lacks: $t"; return 1; }; done; }
 c3() { # $1 Mifare.kt, $2 NfcReader.kt, $3 NfcController.kt, $4 NfcUi.kt
     for t in 'MifareClassic.get(tag)' 'authenticateSectorWithKeyA' 'catalog.classicKeys' 'Desfire.probe(' 'isDesfireSak' 'unsupportedLine('; do grep -qF -- "$t" "$2" || { echo "    reader lacks $t"; return 1; }; done
