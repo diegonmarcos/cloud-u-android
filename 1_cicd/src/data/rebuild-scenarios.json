@@ -467,10 +467,10 @@
         "ac_cloud-calc/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudcalc/web/Main.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 0,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1,
+        "ship": 0,
         "refresh": 0
       }
     },
@@ -519,10 +519,10 @@
         "ac_cloud-c3/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudc3/web/Main.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 0,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1,
+        "ship": 0,
         "refresh": 0
       }
     },
@@ -714,10 +714,10 @@
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 37,
+        "apps": 35,
         "libs": 0,
         "rootfs": 0,
-        "ship": 38,
+        "ship": 36,
         "refresh": 0
       }
     }
