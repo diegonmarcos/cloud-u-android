@@ -11,13 +11,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * The EXEC fallback of [StoreAccess]: run a shell script INSIDE cld.termux's glibc root (where
- * the store is /root/<dir>, git is Debian's and the user's own gitconfig applies), through the
- * signature-level CLOUD_EXEC bound service. Blocking: call it off the main thread.
- *
- * CLOUD_EXEC caps one call at 120 s, and a clone can take longer, so [job] starts the script
- * detached (nohup, its own log + exit file under <store>/.jobs) and polls with short calls.
- * Secrets travel on stdin, never argv (argv is world-readable in /proc).
+ * The EXEC fallback of [StoreAccess]: a shell script INSIDE cld.termux's glibc root (store at
+ * /root/<dir>, Debian's git, the user's gitconfig) through the signature-level CLOUD_EXEC service.
+ * Blocking. One call is capped at 120 s, so [job] runs detached and is polled. Secrets go on stdin.
  */
 class StoreExec(private val ctx: Context) {
 
@@ -39,15 +35,13 @@ class StoreExec(private val ctx: Context) {
     }
 
     /** [script] in the guest (sh -c), stdin [stdin], at most [timeoutMs] (<= 120 s). */
-    fun run(script: String, stdin: String? = null, timeoutMs: Int = 60_000): Result = bound { exec ->
-        val b = exec.exec("/system/bin/sh", arrayOf("-c", guestWrap(script)), stdin, null, timeoutMs)
-        val err = b.getString("error")
-        Result(if (err != null) -1 else b.getInt("exit"), b.getString("stdout").orEmpty(), (b.getString("stderr").orEmpty() + (err?.let { "\n$it" } ?: "")).trim())
-    }
+    fun run(script: String, stdin: String? = null, timeoutMs: Int = 60_000): Result = call(guestWrap(script), stdin, timeoutMs)
 
     /** [script] on the HOST side of cld.termux (its own uid: its whole data dir is readable), not in the glibc guest. */
-    fun runHost(script: String, timeoutMs: Int = 60_000): Result = bound { exec ->
-        val b = exec.exec("/system/bin/sh", arrayOf("-c", script), null, null, timeoutMs)
+    fun runHost(script: String, timeoutMs: Int = 60_000): Result = call(script, null, timeoutMs)
+
+    private fun call(script: String, stdin: String?, timeoutMs: Int): Result = bound { exec ->
+        val b = exec.exec("/system/bin/sh", arrayOf("-c", script), stdin, null, timeoutMs)
         val err = b.getString("error")
         Result(if (err != null) -1 else b.getInt("exit"), b.getString("stdout").orEmpty(), (b.getString("stderr").orEmpty() + (err?.let { "\n$it" } ?: "")).trim())
     }
@@ -75,19 +69,13 @@ class StoreExec(private val ctx: Context) {
         fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
         /**
-         * cld.termux's login shell file (~/.termux/shell -> enter.sh) runs [script] inside the glibc
-         * root. Its -c goes to root's LOGIN SHELL, which is fish (rootfs.json default_shell). fish does
-         * not parse sh quoting: inside '...' it reads \' as an escaped quote, so a script quoted twice
-         * (every [job]: clone, bare clone, sync, pull, push) was re-split by fish and refused
-         * ("fish: Unsupported use of '='") before sh ever ran, and every git job failed. The script
-         * therefore never reaches the login shell as text: it travels base64-encoded (alphabet
-         * A-Za-z0-9+/=, nothing any shell interprets) and the one line the login shell parses,
-         * `exec /bin/sh -c "$(echo B64 | base64 -d)"`, reads the same in fish (3.4+), bash, zsh and sh.
+         * enter.sh hands -c to root's login shell, fish, which reads \' inside '...' as an escape and
+         * refused every twice-quoted [job] ("Unsupported use of '='"). So the script travels base64
+         * (nothing any shell interprets): `exec /bin/sh -c "$(echo B64 | base64 -d)"` reads alike in fish, bash, zsh, sh.
          */
         fun guestWrap(script: String, termuxShell: String = "\$HOME/.termux/shell"): String =
             "exec /system/bin/sh \"$termuxShell\" -c " + q(loginLine(script))
 
-        /** The line the guest's login shell runs: no quote character of [script] survives into it. */
         fun loginLine(script: String): String =
             "exec /bin/sh -c \"\$(echo " + java.util.Base64.getEncoder().encodeToString(script.toByteArray(Charsets.UTF_8)) + " | base64 -d)\""
 
