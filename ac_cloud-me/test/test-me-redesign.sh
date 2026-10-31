@@ -436,9 +436,10 @@ for p in _inv.get("pages", []):
                or (ty == "date" and not re.fullmatch(r"20\d\d-[01]\d-[0-3]\d", v)):
                 bad("inventory", f"inventory/{p['id']} seed row {r['name']}: {k}={v!r} is not a valid {ty}")
 lm, ls = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerModel.kt")), code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerScreen.kt"))
+lsd = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerSeed.kt"))
 if not re.search(r"LedgerSeed\.applied\(d, defs\)\.also \{ if \(it !== d\) LedgerStore\.save\(ctx, store, it\)", ls):
     bad("inventory", "LedgerBlock does not apply and save the declared seed on load")
-if 'recs(o.optJSONArray("seed"))' not in lm or "def.collection in done" not in lm or "out.rows(def.collection).isEmpty()" not in lm:
+if 'recs(o.optJSONArray("seed"))' not in lm or "def.collection in done" not in lsd or "out.rows(def.collection).isEmpty()" not in lsd:
     bad("inventory", "LedgerSeed is not seed-once (marker) and never-overwrite (only into an empty collection)")
 if "SummaryCard(LedgerReports.summary(" not in ls:
     bad("inventory", "LedgerBlock draws no summary header")
@@ -514,8 +515,8 @@ mutant inventory "a seed row pre-stamps mock" "python3 -c \"import json;p='data/
 mutant inventory "an inventory page has no summary" "python3 -c \"import json;p='data/ui/inventory/care.json';d=json.load(open(p));d[1].pop('summary');json.dump(d,open(p,'w'))\""
 mutant inventory "an inventory page writes to the buro store" "sed -i 's/\"store\": \"inventory_user\"/\"store\": \"buro_user\"/' data/ui/inventory/banking.json"
 mutant inventory "inventory_user undeclared in fleet-config" "sed -i 's/\"inventory_user\"/\"inventory_gone\"/' ../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
-mutant inventory "the seed is re-applied every load (no marker)" "sed -i 's/def.collection in done/false/' app/src/main/java/com/diegonmarcos/cloudme/LedgerModel.kt"
-mutant inventory "the seed tops up a collection the owner already filled" "sed -i 's/if (out.rows(def.collection).isEmpty()) for/for/' app/src/main/java/com/diegonmarcos/cloudme/LedgerModel.kt"
+mutant inventory "the seed is re-applied every load (no marker)" "sed -i 's/def.collection in done/false/' app/src/main/java/com/diegonmarcos/cloudme/LedgerSeed.kt"
+mutant inventory "the seed tops up a collection the owner already filled" "sed -i 's/if (out.rows(def.collection).isEmpty()) for/for/' app/src/main/java/com/diegonmarcos/cloudme/LedgerSeed.kt"
 mutant inventory "the seed is applied but not saved" "sed -i 's/if (it !== d) LedgerStore.save(ctx, store, it)/Unit/' app/src/main/java/com/diegonmarcos/cloudme/LedgerScreen.kt"
 mutant inventory "the summary header is not drawn" "sed -i 's/SummaryCard(LedgerReports.summary(/Unit(LedgerReports.summary(/' app/src/main/java/com/diegonmarcos/cloudme/LedgerScreen.kt"
 mutant pages "House comes back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'house','label':'House','pages':[]});json.dump(d,open('build.json','w'))\""

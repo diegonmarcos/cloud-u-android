@@ -49,7 +49,6 @@ object LedgerTags {
     fun builtin(collection: String, n: Int) = "me:ledger:builtin:$collection:$n"
     fun empty(collection: String) = "me:ledger:empty:$collection"
     const val SUMMARY = "me:ledger:summary"
-    fun mock(collection: String, id: String) = "me:ledger:mock:$collection:$id"
 }
 
 /**
@@ -159,7 +158,7 @@ private fun CollectionCard(def: LedgerDef, rows: List<Rec>, currency: String, on
             Row(Modifier.fillMaxWidth().padding(top = 10.dp).testTag(LedgerTags.row(def.collection, id))) {
                 Column(Modifier.weight(1f)) {
                     RecLines(def, r, currency)
-                    if (r[LedgerSeed.MOCK] == "1") Text("mock data", color = accent(), fontSize = 11.sp, modifier = Modifier.testTag(LedgerTags.mock(def.collection, id)))
+                    LedgerSeed.badge(r)?.let { Text(it, color = accent(), fontSize = 11.sp, modifier = Modifier.testTag(LedgerSeed.tag(def.collection, id))) }
                 }
                 onMove?.let { mv -> Text(def.moveLabel, color = accent(), fontSize = 12.sp, modifier = Modifier.clickable { mv(id) }.padding(8.dp).testTag(LedgerTags.move(def.collection, id))) }
                 Text("Edit", color = dim(), fontSize = 12.sp, modifier = Modifier.clickable { editing = id }.padding(8.dp).testTag(LedgerTags.edit(def.collection, id)))
