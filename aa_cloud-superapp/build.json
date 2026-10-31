@@ -2933,7 +2933,7 @@
             ]
           },
           {
-            "_doc": "Me — the personal-administration row, in the owner's order: Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC ('|' = group separators, like the AGI row). Account stays first (#1167); the Me app leads the rest; each Me-* tile deep-links into the matching Cloud-Me section. MySocials and MyTrips left the row (Trips is a page of Achieves). Pinned by test-me-account-tile.sh.",
+            "_doc": "Me — the personal-administration row, in the owner's order: Account Me | Me-Health Experiences RoadMap | Me-Duties Me-Buro Me-LLC ('|' = group separators, like the AGI row). Account stays first (#1167); the Me app leads the rest; each Me-* tile deep-links into the matching Cloud-Me section. MySocials and MyTrips left the row; Me-Study and Me-Achieves became Experiences and RoadMap. Pinned by test-me-account-tile.sh.",
             "title": "Me",
             "tiles": [
               {
@@ -2951,7 +2951,7 @@
                 "target": "extapp:cloud-me"
               },
               {
-                "_doc": "Rule between the Me app and its sub-entries (Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC). NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|' (same separator item as Data Apps and Configs).",
+                "_doc": "Rule between the Me app and its sub-entries (Account Me | Me-Health Experiences RoadMap | Me-Duties Me-Buro Me-LLC). NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|' (same separator item as Data Apps and Configs).",
                 "id": "me-sep-1",
                 "label": "|",
                 "separator": true
@@ -2964,21 +2964,21 @@
                 "target": "extapp:cloud-me#page:health/home"
               },
               {
-                "_doc": "Me-Study \u2014 Cloud-Me's Study section, entered at its CV page (the MyStudy tile, renamed). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
-                "id": "mystudy",
-                "label": "Me-Study",
+                "_doc": "Experiences \u2014 Cloud-Me's top-level Experiences page (Work, Study, Personal Achieves), entered at its first tab Work; replaced the Me-Study and Me-Achieves tiles once Experiences and RoadMap became top-level Cloud-Me pages. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myexperiences",
+                "label": "Experiences",
                 "icon": "ic_file_stack",
-                "target": "extapp:cloud-me#page:experiences/study"
+                "target": "extapp:cloud-me#page:experiences/work"
               },
               {
-                "_doc": "Me-Achieves \u2014 Cloud-Me's Experiences > Personal Achieves, opening on its first tab Geo (#1350: Experiences is Work, Study, Personal Achieves; the Achieves tabs are Geo, Endurance, Personal Growth, Community, By 30, By 40, By 50; the old Trips page folded into Geo). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
-                "id": "myachieves",
-                "label": "Me-Achieves",
-                "icon": "ic_map_pin",
-                "target": "extapp:cloud-me#page:experiences/achieves"
+                "_doc": "RoadMap \u2014 Cloud-Me's top-level RoadMap page (the folder tree of the private notes vault), entered at its Folders page. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myroadmap",
+                "label": "RoadMap",
+                "icon": "ic_maps",
+                "target": "extapp:cloud-me#page:roadmap/folders"
               },
               {
-                "_doc": "Second rule of the Me row, between Me-Health Me-Study Me-Achieves and Me-Duties Me-Buro Me-LLC, like the AGI row. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|'. test-me-account-tile.sh pins the row.",
+                "_doc": "Second rule of the Me row, between Me-Health Experiences RoadMap and Me-Duties Me-Buro Me-LLC, like the AGI row. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|'. test-me-account-tile.sh pins the row.",
                 "id": "me-sep-2",
                 "label": "|",
                 "separator": true

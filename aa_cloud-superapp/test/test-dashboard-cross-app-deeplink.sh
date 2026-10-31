@@ -147,8 +147,8 @@ ROWS = {
     # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
     # then MySocials, MyBuro, MyHealth, MyStudy, MyTrips as the owner ordered. Agenda left the row (it is
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
-    # Owner order (Cloud Me restructure): Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC.
-    "Me": ["tools-account", "me", "me-sep-1", "myhealth", "mystudy", "myachieves", "me-sep-2", "myduties", "myburo", "myllc"],
+    # Owner order (Cloud Me restructure): Account Me | Me-Health Experiences RoadMap | Me-Duties Me-Buro Me-LLC.
+    "Me": ["tools-account", "me", "me-sep-1", "myhealth", "myexperiences", "myroadmap", "me-sep-2", "myduties", "myburo", "myllc"],
     # (#1331: the row is now Lnktree; before it held seven named boards (#1212), and task 311 had removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
@@ -175,8 +175,8 @@ TARGETS = {
     "cad": "extapp:hardtech-cad",
     "sim2real": "extapp:hardtech-sim2real",
     "myhealth":    "extapp:cloud-me#page:health/home",
-    "mystudy":     "extapp:cloud-me#page:experiences/study",
-    "myachieves":  "extapp:cloud-me#page:experiences/achieves",
+    "myexperiences": "extapp:cloud-me#page:experiences/work",
+    "myroadmap":   "extapp:cloud-me#page:roadmap/folders",
     "myduties":    "extapp:cloud-me#page:duties/tasks",
     "myburo":      "extapp:cloud-me#page:buro/ids",
     "myllc":       "extapp:cloud-me#page:llc/employed",
@@ -274,7 +274,7 @@ titles = [g["title"] for g in cloud["tile_groups"]]
 want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Lnktree", "Configs"]
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
-assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Me-Study", "Me-Achieves", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]
+assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Experiences", "RoadMap", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]
 assert g["Tools Primary"][-2:] == ["Wallet", "Vault"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order (Light left for Cloud Calc > Toolkit); Account moved to Me, before the Me tile
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
