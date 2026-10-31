@@ -315,7 +315,7 @@
     "shortcut_action": "page:config/dns"
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The island reads exactly Cloud, Phone, Search, Feed, Access and the app opens on Search (default_section). Settings is not an island item: it is the top bar's round Settings button (Account | Configs). #896/#896.3 child pages: Phone = Installed | Declared (Search is its own island item, hosted by the same libs:appstore StorePhoneFragment on its search page), Feed = Commits | CI-CD (ids = appstore-feeds.json feed ids), Access = Apps Mesh | IPC | Identity | Android Perms | Cloud Perms (#ipc: IPC is the fleet's IPC Mesh, libs:appstore IpcMeshPage, the same page SuperApp > Configs > Network > IPC draws; Identity is libs:appstore FleetIdentityPage, the same page SuperApp > Configs > Apps Mesh > Identity draws: each fleet app's Linux uid, its sharedUserId group from data/fleet-identity.json, the live uid and signer, and any mismatch). MainActivity draws them with PageTabs and StorePages tells the pages below which is open; a host with no strip (SuperApp's embedded Store) gets Phone's drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and nothing else: Apps Mesh and Perms moved to Access, Commits and CI-CD to Feed.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The island reads exactly Cloud, Phone, Search, Feed, Access and the app opens on Cloud (default_section; a deep link or a restored back-stack still opens where it points). Settings is not an island item: it is the top bar's round Settings button (Account | Configs). #896/#896.3 child pages: Phone = Installed | Declared (Search is its own island item, hosted by the same libs:appstore StorePhoneFragment on its search page), Feed = Commits | CI-CD (ids = appstore-feeds.json feed ids), Access = Apps Mesh | IPC | Identity | Android Perms | Cloud Perms (#ipc: IPC is the fleet's IPC Mesh, libs:appstore IpcMeshPage, the same page SuperApp > Configs > Network > IPC draws; Identity is libs:appstore FleetIdentityPage, the same page SuperApp > Configs > Apps Mesh > Identity draws: each fleet app's Linux uid, its sharedUserId group from data/fleet-identity.json, the live uid and signer, and any mismatch). MainActivity draws them with PageTabs and StorePages tells the pages below which is open; a host with no strip (SuperApp's embedded Store) gets Phone's drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and nothing else: Apps Mesh and Perms moved to Access, Commits and CI-CD to Feed.",
     "bottom_nav": [
       "cloud",
       "phone",
@@ -449,7 +449,7 @@
         ]
       }
     ],
-    "default_section": "search",
+    "default_section": "cloud",
     "configs_ui": ["nav_ui"]
   },
   "configs_pages": {
