@@ -99,11 +99,16 @@ on:
       # unrelated commit that regenerated this file. The real guard is
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
+      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ac_c3-watchtower/**"
 permissions:
   contents: write   # for gh release create + tag push reads

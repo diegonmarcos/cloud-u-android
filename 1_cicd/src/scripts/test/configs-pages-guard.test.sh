@@ -39,7 +39,7 @@ mkdir -p "$BASE"
     cd "$ROOT" || exit 1
     {
         git ls-files -- 'a[acd]_*/build.json' 'a[acd]_*/debug-api.json'
-        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
+        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(|FleetConfigsMenu\(|FleetConfigsEntries\.(addTo|open)\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
         printf '%s\n' "$DATA" ac_cloud-account/build.json ac_cloud-c3-webserver/build.json licenses/curated.json
         find "$UIBARS" ab_cloud-libs-shared/libs/perms -type f -not -path "*/build/*"
     } | sort -u | while IFS= read -r f; do [ -f "$f" ] && cp --parents "$f" "$BASE"; done
@@ -47,7 +47,7 @@ mkdir -p "$BASE"
 stage() { rm -rf "$T"; cp -r "$BASE" "$T"; }
 
 APP=ac_cloud-mail            # on the shared scaffold, talks to the jmap service
-PEND=ac_cloud-termux         # wired through FleetConfigsActivity (an upstream fork)
+PEND=ac_c3-watchdog          # a WebView app wired through the lib's menu helper (FleetConfigsMenu)
 APPKT="$(cd "$BASE" && grep -rl 'NavBarTopFirstRowScaffold(' "$APP" | head -1)"
 [ -n "$APPKT" ] || { echo "ERROR: no scaffold call found under $APP — the fixture moved"; exit 1; }
 DECL=$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt
@@ -126,10 +126,10 @@ mutate "an app without a name"                  "$APP/build.json" "$(J "d.pop('d
 # G4 the app reaches the pages
 mutate "an app whose sources stop drawing the scaffold" "$APPKT" "s=s.replace('NavBarTopFirstRowScaffold(','OwnScaffold(')" "G4 $APP: no source reaches Configs"
 mutate "a pending entry for an app that is wired" "$DATA" "$(J "d['pending']['$APP']='a reason that is long enough to pass'")" "G4 $APP: reaches Configs ▸ General / ▸ About now"
-PENDKT="$(cd "$BASE" && grep -rl 'FleetConfigsActivity.intent(' "$PEND" | head -1)"
+PENDKT="$(cd "$BASE" && grep -rlE 'FleetConfigsMenu\(|FleetConfigsEntries\.|FleetConfigsActivity\.intent\(' "$PEND" | head -1)"
 if [ -n "$PENDKT" ]; then
-    mutate "a Views/fork app that stops starting the activity" "$PENDKT" "s=s.replace('FleetConfigsActivity.intent(','OwnSettings.intent(')" "G4 $PEND: no source reaches Configs"
-else fail "no FleetConfigsActivity.intent( under $PEND — the fixture moved"; fi
+    mutate "a menu-wired app that drops its Configs menu" "$PENDKT" "s=re.sub(r'FleetConfigsMenu\(|FleetConfigsEntries\.(addTo|open)\(|FleetConfigsActivity\.intent\(','OwnSettings(',s)" "G4 $PEND: no source reaches Configs"
+else fail "no Configs menu call under $PEND — the fixture moved"; fi
 # G5 the ledgers
 mutate "a pending entry for no app"             "$DATA" "$(J "d['pending']['ac_cloud-ghost']='a reason that is long enough to pass'")" "G5 $DATA::pending names ac_cloud-ghost"
 mutate "a pending entry without a reason"       "$DATA" "$(J "d['pending']['$APP']='todo'")"                      "G5 $DATA::pending.$APP needs a reason"

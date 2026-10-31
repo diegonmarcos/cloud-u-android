@@ -98,6 +98,8 @@ dependencies {
     // 2026-10-15 owner decision: all apps must be Compose. The screen is a Compose host under
     // the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
     implementation project(':libs:ui-kit')
+    // #1352 Configs ▸ General / ▸ About (FleetConfigsMenu, libs:ui-nav-bars)
+    implementation project(':libs:ui-nav-bars')
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

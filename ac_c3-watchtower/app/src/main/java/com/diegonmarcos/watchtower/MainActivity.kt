@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsMenu
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -191,8 +192,12 @@ class MainActivity : AppCompatActivity() {
                         .verticalScroll(rememberScrollState())
                         .padding(start = 16.dp, top = 20.dp, end = 16.dp, bottom = 28.dp),
                 ) {
-                    Text(stringResource(R.string.app_name), color = p.textPrimary,
-                        style = MaterialTheme.typography.headlineSmall)
+                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text(stringResource(R.string.app_name), color = p.textPrimary,
+                            style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                        // #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars)
+                        FleetConfigsMenu(tint = p.accent)
+                    }
                     Text(stringResource(R.string.screen_subtitle, cfg.windowRuns),
                         color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
                     items.forEach { WtItemView(it, onRefresh = ::load) }

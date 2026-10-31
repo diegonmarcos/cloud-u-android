@@ -51,7 +51,7 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:ui-kit"
+        "libs:ui-kit", "libs:ui-nav-bars"
       ]
     },
     "libs:core": {
@@ -78,7 +78,12 @@
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
-    }
+    },
+    "libs:ui-nav-bars": {"dir": "../ab_cloud-libs-shared/libs/ui-nav-bars", "type": "library", "_doc": "#1352 Configs ▸ General and ▸ About (fleetconfigs): FleetConfigsActivity, started from this app's own menu. Shared BY REFERENCE."},
+    "libs:bottomnav": {"dir": "../ab_cloud-libs-shared/libs/bottomnav", "type": "library", "_doc": "libs:ui-nav-bars' `api` dependency; listed so settings.gradle resolves the path."},
+    "libs:ui-icons": {"dir": "../ab_cloud-libs-shared/libs/ui-icons", "type": "library", "_doc": "libs:bottomnav's dependency; listed so settings.gradle resolves the path."},
+    "libs:theme-background": {"dir": "../ab_cloud-libs-shared/libs/theme-background", "type": "library", "_doc": "libs:ui-nav-bars' `api` dependency (the page background); listed so settings.gradle resolves the path."},
+    "libs:perms": {"dir": "../ab_cloud-libs-shared/libs/perms", "type": "library", "_doc": "#1360/#1352 libs:ui-nav-bars' `api` dependency: Configs ▸ General ▸ Perms is libs:perms' AppPermsSection, first run asks every never-asked grant."}
   },
   "toolchain": {
     "_doc": "Pinned for reproducibility, all derived in flake.nix. Mirrors ac_c3-morpheus / ac_c3-watchdog / aa_cloud-superapp so every Android project here shares one toolchain story.",

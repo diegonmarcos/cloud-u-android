@@ -157,7 +157,7 @@ internal fun ActionButton(label: String, c: ThemeColors, tag: String, onClick: (
 
 internal data class PermRow(val label: String, val granted: Boolean, val dangerous: Boolean)
 
-private fun packageInfo(ctx: Context): PackageInfo? =
+internal fun packageInfo(ctx: Context): PackageInfo? =
     runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS) }.getOrNull()
 
 internal fun requested(ctx: Context): List<String> = packageInfo(ctx)?.requestedPermissions?.toList().orEmpty()

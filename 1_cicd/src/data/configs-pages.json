@@ -57,6 +57,11 @@
   "licences": "licenses/curated.json",
   "scaffold_call": "NavBarTopFirstRowScaffold(",
   "views_call": "FleetConfigsActivity.intent(",
+  "menu_calls": [
+    "FleetConfigsMenu(",
+    "FleetConfigsEntries.addTo(",
+    "FleetConfigsEntries.open("
+  ],
   "origin_label": {
     "own": "Own code of the fleet",
     "upstream-fork": "Signed fork of an upstream open-source app",
@@ -264,10 +269,7 @@
     "aa_cloud-superapp": "The fleet's launcher hub keeps its own special Configs (owner rule): its Configs is the fleet console, not one app's settings."
   },
   "pending": {
-    "_doc": "Apps that declare configs_pages (held by G1-G3) but do not reach the pages yet: they are drawn with Views, a WebView, Tauri or an upstream fork and do not link the shared scaffold. The lib's FleetConfigsActivity is their equivalent; wiring it means linking libs:ui-nav-bars into the app and starting FleetConfigsActivity.intent( from its settings menu. Delete an entry in the commit that wires the app (the guard fails a stale one).",
-    "ac_c3-morpheus": "WebView panel app without the shared Compose scaffold; needs libs:ui-nav-bars linked and a menu entry.",
-    "ac_c3-watchdog": "WebView panel (watchdog TUI transcribed to HTML); needs libs:ui-nav-bars linked and a menu entry.",
-    "ac_c3-watchtower": "WebView panel app without the shared Compose scaffold; needs libs:ui-nav-bars linked and a menu entry.",
+    "_doc": "Apps that declare configs_pages (held by G1-G3) but do not reach the pages yet. Wiring means linking libs:ui-nav-bars (with bottomnav, ui-icons, theme-background, perms) and calling FleetConfigsMenu( (Compose) or FleetConfigsEntries.addTo( / FleetConfigsActivity.intent( (Views, forks) from the app's own menu. Delete an entry in the commit that wires the app (the guard fails a stale one).",
     "ac_cloud-c3-webserver": "Tauri 2 app (Rust and web only, no Kotlin UI); needs a native settings entry that starts the activity.",
     "ac_cloud-camera": "Own camera shell without the shared first-row scaffold; its settings screen needs the two entries.",
     "ac_cloud-chat": "Upstream chat fork with its own settings UI; the fork's preferences need the two entries.",

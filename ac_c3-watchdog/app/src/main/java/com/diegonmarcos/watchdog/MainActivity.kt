@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsMenu
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -39,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         )
         setContent {
             CloudKitTheme(palette) {
+              androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize().background(LocalKitPalette.current.surface),
                     factory = { ctx ->
@@ -60,6 +62,9 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                 )
+                // #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars), over the dashboard's top-right corner
+                FleetConfigsMenu(Modifier.align(androidx.compose.ui.Alignment.TopEnd), tint = LocalKitPalette.current.accent)
+              }
             }
         }
     }

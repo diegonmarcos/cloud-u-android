@@ -19,7 +19,8 @@ DECLARATION  1_cicd/src/data/configs-pages.json (the required sections and About
       has a why (about.perms_why or perm_why); the v1 field `what` is gone; every derived field resolves at build
       time (name, repo, licence from licenses/curated.json, crash sink port, debug API port); version and package
       fall back to the installed package at runtime, so they are not required in build.json
-  G4  the app reaches the pages (its sources call the shared scaffold or FleetConfigsActivity.intent), or it is
+  G4  the app reaches the pages (its sources call the shared scaffold, FleetConfigsActivity.intent, or one of the
+      lib's menu helpers FleetConfigsMenu / FleetConfigsEntries), or it is
       named in `pending` with a reason; a pending app that reaches them is stale
   G5  every exempt / pending entry names a real app and carries a reason
 
@@ -197,7 +198,7 @@ def check(root):
             if f in spec["about_derived"] and not v:
                 bad.append("G3 %s: About field %r does not resolve (derived at build time by libs/ui-nav-bars/fleet-configs.gradle)" % (app, f))
         # G4
-        reached = reaches(root, app, (spec["scaffold_call"], spec["views_call"]))
+        reached = reaches(root, app, (spec["scaffold_call"], spec["views_call"]) + tuple(spec.get("menu_calls") or []))
         if app in pending:
             if reached:
                 bad.append("G4 %s: reaches Configs ▸ General / ▸ About now — delete its entry in %s::pending" % (app, DATA))

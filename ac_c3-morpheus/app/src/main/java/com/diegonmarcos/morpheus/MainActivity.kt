@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsMenu
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -103,6 +104,8 @@ class MainActivity : AppCompatActivity() {
                                 ),
                             ) { Text(t.label) }
                         }
+                        // #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars)
+                        FleetConfigsMenu(tint = p.accent)
                     }
                     Box(Modifier.fillMaxWidth().weight(1f)) {
                         AndroidView(
