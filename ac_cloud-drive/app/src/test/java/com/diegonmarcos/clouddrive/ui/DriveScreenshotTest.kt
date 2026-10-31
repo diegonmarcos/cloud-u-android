@@ -133,33 +133,6 @@ class DriveScreenshotTest {
     }
 
     /** Sync's top row with the terminal action, over Files' top row (the neighbour whose actions it must match). */
-    @Test
-    fun `A37 Sync island terminal action sits like the Files island actions`() {
-        compose.setContent {
-            DriveTheme {
-                androidx.compose.foundation.layout.Column {
-                    ToolbarIsland(title = "Sync", subtitle = "Git", actions = { com.diegonmarcos.clouddrive.sync.TerminalIslandAction(actions) {} })
-                    ToolbarIsland(title = "Files", subtitle = "Internal storage", actions = {
-                        IslandAction(Icons.Filled.Search, "Search") {}
-                        IslandAction(Icons.Filled.FolderOpen, "Places") {}
-                        IslandAction(Icons.Filled.MoreVert, "More") {}
-                    })
-                }
-            }
-        }
-        repeat(2) { compose.runOnUiThread { shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300)) }; compose.waitForIdle() }
-        val density = compose.density.density
-        val islands = compose.onAllNodesWithTag(DriveTags.ISLAND).fetchSemanticsNodes().map { it.boundsInRoot }
-        assertEquals(2, islands.size)
-        assertEquals("both islands are the same height", islands[0].height, islands[1].height, 1f)
-        val actionBox = compose.onAllNodesWithContentDescription("Open terminal (starts it first)").fetchSemanticsNodes().single().boundsInRoot
-        val search = compose.onAllNodesWithContentDescription("Search").fetchSemanticsNodes().single().boundsInRoot
-        assertEquals("the terminal action is the same size as a Files island action", search.width, actionBox.width, 1f)
-        assertEquals(search.height, actionBox.height, 1f)
-        assertTrue("the action sits inside the right edge of its island", actionBox.right <= islands[0].right && actionBox.right > islands[0].right - 16 * density)
-        shot("sync-terminal-action@a37.png")
-    }
-
     /** The Places sheet's root switcher: Emulated, Drive store and Terminal sections drawn with the same rows. */
     @Test
     fun `A37 Places sheet lists Terminal roots under their own header`() {

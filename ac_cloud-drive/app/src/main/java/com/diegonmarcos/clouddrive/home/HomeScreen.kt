@@ -34,7 +34,6 @@ import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.StorageBar
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,7 +84,7 @@ fun HomeScreen(
     val reachableContainers = containerConnections.count { it.status == "ok" }
 
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.home_title), subtitle = stringResource(R.string.home_hint))
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             item { SectionHeader(stringResource(R.string.home_apps_section), count = Declarations.apps.size) }
             item {

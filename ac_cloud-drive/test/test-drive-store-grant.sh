@@ -25,10 +25,9 @@ grep -q 'LegacyImport.run' "$S" && ok "the seed imports the legacy clones itself
 grep -q 'chmod -R u+rwX' "$SRC/StoreReady.kt" && ok "permissions inside the terminal home are fixed by the app" || bad "no permission fix"
 grep -q 'cp -a /storage' "$ROOT/ac_cloud-termux/rootfs/enter.sh" && bad "terminal still tells the owner to cp by hand" || ok "no manual cp instruction"
 SY="$SRC/sync/SyncScreen.kt"
-# #1356 the Git page lost its title row; the shared action stays on the Fsync and Mounts top rows.
-grep -q 'IslandAction(Icons.Filled.Terminal' "$SY" && grep -q 'TerminalIslandAction(actions' "$SRC/sync/FsyncPage.kt" && ok "the terminal shortcut is a shared-island action in the Fsync top row" || bad "no terminal island action in Fsync"
-grep -q 'StoreReady.wake' "$SY" && grep -q 'StoreAccess.ownerPackage()' "$SY" && ok "it starts the terminal and its store service first, package from the declaration" || bad "shortcut does not wake the terminal or hardcodes the package"
-grep -q 'Settings\|RUN_COMMAND' "$SY" && bad "shortcut uses a custom path" || ok "no one-off launch path"
+# #1356 no tab draws a title row any more: the terminal shortcut is the Termux tile of Home ▸ Apps (data/drive-apps.json).
+grep -rq 'TerminalIslandAction' "$SRC" && bad "a tab still carries the terminal island action" || ok "no terminal island action on any tab"
+grep -q '"termux"' "$ROOT/ac_cloud-drive/data/drive-apps.json" && ok "the terminal is reached from the Termux tile of Home ▸ Apps" || bad "no Termux tile on Home ▸ Apps"
 grep -q 'ExecListing.list' "$SRC/files/FilesController.kt" && grep -q 'viaTerminal' "$SRC/files/Places.kt" && ok "Terminal roots stay offered and browsable through CLOUD_EXEC" || bad "Terminal roots vanish in EXEC mode"
 grep -q 'ExecMutation.transfer' "$SRC/files/FilesController.kt" && grep -q 'ExecMutation.delete' "$SRC/files/FilesController.kt" && grep -q 'ExecMutation.rename' "$SRC/files/FilesController.kt" && grep -q 'ExecMutation.mkdir' "$SRC/files/FilesController.kt" && ok "copy, move, delete, rename and mkdir in the terminal go through CLOUD_EXEC when the uid is not shared" || bad "a Files change in the terminal still needs the shared uid"
 [ $fails -eq 0 ] && echo "test-drive-store-grant: all checks passed" || { echo "test-drive-store-grant: $fails FAILED"; exit 1; }

@@ -57,7 +57,6 @@ import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.StatusLightRow
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import java.text.DateFormat
 import java.util.Date
@@ -88,11 +87,7 @@ fun FsyncPageScreen(
     val scope = rememberCoroutineScope()
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(
-            title = Declarations.nav.section(Declarations.SECTION_FSYNC)?.label.orEmpty(),
-            subtitle = pages.firstOrNull { it.id == current }?.label,
-            actions = { TerminalIslandAction(actions, ::say) },
-        )
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         // #1216 the page is the folder sync rules; a section that declares sub-pages would still get its strip.
         if (pages.isEmpty()) Box(Modifier.weight(1f)) { FolderSyncScreen(rclone, storage, actions, prefs, ::say) }
         else {

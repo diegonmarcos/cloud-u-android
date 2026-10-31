@@ -65,7 +65,6 @@ import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.LoadingState
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.clouddrive.ui.topIslandInsets
 import com.diegonmarcos.cloudlib.disk.AppSizes
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
@@ -118,7 +117,7 @@ fun AppsPage(prefs: DrivePrefs, collect: (android.content.Context) -> AppSnapsho
     }
     LaunchedEffect(tick) { snap = withContext(Dispatchers.IO) { runCatching { collect(ctx) }.getOrNull() } ?: snap }
     Column(Modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.manage_apps_title), subtitle = snap?.let { stringResource(R.string.manage_apps_subtitle, it.rows.size, it.shell ?: stringResource(R.string.manage_apps_no_shell)) })
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         val s = snap
         if (s == null) { LoadingState(Modifier.weight(1f)); return@Column }
         if (!s.usageAccess) {
@@ -255,7 +254,7 @@ fun DataPage(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (String
     val total = remember(shown) { shown.sumOf { it.size } }
 
     Column(Modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.manage_data_title), subtitle = stringResource(R.string.manage_data_subtitle, rows.size, FileOps.humanBytes(total)))
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         if (!hasAccess) { EmptyState(IconCatalog.vectorOrDefault("lock"), stringResource(R.string.manage_data_no_access), "", Modifier.weight(1f), stringResource(R.string.disk_grant_files)) { actions.requestStorageAccess() }; return@Column }
         DataFilters(filter) { f -> filter = f; prefs.setDataFilter(f.encode()) }
         PillRow(Modifier.padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap)) {

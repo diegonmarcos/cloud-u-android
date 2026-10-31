@@ -110,7 +110,6 @@ import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.files.convert.ConverterRegistry
 import com.diegonmarcos.clouddrive.ui.ProgressCard
 import com.diegonmarcos.clouddrive.ui.SectionHeader
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.superapp.bottomnav.bottomNavPillShape
 import java.io.File
 import java.text.DateFormat
@@ -202,10 +201,8 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
 
     Column(modifier.fillMaxSize().testTag(DriveTags.FILES_PANE_A + "_root")) {
         val activeLoc = ui.activePane.location
-        ToolbarIsland(
-            title = stringResource(R.string.files_title),
-            subtitle = (activeLoc as? Location.Local)?.path ?: activeLoc.key.removePrefix("A:"),
-            actions = {
+        // #1356 no title row: the Files actions sit in one compact row (the breadcrumbs show the path).
+        Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 IslandAction(Icons.Filled.SwapVert, stringResource(if (ui.dualPane) R.string.files_single_pane else R.string.files_dual_pane), enabled = hasAccess) { controller.setDual(!ui.dualPane) }
                 IslandAction(Icons.Filled.Search, stringResource(R.string.files_search), enabled = hasAccess) { if (searching) closeSearch() else openSearch() }
                 IslandAction(Icons.Filled.FolderOpen, stringResource(R.string.files_places), enabled = hasAccess) { dialog = FilesDialog.Places(ui.active, pickDestination = false, move = false) }
@@ -219,8 +216,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                     DropdownMenuItem(text = { Text(stringResource(R.string.files_select_all)) }, onClick = { more = false; controller.update { s -> FilesReducer.selectAll(s, s.active, listings[activeLoc.key]?.let { l -> controller.visible(s.activePane, l) }?.map { it.key } ?: emptyList()) } })
                     DropdownMenuItem(text = { Text(stringResource(R.string.chrome_retry)) }, onClick = { more = false; controller.refreshActive() })
                 }
-            },
-        )
+                    }
 
         if (!hasAccess) {
             EmptyState(Icons.Filled.Lock, stringResource(R.string.files_no_access_title), stringResource(R.string.files_no_access_hint), Modifier.weight(1f), stringResource(R.string.files_grant_access)) { actions.requestStorageAccess() }

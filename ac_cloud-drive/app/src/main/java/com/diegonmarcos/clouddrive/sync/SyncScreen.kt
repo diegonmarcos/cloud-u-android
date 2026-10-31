@@ -112,16 +112,3 @@ fun rememberGitNextRun(): Long? {
     return nextRun
 }
 
-/** The terminal owns the shared store: start it (process, service, store folder), then open it. One island action. */
-@Composable
-fun TerminalIslandAction(actions: DriveActions, say: (String) -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    IslandAction(Icons.Filled.Terminal, stringResource(R.string.sync_open_terminal)) {
-        scope.launch {
-            val why = withContext(Dispatchers.IO) { StoreReady.wake(ctx.applicationContext) }
-            if (!actions.launchApp(StoreAccess.ownerPackage(), "")) say(ctx.getString(R.string.chrome_not_installed, ctx.getString(R.string.sync_terminal_name)))
-            else if (why != null) say(why)
-        }
-    }
-}

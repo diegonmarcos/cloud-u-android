@@ -157,6 +157,13 @@ if bj["ui"].get("top_bar"):
                     c = t[i]; depth += c == "("; depth -= c == ")"; i += 1
                     if depth == 0: break
                 if "underTopChrome = false" not in t[m.start():i]: bad.append("%s: a strip reserves the status-bar inset under the top bar" % f)
+for x in bj["ui"]["sections"]:
+    if x.get("title_row") is not False: bad.append("ui.sections[%s].title_row is not false" % x["id"])
+# no tab draws a title row (the island reserves its height + the status-bar inset); the viewer and the agent sub-page are not tabs
+for rel in ("home/HomeScreen.kt", "configs/ConfigsScreen.kt", "volumes/VolumesScreen.kt", "sync/FsyncPage.kt", "sync/MountsPage.kt",
+            "sync/SyncScreen.kt", "manage/ManageScreen.kt", "files/FilesScreen.kt", "files/ExplorerScreen.kt"):
+    t = open(os.path.join(src, rel)).read() if os.path.exists(os.path.join(src, rel)) else ""
+    if "ToolbarIsland(" in t or "TerminalIslandAction(" in t: bad.append("%s still draws a title row" % rel)
 g = next(x for x in bj["ui"]["sections"] if x["id"] == "git")
 if g.get("title_row") is False:
     body = git[git.index("Column(modifier.fillMaxSize()) {", git.index("fun GitPageScreen(")):]
@@ -169,6 +176,9 @@ echo "== T5 no reserved height above the section strips =="
 out=$(t5 "$SRC" "$SYNC/SyncScreen.kt") && pass "every strip under the top bar adds no inset; the Git strip is the page's first child" || fail "T5: $out"
 mkdir -p "$tmp/src5/files"; sed 's/, underTopChrome = false)/)/' "$SRC/files/ExplorerScreen.kt" > "$tmp/src5/files/ExplorerScreen.kt"
 t5 "$tmp/src5" "$SYNC/SyncScreen.kt" >/dev/null 2>&1 && fail "T5 passed a strip that reserves the inset (vacuous)" || pass "Explorer's strip back on the inset → T5 RED"
+mkdir -p "$tmp/src6/home"; sed 's#^\(\s*\)// \#1356 no title row.*#\1ToolbarIsland(title = "Home")#' "$SRC/home/HomeScreen.kt" > "$tmp/src6/home/HomeScreen.kt"
+grep -q 'ToolbarIsland(title = "Home")' "$tmp/src6/home/HomeScreen.kt" || fail "T5 mutation anchor gone in HomeScreen"
+t5 "$tmp/src6" "$SYNC/SyncScreen.kt" >/dev/null 2>&1 && fail "T5 passed a title row back on Home (vacuous)" || pass "a title row back on Home → T5 RED"
 sed 's/^\(        \)NavBarTopSecondRow(pages = pages/\1Spacer(Modifier.height(DriveMetrics.islandHeight))\n\1NavBarTopSecondRow(pages = pages/' "$SYNC/SyncScreen.kt" > "$tmp/S5.kt"
 t5 "$SRC" "$tmp/S5.kt" >/dev/null 2>&1 && fail "T5 passed a Spacer above the Git strip (vacuous)" || pass "a Spacer above the Git strip → T5 RED"
 

@@ -57,7 +57,6 @@ import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.StatusLightRow
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import kotlinx.coroutines.launch
 
@@ -87,11 +86,7 @@ fun MountsPageScreen(
     val scope = rememberCoroutineScope()
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(
-            title = Declarations.nav.section(Declarations.SECTION_MOUNTS)?.label.orEmpty(),
-            subtitle = pages.firstOrNull { it.id == current }?.label,
-            actions = { TerminalIslandAction(actions, ::say) },
-        )
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "mounts_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {

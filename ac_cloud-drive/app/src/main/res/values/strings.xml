@@ -30,7 +30,6 @@
     <string name="chrome_unknown_tab">Nothing is declared for this tab</string>
 
     <!-- Files -->
-    <string name="files_title">Files</string>
     <string name="files_dual_pane">Two panes</string>
     <string name="files_single_pane">One pane</string>
     <string name="files_search">Search</string>
@@ -139,7 +138,6 @@
     <string name="files_rename_blocked">The preview found conflicts; fix the pattern</string>
 
     <!-- Volumes (#603) -->
-    <string name="volumes_title">Volumes</string>
     <string name="volumes_device_section">Device volumes</string>
     <string name="volumes_device_none">No removable volume</string>
     <string name="volumes_device_none_hint">Nothing is attached, and no drive has been granted through the system picker</string>
@@ -166,8 +164,6 @@
     <string name="volumes_folder_empty">empty folder</string>
 
     <!-- Home (#603, redesigned #609 into two sections: Apps and Volumes) -->
-    <string name="home_title">Home</string>
-    <string name="home_hint">The drive at a glance</string>
     <string name="home_apps_section">Apps</string>
     <string name="home_apps_hint">The fleet\'s data apps, from the constellation manifest</string>
     <string name="home_open_files">Open in Files</string>
@@ -378,7 +374,6 @@
     <string name="backups_empty_hint">Declare one in data/drive-mirror-jobs.json</string>
 
     <!-- Configs -->
-    <string name="configs_title">Configs</string>
     <string name="configs_webserver">Webserver</string>
     <string name="configs_webserver_body">cloud-c3-webserver serves this phone\'s storage on %1$s</string>
     <string name="configs_webserver_open">Open c3-webserver</string>
@@ -478,8 +473,6 @@
     <!-- #669 a fleet-listed clone needs the fleet session it was listed with; without one the
          gate answers instead of the git server. The message names the next step: the Authelia
          sign-in on this same page. -->
-    <string name="sync_open_terminal">Open terminal (starts it first)</string>
-    <string name="sync_terminal_name">Cloud Terminal Termux</string>
     <string name="git_seed_retry">Retry seed</string>
     <string name="git_fleet_clone_no_session">No fleet session is on this phone — the Authelia sign-in on this page starts one; the clone rides it.</string>
     <!-- #684 THE TWO PARALLEL WAY-CARDS (GitHub / Cloud git). The card names are DECLARED
@@ -530,9 +523,6 @@
     <string name="disk_grant_usage">Open Permissions</string>
 
     <!-- Manage (Apps / Data) and Agents -->
-    <string name="manage_apps_title">Apps</string>
-    <string name="manage_apps_subtitle">%1$d apps · shell: %2$s</string>
-    <string name="manage_apps_no_shell">none</string>
     <string name="manage_apps_usage_missing">Permissions needed: Usage access. Without it other apps\' sizes show —.</string>
     <string name="manage_apps_shell_hint">Running and RAM of other apps need the privileged shell (SuperApp or Shizuku). Without it they show —. Connect it in Configs ▸ Others.</string>
     <string name="manage_apps_col_name">App</string>
@@ -544,8 +534,6 @@
     <string name="manage_apps_col_ram">RAM</string>
     <string name="manage_yes">yes</string>
     <string name="manage_no">no</string>
-    <string name="manage_data_title">Data</string>
-    <string name="manage_data_subtitle">%1$d items · %2$s</string>
     <string name="manage_data_no_access">Data needs all-files access.</string>
     <string name="manage_data_files">Files</string>
     <string name="manage_data_folders">Folders</string>

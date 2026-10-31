@@ -39,7 +39,6 @@ import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.Pill
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 
 /**
  * #1216 CONFIGS: ONE island whose strip is build.json ui.sections[configs].pages: General (sections Explorer, Manage, Agents, then
@@ -75,7 +74,7 @@ fun ConfigsScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.configs_title), subtitle = pages.firstOrNull { it.id == current }?.label)
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         // #868 the strip is libs:bottomnav's PageTabs over ui.sections[configs].pages.
         NavBarTopSecondRow(pages = Declarations.navPages("configs"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.CONFIGS_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "configs_page", modifier = Modifier.weight(1f)) { id ->

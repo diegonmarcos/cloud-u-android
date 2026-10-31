@@ -48,7 +48,6 @@ import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import kotlinx.coroutines.launch
 
 /**
@@ -92,7 +91,7 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
 
     Column(modifier.fillMaxSize()) {
         // #630 no shared "current class" caption any more: each section names its own selection.
-        ToolbarIsland(title = stringResource(R.string.volumes_title))
+        // #1356 no title row (the terminal shortcut is the Termux tile of Home ▸ Apps): the content starts under the top bar.
         SectionHeader(stringResource(R.string.volumes_device_section), count = volumes.size)
         if (volumes.isEmpty()) {
             DriveCard(stringResource(R.string.volumes_device_none), light = StatusLight.State.UNKNOWN, summary = stringResource(R.string.volumes_device_none_hint), tag = DriveTags.VOLUMES_CARD) {

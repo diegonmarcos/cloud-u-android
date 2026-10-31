@@ -102,7 +102,7 @@
     "sections": [
       {
         "id": "explorer",
-        "label": "Explorer",
+        "label": "Explorer", "title_row": false,
         "icon": "folder",
         "_doc": "Owner restructure: Files is renamed Explorer and carries two sub-pages drawn by PageTabs. Local is the X-plore-class manager over shared storage and the shared store (ui.files). Cloud is the former Volumes tab, moved here whole: its four volume classes are Cloud's own sub-pages (VolumesScreen draws them per ui.volumes.sections), so Declarations.classesOf reads ui.sections[explorer].pages[cloud].pages.",
         "pages": [
@@ -142,7 +142,7 @@
       },
       {
         "id": "manage",
-        "label": "Manage",
+        "label": "Manage", "title_row": false,
         "icon": "storage",
         "_doc": "Owner restructure: the slot Volumes freed. Disk Management moved here from Home's sub-page and split into two sub-pages. Apps is a table of every installed app ranked by total size (StorageStatsManager behind usage access; running state and PSS from ActivityManager for this app and from the privileged shell channel, dumpsys meminfo and ps, for the rest; a dash plus a hint otherwise). Data is everything in shared storage and the shared store that is not an app, ranked by size, filtered by the groups and subtypes declared in manage/FileClassifier.kt (default: Media only; the filter persists in cloud-drive-prefs).",
         "pages": [
@@ -160,19 +160,19 @@
       },
       {
         "id": "agents",
-        "label": "Agents",
+        "label": "Agents", "title_row": false,
         "icon": "smart_toy",
         "_doc": "Owner addition: on-device agents. The first, Screenshots, OCRs every screenshot and labels it with on-device ML (libs:ml-l-image's engine, detect modes text/labels/objects), incrementally, and writes the contract in data/agent-screenshots-contract.json (docs/screenshot-agent-contract.md) for other fleet apps (Cloud Tasks first)."
       },
       {
         "id": "ai",
-        "label": "AI",
+        "label": "AI", "title_row": false,
         "icon": "auto_awesome",
         "_doc": "Owner addition: the fleet's AI chat (libs:ai) as a tab. It talks to the fleet agent gateway (my-ai-api, mesh only) with the agent picked in the page; no token is held or read by this app (decisions-use guard D5). Declared once in libs:ai's assets/ai/ai.json; the gateway's mesh address is baked from the fleet catalogue by libs/ai/ai-gateway.gradle."
       },
       {
         "id": "home",
-        "label": "Home",
+        "label": "Home", "title_row": false,
         "icon": "home"
       },
       {
@@ -197,13 +197,13 @@
       },
       {
         "id": "fsync",
-        "label": "Fsync",
+        "label": "Fsync", "title_row": false,
         "icon": "sync",
         "_doc": "#1216 the Fsync page is the folder sync rules and nothing else: Unison two-way pairs with conflict detection and keep-A / keep-B / keep-both (sync/FsyncPage.kt FolderSyncScreen over UnisonCoordinator). The former Backup sub-page (rsync mirror jobs) is gone, so the section declares no sub-pages and draws no strip. The servers, APIs and SFTP hosts the rules talk to are set up in Configs > Fsync. Everything drawn is real state: the pairs the user made and the last result of each run; the APK declares no job, rule or pair."
       },
       {
         "id": "mounts",
-        "label": "Mounts",
+        "label": "Mounts", "title_row": false,
         "icon": "lan",
         "_doc": "#1173 the Mounts page with two sub-pages: Rclone = rclone's own `rclone config` flow in the app (backend list and option schema from `rclone config providers`, OAuth through `rclone authorize`, service account, shared drives, test with `rclone lsd`, usage with `rclone about`, edit, delete, serve over loopback WebDAV) in sync/MountsPage.kt + sync/RemoteWizard.kt, and FUSE = real FUSE mounts (rclone mount, sshfs) run inside the Termux proot guest through the CLOUD_EXEC channel, with a runtime verdict on whether FUSE can work on the device and a WebDAV serve fallback when it cannot (storage/FuseWire.kt). Remotes, keys, mounts and Unison pairs are owned by Cloud Account and reached over its accountdata door (storage/DriveCredentialsClient.kt, held to the contract by DriveCredentialsGuardTest).",
         "pages": [
@@ -221,7 +221,7 @@
       },
       {
         "id": "configs",
-        "label": "Configs",
+        "label": "Configs", "title_row": false,
         "icon": "settings",
         "_doc": "#1216 the strip inside the Configs island, ONE declaration: General (sections Explorer, Manage, Agents, then removable storage and About: the former Others page is folded in), Git (the sign-in auths), Fsync (the servers, APIs and SFTP hosts the folder sync rules use, read from ui.sync.config_fsync and data/drive-connections.json), Mounts (rclone setup, one line per provider of ui.sync.mounts.providers, Others last) and Webserver (opens cloud-c3-webserver). The Backups page is gone.",
         "pages": [
