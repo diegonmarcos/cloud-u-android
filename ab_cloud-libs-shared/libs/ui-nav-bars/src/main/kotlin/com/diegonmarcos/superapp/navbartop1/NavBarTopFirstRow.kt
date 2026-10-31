@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
@@ -49,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -123,6 +130,8 @@ public object TopFirstRowTags {
     public const val PROFILE: String = TopBarTags.ACCOUNT
     public const val CONFIGS: String = TopBarTags.CONFIGS
     public const val DROPDOWN: String = "navtop1_dropdown"
+    /** The opaque [topChromeUnderlay] box the scaffold draws the first row on. */
+    public const val UNDERLAY: String = "navtop1_underlay"
     /** The chevron that opens the dropdown when a tap on the title does something else (onTitleClick). */
     public const val MORE: String = "navtop1_more"
     public const val SEPARATOR_PAGES: String = "navtop1_sep_pages"
@@ -451,6 +460,14 @@ public fun NavBarTopFirstRowScaffold(
     // Scroll-hide (Configs > UI, on by default): a downward scroll hides ALL of them until an upward scroll reveals them again.
     CompositionLocalProvider(LocalNavUiSettings provides ui) {
     NavChromeScroll { collapse ->
+      // The first row is transparent (NavTokens.topRowFill), so without an underlay it showed the HOST WINDOW's background: a
+      // WebView app (Cloud Contacts, Cloud Me) leaves the default light Material window there, and the row's white ink and the
+      // status icons went white-on-white, worst with the page dropdown open. The scaffold paints [topChromeUnderlay] behind the
+      // status-bar band (above the host's statusBarsPadding, so drawn outside these bounds) and behind the first row; the page
+      // area keeps whatever the app paints.
+      val underlay = topChromeUnderlay(dark)
+      val statusTop = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
+      Box(Modifier.drawBehind { if (statusTop > 0f) drawRect(underlay, Offset(0f, -statusTop), Size(size.width, statusTop)) }, propagateMinConstraints = true) {
         AppTopBarScaffold(
             decl = TopBarDecl(drawer = plan.hamburger, settings = TopBarSettings.KNOWN, inlineActions = true),
             drawerOverride = if (plan.hamburger) cleanDrawerBody else null,
@@ -466,6 +483,7 @@ public fun NavBarTopFirstRowScaffold(
             barVisible = barVisible && !collapse.collapsed,
             topRow = { c ->
                 val slot = c.drawerContent
+                Box(Modifier.background(underlay).testTag(TopFirstRowTags.UNDERLAY)) {
                 if (plan.hamburger) NavBarTopCleanRow(ThemeBackground.colors(dark), labels, c) else NavBarTopFirstRow(
                     title, ThemeBackground.colors(dark), labels, followed, navigate,
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
@@ -474,12 +492,21 @@ public fun NavBarTopFirstRowScaffold(
                     extra = if (slot != null) ({ close -> slot(close) }) else null,
                     onConfigsUi = openGeneral, onConfigsAbout = openAbout,
                 )
+                }
             },
             content = { CompositionLocalProvider(LocalSubPageRequests provides requests, LocalBreadcrumbLeaf provides leafState, content = content) },
         )
+      }
     }
     }
 }
+
+/**
+ * What the scaffold paints behind the transparent first row and the status-bar band: the palette's OPAQUE island, the same
+ * surface the title dropdown is drawn on, so the row's [ThemeColors.onIsland] ink and the light status icons stay readable
+ * whatever window background the host left (a WebView app's default light window turned the bar white-on-white). Pure.
+ */
+public fun topChromeUnderlay(dark: Boolean): Color = ThemeBackground.colors(dark).island
 
 /** The path's last, page-less segment (an open message's subject), set by whichever page shows it. */
 public class BreadcrumbLeafState {

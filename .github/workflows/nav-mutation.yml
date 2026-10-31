@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'gesture-latch | gesture-new | dropdown-cap | dropdown-ink'
+        description: 'gesture-latch | gesture-new | dropdown-cap | dropdown-ink | top-underlay'
         required: true
 permissions:
   contents: read
@@ -27,6 +27,10 @@ jobs:
             dropdown-cap)  sed -i 's/return below.coerceIn(minOf(minPx, whole), whole)/return 520/' $K/NavDropdownSizing.kt ;;
             # the dropdown's child entries back to a dark ink on the dark dropdown: NavDropdownInkTest must go red
             dropdown-ink)  sed -i 's/DropdownEntryRole.Child -> dropdownOnSurface.copy(alpha = dropdownChildAlpha)/DropdownEntryRole.Child -> Color(0xFF1D1B20)/' $K/NavTokens.kt ;;
+            # the first row's underlay back to the light Material surface (the white-on-white bar): TopChromeUnderlayTest must go red.
+            # libs:ui-nav-bars is not in Cloud Store's build, so this one runs Cloud Contacts' unit suite.
+            top-underlay)  sed -i 's/^public fun topChromeUnderlay(dark: Boolean): Color = ThemeBackground.colors(dark).island$/public fun topChromeUnderlay(dark: Boolean): Color = Color(0xFFFEF7FF)/' ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt
+                           echo "WORK_DIR=ac_cloud-contacts" >> "$GITHUB_ENV" ;;
             *) echo "unknown mutation"; exit 2 ;;
           esac
           git diff --stat
@@ -71,4 +75,4 @@ jobs:
       # the evidence: which nav test caught it
       - name: Failed tests
         if: always()
-        run: grep -rl "<failure" --include="TEST-*.xml" ab_cloud-libs-shared/libs/bottomnav/build 2>/dev/null | xargs -r grep -h -o 'testcase name="[^"]*"' | head -40 || true
+        run: grep -rl "<failure" --include="TEST-*.xml" ab_cloud-libs-shared/libs/bottomnav/build ab_cloud-libs-shared/libs/ui-nav-bars/build 2>/dev/null | xargs -r grep -h -o 'testcase name="[^"]*"' | head -40 || true
