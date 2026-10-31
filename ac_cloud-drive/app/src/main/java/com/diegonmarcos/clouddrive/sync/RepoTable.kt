@@ -32,6 +32,8 @@ data class RepoTableRow(
 /** #1138 the table's pure rules: ranking, sorting, how each cell prints and where its facts come from. */
 object RepoTable {
     const val DASH = "—"
+    /** #1356 the columns that never scroll sideways: the status icon and the name, left of every fact column. */
+    val PINNED = setOf(RepoColumn.STATUS, RepoColumn.NAME)
     val DEFAULT_SORT = RepoColumn.NAME
     /** #1288 THE column set and order of every repo table (the main one, Parentless, Unlisted): the one header draws exactly these. */
     val COLUMNS: List<RepoColumn> = RepoColumn.entries.toList()

@@ -182,4 +182,26 @@ t5 "$tmp/src6" "$SYNC/SyncScreen.kt" >/dev/null 2>&1 && fail "T5 passed a title 
 sed 's/^\(        \)NavBarTopSecondRow(pages = pages/\1Spacer(Modifier.height(DriveMetrics.islandHeight))\n\1NavBarTopSecondRow(pages = pages/' "$SYNC/SyncScreen.kt" > "$tmp/S5.kt"
 t5 "$SRC" "$tmp/S5.kt" >/dev/null 2>&1 && fail "T5 passed a Spacer above the Git strip (vacuous)" || pass "a Spacer above the Git strip → T5 RED"
 
+# T6 #1356 a simple Git page: (a) the refresh is a thin top bar, never a disc over the controls; (b) Status and Name are pinned,
+#    the fact columns scroll under them (header and rows alike); (c) parentless / unlisted panels are in More > Advanced, not the list.
+t6() { python3 - "$BJ" "$1" "$2" "$3" <<'PY'
+import json, sys
+bj = json.load(open(sys.argv[1])); frame, page, ui = (open(p).read() for p in sys.argv[2:5]); bad = []
+if "indicator = {" not in frame or "LinearProgressIndicator(" not in frame or "SYNC_GIT_REFRESH_BAR" not in frame: bad.append("(a) the refresh is not a top bar")
+if "RepoTable.COLUMNS.filter { it in RepoTable.PINNED }" not in ui or "Modifier.weight(1f).horizontalScroll(scroll)" not in ui: bad.append("(b) the header does not pin Status and Name")
+if "Row(Modifier.weight(1f).horizontalScroll(scroll).padding(end = DriveMetrics.sectionInset" not in page: bad.append("(b) the rows do not pin Status and Name")
+if 'item(key = "parentless")' in page or 'item(key = "unlisted")' in page: bad.append("(c) parentless / unlisted are still in the main list")
+more = next(g for g in bj["ui"]["sync"]["git"]["top_bar"]["groups"] if g["id"] == "more")
+if not any(i["kind"] == "open_advanced" for i in more["items"]): bad.append("(c) More has no Advanced item")
+if '"open_advanced" -> showAdvanced = true' not in page or "ParentlessPanel(" not in page[page.index("if (showAdvanced)"):] : bad.append("(c) Advanced does not open the panels")
+print("\n".join(bad)); sys.exit(1 if bad else 0)
+PY
+}
+echo "== T6 a simple Git page: top refresh bar, pinned Name, Advanced =="
+FR="$SYNC/GitPageFrame.kt"; UI="$SYNC/RepoTableUi.kt"
+out=$(t6 "$FR" "$PAGE" "$UI") && pass "refresh is a top bar; Status and Name pinned; parentless / unlisted in More > Advanced" || fail "T6: $out"
+sed 's/indicator = {/indicatorX = {/' "$FR" > "$tmp/F6.kt"; t6 "$tmp/F6.kt" "$PAGE" "$UI" >/dev/null 2>&1 && fail "T6 passed the default spinner (vacuous)" || pass "the default spinner back → T6 RED"
+sed 's/RepoTable.COLUMNS.filter { it in RepoTable.PINNED }/RepoTable.COLUMNS/' "$UI" > "$tmp/U6.kt"; t6 "$FR" "$PAGE" "$tmp/U6.kt" >/dev/null 2>&1 && fail "T6 passed an unpinned header (vacuous)" || pass "an unpinned header → T6 RED"
+sed 's|// #1356 the parentless and unlisted folder panels live in More > Advanced (a simple default view).|item(key = "parentless") { }|' "$PAGE" > "$tmp/P6.kt"; t6 "$FR" "$tmp/P6.kt" "$UI" >/dev/null 2>&1 && fail "T6 passed parentless back in the list (vacuous)" || pass "parentless back in the main list → T6 RED"
+
 [ "$FAILURES" -eq 0 ] && { echo "test-drive-git-top-bar: all green"; exit 0; } || { echo "test-drive-git-top-bar: $FAILURES failure(s)"; exit 1; }

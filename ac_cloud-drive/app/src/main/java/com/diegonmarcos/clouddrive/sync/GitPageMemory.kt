@@ -26,6 +26,7 @@ data class GitPageMemory(
     val logsTab: String = "",
     val query: String = "",
     val showFilters: Boolean = false,
+    val showAdvanced: Boolean = false,
     val scrollIndex: Int = 0,
     val scrollOffset: Int = 0,
 ) {

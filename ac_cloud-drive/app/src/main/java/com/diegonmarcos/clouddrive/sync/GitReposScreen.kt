@@ -300,12 +300,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #1315 the declared top bar's own state: the search, the Filters sheet, the legend, a confirmation in flight, the executor's jobs.
     var query by remember { mutableStateOf(memory.query) }
     var showFilters by remember { mutableStateOf(memory.showFilters) }
+    var showAdvanced by remember { mutableStateOf(memory.showAdvanced) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState(memory.scrollIndex, memory.scrollOffset)
     LaunchedEffect(memoryKey) {
         androidx.compose.runtime.snapshotFlow {
             GitPageMemory(
                 expanded = expanded, panelRepo = panelRepo, panel = panel, settingsFor = settingsFor, statusFor = statusFor,
-                showActivity = showActivity, logsTab = logsTab, query = query, showFilters = showFilters,
+                showActivity = showActivity, logsTab = logsTab, query = query, showFilters = showFilters, showAdvanced = showAdvanced,
                 scrollIndex = listState.firstVisibleItemIndex, scrollOffset = listState.firstVisibleItemScrollOffset,
             )
         }.collect { memoryStore.put(memoryKey, it) }
@@ -856,6 +857,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             "open_report" -> showDepthReport = true
             "toggle_filter" -> page.filters.firstOrNull { it.id == item.filter }?.let { f -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, item.option)) }
             "legend" -> showLegend = true
+            // #1356 More > Advanced: the parentless and unlisted folder panels, out of the default view.
+            "open_advanced" -> showAdvanced = true
         }
     }
     fun onTopItem(item: Declarations.GitTopItemDecl) { if ((item.confirm || item.danger) && item.kind != "depth") topConfirm = item else runTopItem(item) }
@@ -1064,12 +1067,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     }
                     // #1149 ONE TABLE for every listing above: the sticky header, the bulk bar, the rows.
                     if (!setup) tableBlock()
-                    // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
-                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) } }
-                    // #1255 UNLISTED GIT FOLDERS: git folders under the declared roots that no registry repository matches (or with no remote).
-                    if (!setup) item(key = "unlisted") {
-                        UnlistedPanel(page.unlisted.label, unlistedFolders, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true })
-                    }
+                    // #1356 the parentless and unlisted folder panels live in More > Advanced (a simple default view).
                     // #1315 THE ONE INVENTORY's other sections: duplicate clones, bare mirrors, leftover folders (drawn only when they have rows).
                     if (!setup) item(key = "inventory") { InventorySections(inventoryState, page.inventory, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true }) }
                 }
@@ -1124,6 +1122,16 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     if (showDepthReport) depthRun?.let { r -> DepthReportWindow(r, onCancel = { coordinator.cancelDepthRun() }, onClose = { showDepthReport = false }) }
     topConfirm?.let { item -> GitTopConfirm(item, page.topBar, scopeTargets.size, onConfirm = { runTopItem(item); topConfirm = null }, onDismiss = { topConfirm = null }, cancelLabel = stringResource(R.string.chrome_cancel)) }
     if (showFilters) GitFilterSheet(page.topBar, page.filters, filterSel, ::countsOf, onPick = { f, o -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, o)) }, onClear = { coordinator.clearFilters(); query = "" }, onDismiss = { showFilters = false })
+    // #1356 MORE > ADVANCED: the local repos parentless and the unlisted git folders, in one sheet over the page.
+    if (showAdvanced) ModalBottomSheet(onDismissRequest = { showAdvanced = false }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_ADVANCED)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = DriveMetrics.padWide)) {
+            page.topBar.groups.flatMap { it.items }.firstOrNull { it.kind == "open_advanced" }?.let { adv ->
+                Text(adv.label, Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.titleMedium)
+            }
+            if (prefs != null) ParentlessPanel(prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) }
+            UnlistedPanel(page.unlisted.label, unlistedFolders, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true })
+        }
+    }
     if (showLegend) GitLegendDialog(page.topBar, page.status.icons, { showLegend = false }, stringResource(R.string.repo_status_window_close))
     depthConfirm?.let { a ->
         AlertDialog(
@@ -1397,7 +1405,8 @@ private fun GitRepoRow(
             .clickable(onClick = onToggle),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+        // #1356 Status and Name are pinned; the fact columns scroll sideways under them on the ONE scroll state the header shares.
+        Row(Modifier.padding(start = DriveMetrics.sectionInset, top = DriveMetrics.gap, bottom = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             // #1238 the leftmost column is the status icon on its own: a tap opens the full-screen status window.
             RepoStatusCell(icons, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))
             Column(Modifier.width(DriveMetrics.tableName)) {
@@ -1420,6 +1429,8 @@ private fun GitRepoRow(
                     if (glance.repositoryState != "SAFE") Text(glance.repositoryState, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+        Row(Modifier.weight(1f).horizontalScroll(scroll).padding(end = DriveMetrics.sectionInset, top = DriveMetrics.gap, bottom = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             RepoCells(cells)
             Box(Modifier.width(DriveMetrics.tableName), contentAlignment = Alignment.CenterEnd) {
                 when {

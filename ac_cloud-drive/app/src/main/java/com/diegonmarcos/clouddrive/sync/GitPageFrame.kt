@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
@@ -33,7 +34,15 @@ fun GitPageFrame(refreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier 
     // #1358 the git engine's missing All files access is said ONCE, above every row (EngineGrantBanner draws nothing otherwise);
     // #1372 it sits ABOVE the pull-to-refresh box, so the refresh spinner never draws over it.
     PermsPromptAbove(prompt = { EngineGrantBanner() }, modifier = modifier.fillMaxSize()) {
-        PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+        // #1356 the refresh is a thin bar along the top edge, never a floating disc over the search field or the top nav.
+        PullToRefreshBox(
+            isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize(),
+            indicator = {
+                if (refreshing) androidx.compose.material3.LinearProgressIndicator(
+                    Modifier.fillMaxWidth().align(androidx.compose.ui.Alignment.TopCenter).testTag(DriveTags.SYNC_GIT_REFRESH_BAR),
+                )
+            },
+        ) {
             LazyColumn(
                 Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).testTag(DriveTags.SYNC_GIT_LIST),
                 state = state,

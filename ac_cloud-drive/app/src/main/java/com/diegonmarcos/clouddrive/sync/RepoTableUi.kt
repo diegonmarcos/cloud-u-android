@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -62,15 +63,22 @@ internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: Scr
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).heightIn(min = DriveMetrics.tap).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset), verticalAlignment = Alignment.CenterVertically) {
-            RepoTable.COLUMNS.forEach { c ->
-                val arrow = if (c == column) (if (ascending) " ▲" else " ▼") else ""
-                Text(
-                    columnLabel(c) + arrow, repoCellModifier(c).clickable { onSort(c) },
-                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                    textAlign = when (c) { RepoColumn.NAME -> TextAlign.Start; RepoColumn.STATUS -> TextAlign.Center; else -> TextAlign.End }, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                )
-            }
+        // #1356 Status and Name are pinned (they never scroll off); the fact columns scroll sideways under the same state the rows use.
+        val label: @Composable (RepoColumn) -> Unit = { c ->
+            val arrow = if (c == column) (if (ascending) " ▲" else " ▼") else ""
+            Text(
+                columnLabel(c) + arrow, repoCellModifier(c).clickable { onSort(c) },
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                textAlign = when (c) { RepoColumn.NAME -> TextAlign.Start; RepoColumn.STATUS -> TextAlign.Center; else -> TextAlign.End }, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Row(Modifier.padding(start = DriveMetrics.sectionInset), verticalAlignment = Alignment.CenterVertically) {
+            RepoTable.COLUMNS.filter { it in RepoTable.PINNED }.forEach { label(it) }
+        }
+        Row(Modifier.weight(1f).horizontalScroll(scroll).padding(end = DriveMetrics.sectionInset), verticalAlignment = Alignment.CenterVertically) {
+            RepoTable.COLUMNS.filter { it !in RepoTable.PINNED }.forEach { label(it) }
+            // the rows' trailing disclosure cell: the last fact column scrolls fully into view
+            Spacer(Modifier.width(DriveMetrics.tableName))
         }
     }
 }
