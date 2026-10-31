@@ -3,7 +3,6 @@ package com.diegonmarcos.cloudnews
 import com.diegonmarcos.cloudlib.web.CloudChromeClient
 import com.diegonmarcos.cloudlib.web.CloudWeb
 import com.diegonmarcos.cloudlib.web.WebProfile
-import com.diegonmarcos.superapp.bottomnav.ChromeWebView
 import android.os.Bundle
 import android.util.Log
 import android.webkit.ConsoleMessage

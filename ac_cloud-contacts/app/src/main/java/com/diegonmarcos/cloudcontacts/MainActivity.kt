@@ -2,7 +2,6 @@ package com.diegonmarcos.cloudcontacts
 
 import com.diegonmarcos.cloudlib.web.CloudWeb
 import com.diegonmarcos.cloudlib.web.WebProfile
-import com.diegonmarcos.superapp.bottomnav.ChromeWebView
 import android.Manifest
 import android.annotation.SuppressLint
 import android.graphics.Color

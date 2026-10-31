@@ -50,8 +50,8 @@ def check(root, ok):
     dl = src.get(os.path.join(LIB, "BrowserDownloads.kt"), "")
     ok("cookieHeader: (String) -> String?" in dl and "cookieHeader(url)" in dl, "a download takes its cookie header from the caller's jar")
     ok("cookiesOf(webView).getCookie(u)" in frag, "the download reads the requesting tab's profile cookies")
-    ok("profile = profileOfWebView[wv]" in frag and "TabProfile.bind(this, profile)" in src.get(os.path.join(LIB, "OfflineSites.kt"), ""), "the offline save binds the asking tab's profile")
-    ok("TabProfile.bind(this, profileOfWebView[wv])" in frag, "the scraper's hidden WebView binds the asking tab's profile")
+    ok("profile = profileOfWebView[wv]" in frag and "TabProfile.bind(it, profile)" in src.get(os.path.join(LIB, "OfflineSites.kt"), ""), "the offline save binds the asking tab's profile")
+    ok("TabProfile.bind(it, profileOfWebView[wv])" in frag, "the scraper's hidden WebView binds the asking tab's profile")
     ok("BrowserClearData.endPrivateSession(" in frag, "closing the last private tab ends the private session")
     ok("override fun onPermissionRequest" in frag and "override fun onGeolocationPermissionsShowPrompt" in frag,
        "WebView's permission and location prompts are handled")

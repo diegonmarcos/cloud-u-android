@@ -105,7 +105,7 @@ object CloudWeb {
     }
 
     private inline fun optional(block: () -> Unit) {
-        try { block() } catch (_: Throwable) { }
+        try { block() } catch (ignored: Throwable) { }
     }
 
     /** Clears the app's one Chromium HTTP cache (per app, not per view), so a throwaway view serves. */
