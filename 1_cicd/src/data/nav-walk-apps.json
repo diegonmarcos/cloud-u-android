@@ -72,7 +72,13 @@
       "app": "ac_cloud-notes",
       "ship": "ship-cloud-notes.yml",
       "artifact": "cloud-notes-arm64-v8a-",
-      "asset": "Cloud-Notes"
+      "asset": "Cloud-Notes",
+      "_doc_scenes": "#1369 Obsidian look review: each scene photographed in dark and light, Clean nav (cloud-android-nav-walk.py run_scenes).",
+      "scene_nav_mode": "clean",
+      "scene_themes": ["dark", "light"],
+      "scene_boot_s": 10,
+      "scene_setup": [["shell", "mkdir -p /sdcard/Documents"], ["push", "ac_cloud-notes/test/fixtures/vault/sample", "/sdcard/Documents/sample-vault"], ["shell", "appops set {pkg} MANAGE_EXTERNAL_STORAGE allow"]],
+      "scenes": [{"name": "notes-list", "steps": [["tap", "bottomnav_item_pages"], ["wait", 3]]}, {"name": "editor", "steps": [["tap", "topbar_menu"], ["tap", "navclean_app_action_pages/new"], ["wait", 4]]}, {"name": "left-drawer-actions", "steps": [["tap", "topbar_menu"], ["wait", 1]]}, {"name": "vault", "steps": [["tap", "bottomnav_item_pages"], ["tap", "topbar_menu"], ["tap", "navclean_sub"], ["tap", "Vault"], ["wait", 4], ["tap", "Vault path"], ["type", "/storage/emulated/0/Documents/sample-vault"], ["tap", "Open"], ["wait", 5]]}, {"name": "vault-right-sidebar", "steps": [["tap", "bottomnav_item_pages"], ["tap", "topbar_menu"], ["tap", "navclean_sub"], ["tap", "Vault"], ["wait", 4], ["tap", "Vault path"], ["type", "/storage/emulated/0/Documents/sample-vault"], ["tap", "Open"], ["wait", 5], ["tap", "Toggle right sidebar"]]}, {"name": "vault-left-drawer", "steps": [["tap", "bottomnav_item_pages"], ["tap", "topbar_menu"], ["tap", "navclean_sub"], ["tap", "Vault"], ["wait", 4], ["tap", "Vault path"], ["type", "/storage/emulated/0/Documents/sample-vault"], ["tap", "Open"], ["wait", 5], ["tap", "Toggle left sidebar"]]}, {"name": "command-palette", "steps": [["tap", "bottomnav_item_pages"], ["tap", "topbar_menu"], ["tap", "navclean_sub"], ["tap", "Vault"], ["wait", 4], ["tap", "Vault path"], ["type", "/storage/emulated/0/Documents/sample-vault"], ["tap", "Open"], ["wait", 5], ["tap", "Toggle left sidebar"], ["tap", "Command palette"], ["wait", 1]]}]
     },
     {
       "app": "ac_cloud-mail",

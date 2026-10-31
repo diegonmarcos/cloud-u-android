@@ -1,4 +1,4 @@
-# ─── GENERATED: do not edit — edit 1_cicd/src/scripts/cloud-android-nav-walk.py ───
+
 #!/usr/bin/env python3
 """cloud-android-nav-walk: the shared nav pattern, enforced at RUNTIME on a real emulator.
 
@@ -17,6 +17,12 @@ for each, checks what the owner keeps finding by hand:
   P5 a section declared vertical_side_menu shows the side menu and its toggle flips expanded <-> rail.
   P4 the pick landed: after choosing the page in the dropdown the title path ends in its label.
 
+  SCENES (#1369, nav-walk-apps.json `scenes`): after the walk, an app may declare named scenes (a fresh launch, then steps:
+     tap a resource id, tap a text or content description, type, a key, an edge swipe, a wait; `scene_setup` pushes repo
+     files and runs device commands once before), photographed under each theme of
+     `scene_themes` (system night mode) and the nav mode `scene_nav_mode`. They are evidence (shots/scene_<theme>_<name>.png),
+     reported PASS or, when a step found nothing, SKIP with the step named; they never change a page's verdict.
+
 Nothing here is relaxed to get green: a failing page is reported with its reason, a screenshot and the UI dump.
 
 It drives the app through UiAutomator (`uiautomator dump`, `input`), so it needs no instrumentation APK and no Gradle. The
@@ -26,6 +32,7 @@ bars expose their test tags as resource ids (libs:ui-nav-bars sets testTagsAsRes
 Exit 0 when every page passed, 1 when any failed, 2 when the app could not be driven at all (counted as failed pages).
 """
 import argparse
+import shlex
 import json
 import os
 import re
@@ -1047,7 +1054,77 @@ class Walk:
                                          "failures": ["driver error: %r" % ex], "seconds": 0})
                 finally:
                     signal.alarm(0)
+            if emulator_alive() and self.cfg.get("scenes"):
+                signal.alarm(max(SECTION_BUDGET, 90 * len(self.cfg["scenes"]) * len(self.cfg.get("scene_themes", ["dark", "light"]))))
+                try:
+                    self.run_scenes()
+                except Exception as ex:  # evidence only: a driver fault is reported, never silent
+                    self.results.append({"section": "scene", "page": "-", "label": "scenes", "status": "SKIP", "checks": {"note": "scene driver error: %r" % ex},
+                                         "failures": [], "seconds": 0})
+                finally:
+                    signal.alarm(0)
         self.report()
+
+    # ── scenes (#1369): declared screenshots for a reviewer, dark and light ──
+    def find_any(self, nodes, want):
+        """A node whose resource id, text or content description equals [want] (the WebView exposes aria-labels as descriptions)."""
+        for n in nodes or []:
+            if want in (n.rid, n.text, n.desc):
+                return n
+        return None
+
+    def scene_step(self, step):
+        kind, arg = step[0], (step[1] if len(step) > 1 else None)
+        if kind == "wait":
+            settle(float(arg)); return True
+        if kind == "type":  # into the focused field
+            shell("input text %s" % shlex.quote(str(arg).replace(" ", "%s"))); settle(0.8); return True
+        if kind == "push":  # a repo path onto the device (scene_setup): ["push", "<repo-relative src>", "<device dest>"]
+            repo = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+            adb("push", os.path.join(repo, arg), step[2]); return True
+        if kind == "shell":  # a device shell command (scene_setup); {pkg} is the app's package
+            shell(str(arg).replace("{pkg}", self.pkg)); return True
+        if kind == "key":
+            shell("input keyevent %s" % arg); settle(1.0); return True
+        if kind == "edge":  # a swipe in from the left or right edge (Obsidian's drawers)
+            y = self.h // 2
+            x0, x1 = (5, int(self.w * 0.7)) if arg == "left" else (self.w - 5, int(self.w * 0.3))
+            shell("input swipe %d %d %d %d 300" % (x0, y, x1, y)); settle(1.2); return True
+        if kind == "tap":  # resource id, text or content description; waits up to 10 s for it
+            deadline = time.time() + 10
+            while time.time() < deadline:
+                n = self.find_any(dump(2), arg)
+                if n is not None:
+                    tap(n); settle(1.5); return True
+                settle(1.0)
+            return False
+        raise ValueError("unknown scene step %r" % (step,))
+
+    def run_scenes(self):
+        scenes = self.cfg.get("scenes") or []
+        if not scenes:
+            return
+        shell("settings put global cloud_nav_ui_mode %s" % self.cfg.get("scene_nav_mode", "classic"))
+        for st in self.cfg.get("scene_setup", []):
+            self.scene_step(st)
+        try:
+            for theme in self.cfg.get("scene_themes", ["dark", "light"]):
+                shell("cmd uimode night %s" % ("yes" if theme == "dark" else "no"))
+                for sc in scenes:
+                    name, t0 = "scene_%s_%s" % (theme, sc["name"]), time.time()
+                    shell("am force-stop %s" % self.pkg)
+                    shell("monkey -p %s -c android.intent.category.LAUNCHER 1" % self.pkg)
+                    settle(float(self.cfg.get("scene_boot_s", 8)))
+                    missed = next((st for st in sc.get("steps", []) if not self.scene_step(st)), None)
+                    settle(1.5)
+                    self.evidence(name)
+                    self.results.append({"section": "scene", "page": "%s/%s" % (theme, sc["name"]), "label": sc["name"],
+                                         "status": "SKIP" if missed else "PASS",
+                                         "checks": {"note": ("step found nothing: %r" % (missed,)) if missed else "shots/%s.png" % name},
+                                         "failures": [], "seconds": int(time.time() - t0)})
+        finally:
+            shell("cmd uimode night no")
+            shell("settings put global cloud_nav_ui_mode classic")
 
     def report(self):
         app = self.a.app

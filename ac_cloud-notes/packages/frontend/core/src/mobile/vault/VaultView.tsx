@@ -63,7 +63,7 @@ export const VaultView = () => {
           <h3>Open by path</h3>
           <p className="cnv-dim">A folder on the phone, or a clone in the fleet store as <code>store:{decl.open.store.git_subdir}/&lt;repo&gt;</code>.</p>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input className="cnv-input" value={typed} onChange={e => setTyped(e.target.value)} data-testid="path-input" />
+            <input className="cnv-input" value={typed} onChange={e => setTyped(e.target.value)} aria-label="Vault path" data-testid="path-input" />
             <button type="button" className="cnv-btn cnv-primary" disabled={api.busy} onClick={() => void api.openTyped(typed)}>Open</button>
           </div>
         </div>
