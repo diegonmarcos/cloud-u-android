@@ -1,0 +1,1140 @@
+{
+ "_doc": "The FinTerm market universe the container (capital-stack-finterminal-api) keeps in SQLite and serves under /v1: daily EOD history for every symbol the APK tables read, the government yield matrix (country x tenor), GDP weights and the SEC earnings universe. The container generates its jobs from this file (gen-fetchers.mjs embeds it in fetchers.json, drift-guarded). An etf_proxy row is the listed ETF named in proxy_for, never the index level. A cell with no free source is served as null.",
+ "sources": {
+  "cboe": {
+   "ref": "cboe",
+   "format": "cboe_chart",
+   "path": "/charts/historical/{code}.json",
+   "per_min": 4
+  },
+  "fred": {
+   "ref": "fred",
+   "format": "fred_csv",
+   "path": "",
+   "params": {
+    "id": "{code}",
+    "cosd": "{from}"
+   },
+   "per_min": 20
+  },
+  "coinbase": {
+   "ref": "coinbase",
+   "format": "coinbase_candles",
+   "path": "/products/{code}/candles",
+   "params": {
+    "granularity": "86400",
+    "start": "{page_start}",
+    "end": "{page_end}"
+   },
+   "per_min": 30,
+   "page_days": 300,
+   "first": "2015-07-20"
+  },
+  "ecb_data": {
+   "ref": "ecb_data",
+   "per_min": 20
+  },
+  "dbnomics": {
+   "ref": "dbnomics",
+   "per_min": 20
+  },
+  "worldbank": {
+   "ref": "worldbank",
+   "per_min": 20
+  },
+  "frankfurter": {
+   "ref": "frankfurter",
+   "per_min": 20
+  },
+  "sec_edgar": {
+   "ref": "sec_edgar",
+   "per_min": 60
+  },
+  "bundesbank": {
+   "name": "Deutsche Bundesbank time series API",
+   "endpoint": "https://api.statistiken.bundesbank.de/rest/data",
+   "auth": "none",
+   "per_min": 20,
+   "licence": "Bundesbank, attribution"
+  },
+  "boe": {
+   "name": "Bank of England Interactive Database",
+   "endpoint": "https://www.bankofengland.co.uk",
+   "auth": "none",
+   "per_min": 10,
+   "licence": "Bank of England, attribution"
+  },
+  "mof_jgb": {
+   "name": "Ministry of Finance Japan, JGB interest rates",
+   "endpoint": "https://www.mof.go.jp",
+   "auth": "none",
+   "per_min": 10,
+   "licence": "MoF Japan, attribution"
+  },
+  "boc": {
+   "name": "Bank of Canada Valet API",
+   "endpoint": "https://www.bankofcanada.ca",
+   "auth": "none",
+   "per_min": 20,
+   "licence": "Bank of Canada terms, attribution"
+  },
+  "rba": {
+   "name": "Reserve Bank of Australia statistical tables",
+   "endpoint": "https://www.rba.gov.au",
+   "auth": "none",
+   "per_min": 10,
+   "licence": "RBA, CC BY 4.0"
+  },
+  "snb": {
+   "name": "Swiss National Bank data portal",
+   "endpoint": "https://data.snb.ch",
+   "auth": "none",
+   "per_min": 10,
+   "licence": "SNB, attribution"
+  }
+ },
+ "history": {
+  "years": 12,
+  "daily_every_s": 86400,
+  "overlap_days": 10,
+  "symbols": [
+   {
+    "symbol": "XLE",
+    "name": "Energy Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLE",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLK",
+    "name": "Technology Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLK",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLRE",
+    "name": "Real Estate Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLRE",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLF",
+    "name": "Financials Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLF",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLV",
+    "name": "Health Care Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLV",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLI",
+    "name": "Industrials Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLI",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLY",
+    "name": "Consumer Discretionary Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLY",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLP",
+    "name": "Consumer Staples Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLP",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLU",
+    "name": "Utilities Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLU",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLB",
+    "name": "Materials Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLB",
+    "kind": "etf"
+   },
+   {
+    "symbol": "XLC",
+    "name": "Communication Services Select Sector SPDR",
+    "group": "us_sectors",
+    "source": "cboe",
+    "code": "XLC",
+    "kind": "etf"
+   },
+   {
+    "symbol": "IWF",
+    "name": "Russell 1000 Growth",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "IWF",
+    "kind": "etf"
+   },
+   {
+    "symbol": "IWD",
+    "name": "Russell 1000 Value",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "IWD",
+    "kind": "etf"
+   },
+   {
+    "symbol": "MTUM",
+    "name": "MSCI USA Momentum",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "MTUM",
+    "kind": "etf"
+   },
+   {
+    "symbol": "QUAL",
+    "name": "MSCI USA Quality",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "QUAL",
+    "kind": "etf"
+   },
+   {
+    "symbol": "USMV",
+    "name": "MSCI USA Min Vol",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "USMV",
+    "kind": "etf"
+   },
+   {
+    "symbol": "IWM",
+    "name": "Russell 2000",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "IWM",
+    "kind": "etf"
+   },
+   {
+    "symbol": "SCHD",
+    "name": "US Dividend Equity",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "SCHD",
+    "kind": "etf"
+   },
+   {
+    "symbol": "VIG",
+    "name": "Dividend Appreciation",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "VIG",
+    "kind": "etf"
+   },
+   {
+    "symbol": "RSP",
+    "name": "S&P 500 Equal Weight",
+    "group": "strategies",
+    "source": "cboe",
+    "code": "RSP",
+    "kind": "etf"
+   },
+   {
+    "symbol": "CQQQ",
+    "name": "China Technology",
+    "group": "em_sectors",
+    "source": "cboe",
+    "code": "CQQQ",
+    "kind": "etf"
+   },
+   {
+    "symbol": "KWEB",
+    "name": "China Internet",
+    "group": "em_sectors",
+    "source": "cboe",
+    "code": "KWEB",
+    "kind": "etf"
+   },
+   {
+    "symbol": "CHIQ",
+    "name": "China Consumer Discretionary",
+    "group": "em_sectors",
+    "source": "cboe",
+    "code": "CHIQ",
+    "kind": "etf"
+   },
+   {
+    "symbol": "EMQQ",
+    "name": "EM Internet & E-commerce",
+    "group": "em_sectors",
+    "source": "cboe",
+    "code": "EMQQ",
+    "kind": "etf"
+   },
+   {
+    "symbol": "SPX",
+    "name": "S&P 500",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "_SPX",
+    "kind": "index"
+   },
+   {
+    "symbol": "NDX",
+    "name": "Nasdaq-100",
+    "group": "global_indices",
+    "source": "fred",
+    "code": "NASDAQ100",
+    "kind": "index"
+   },
+   {
+    "symbol": "DJI",
+    "name": "Dow Jones Industrial Average",
+    "group": "global_indices",
+    "source": "fred",
+    "code": "DJIA",
+    "kind": "index"
+   },
+   {
+    "symbol": "RUT",
+    "name": "Russell 2000",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "IWM",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares Russell 2000 ETF"
+   },
+   {
+    "symbol": "TSX",
+    "name": "S&P/TSX Composite",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWC",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Canada ETF"
+   },
+   {
+    "symbol": "IBOV",
+    "name": "Bovespa",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWZ",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Brazil ETF"
+   },
+   {
+    "symbol": "MXX",
+    "name": "S&P/BMV IPC",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWW",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Mexico ETF"
+   },
+   {
+    "symbol": "UKX",
+    "name": "FTSE 100",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWU",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI United Kingdom ETF"
+   },
+   {
+    "symbol": "DAX",
+    "name": "DAX",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWG",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Germany ETF"
+   },
+   {
+    "symbol": "CAC",
+    "name": "CAC 40",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWQ",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI France ETF"
+   },
+   {
+    "symbol": "SX5E",
+    "name": "Euro Stoxx 50",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "FEZ",
+    "kind": "etf_proxy",
+    "proxy_for": "SPDR Euro Stoxx 50 ETF"
+   },
+   {
+    "symbol": "IBEX",
+    "name": "IBEX 35",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWP",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Spain ETF"
+   },
+   {
+    "symbol": "FTSEMIB",
+    "name": "FTSE MIB",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWI",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Italy ETF"
+   },
+   {
+    "symbol": "AEX",
+    "name": "AEX",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWN",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Netherlands ETF"
+   },
+   {
+    "symbol": "SMI",
+    "name": "SMI",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWL",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Switzerland ETF"
+   },
+   {
+    "symbol": "OMX",
+    "name": "OMX Stockholm 30",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWD",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Sweden ETF"
+   },
+   {
+    "symbol": "N225",
+    "name": "Nikkei 225",
+    "group": "global_indices",
+    "source": "fred",
+    "code": "NIKKEI225",
+    "kind": "index"
+   },
+   {
+    "symbol": "TOPIX",
+    "name": "TOPIX",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWJ",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Japan ETF"
+   },
+   {
+    "symbol": "HSI",
+    "name": "Hang Seng",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWH",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Hong Kong ETF"
+   },
+   {
+    "symbol": "SHCOMP",
+    "name": "Shanghai Composite",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "ASHR",
+    "kind": "etf_proxy",
+    "proxy_for": "Xtrackers Harvest CSI 300 China A ETF"
+   },
+   {
+    "symbol": "SZCOMP",
+    "name": "Shenzhen Component",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "CNXT",
+    "kind": "etf_proxy",
+    "proxy_for": "VanEck ChiNext ETF"
+   },
+   {
+    "symbol": "KOSPI",
+    "name": "KOSPI",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWY",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI South Korea ETF"
+   },
+   {
+    "symbol": "TAIEX",
+    "name": "TAIEX",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWT",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Taiwan ETF"
+   },
+   {
+    "symbol": "NIFTY",
+    "name": "Nifty 50",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "INDY",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares India 50 ETF"
+   },
+   {
+    "symbol": "SENSEX",
+    "name": "BSE Sensex",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "INDA",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI India ETF"
+   },
+   {
+    "symbol": "AS51",
+    "name": "S&P/ASX 200",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EWA",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Australia ETF"
+   },
+   {
+    "symbol": "NZ50",
+    "name": "S&P/NZX 50",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "ENZL",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI New Zealand ETF"
+   },
+   {
+    "symbol": "JTOPI",
+    "name": "FTSE/JSE Top 40",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EZA",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI South Africa ETF"
+   },
+   {
+    "symbol": "TASI",
+    "name": "Tadawul All Share",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "KSA",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Saudi Arabia ETF"
+   },
+   {
+    "symbol": "MSCIWORLD",
+    "name": "MSCI World",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "URTH",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI World ETF"
+   },
+   {
+    "symbol": "MSCIEM",
+    "name": "MSCI Emerging Markets",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "EEM",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI Emerging Markets ETF"
+   },
+   {
+    "symbol": "MSCIACWI",
+    "name": "MSCI ACWI",
+    "group": "global_indices",
+    "source": "cboe",
+    "code": "ACWI",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares MSCI ACWI ETF"
+   },
+   {
+    "symbol": "WTI",
+    "name": "WTI crude (spot, EIA via FRED)",
+    "group": "commodities",
+    "source": "fred",
+    "code": "DCOILWTICO",
+    "kind": "spot"
+   },
+   {
+    "symbol": "BRENT",
+    "name": "Brent crude (spot, EIA via FRED)",
+    "group": "commodities",
+    "source": "fred",
+    "code": "DCOILBRENTEU",
+    "kind": "spot"
+   },
+   {
+    "symbol": "NATGAS",
+    "name": "Henry Hub natural gas (spot, EIA via FRED)",
+    "group": "commodities",
+    "source": "fred",
+    "code": "DHHNGSP",
+    "kind": "spot"
+   },
+   {
+    "symbol": "GOLD",
+    "name": "Gold",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "GLD",
+    "kind": "etf_proxy",
+    "proxy_for": "SPDR Gold Shares"
+   },
+   {
+    "symbol": "SILVER",
+    "name": "Silver",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "SLV",
+    "kind": "etf_proxy",
+    "proxy_for": "iShares Silver Trust"
+   },
+   {
+    "symbol": "PLATINUM",
+    "name": "Platinum",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "PPLT",
+    "kind": "etf_proxy",
+    "proxy_for": "abrdn Platinum ETF"
+   },
+   {
+    "symbol": "PALLADIUM",
+    "name": "Palladium",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "PALL",
+    "kind": "etf_proxy",
+    "proxy_for": "abrdn Palladium ETF"
+   },
+   {
+    "symbol": "COPPER",
+    "name": "Copper",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "CPER",
+    "kind": "etf_proxy",
+    "proxy_for": "United States Copper Index Fund"
+   },
+   {
+    "symbol": "CRUDE_FUT",
+    "name": "Crude oil front-month futures",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "USO",
+    "kind": "etf_proxy",
+    "proxy_for": "United States Oil Fund"
+   },
+   {
+    "symbol": "NATGAS_FUT",
+    "name": "Natural gas front-month futures",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "UNG",
+    "kind": "etf_proxy",
+    "proxy_for": "United States Natural Gas Fund"
+   },
+   {
+    "symbol": "AGRI",
+    "name": "Agriculture basket",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "DBA",
+    "kind": "etf_proxy",
+    "proxy_for": "Invesco DB Agriculture Fund"
+   },
+   {
+    "symbol": "CORN",
+    "name": "Corn",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "CORN",
+    "kind": "etf_proxy",
+    "proxy_for": "Teucrium Corn Fund"
+   },
+   {
+    "symbol": "WHEAT",
+    "name": "Wheat",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "WEAT",
+    "kind": "etf_proxy",
+    "proxy_for": "Teucrium Wheat Fund"
+   },
+   {
+    "symbol": "SOYBEANS",
+    "name": "Soybeans",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "SOYB",
+    "kind": "etf_proxy",
+    "proxy_for": "Teucrium Soybean Fund"
+   },
+   {
+    "symbol": "BASEMETALS",
+    "name": "Base metals basket",
+    "group": "commodities",
+    "source": "cboe",
+    "code": "DBB",
+    "kind": "etf_proxy",
+    "proxy_for": "Invesco DB Base Metals Fund"
+   },
+   {
+    "symbol": "BTC-USD",
+    "name": "Bitcoin",
+    "group": "crypto",
+    "source": "coinbase",
+    "code": "BTC-USD",
+    "kind": "spot"
+   },
+   {
+    "symbol": "ETH-USD",
+    "name": "Ether",
+    "group": "crypto",
+    "source": "coinbase",
+    "code": "ETH-USD",
+    "kind": "spot"
+   },
+   {
+    "symbol": "EMB",
+    "name": "USD EM sovereign bonds (iShares J.P. Morgan USD EM Bond)",
+    "group": "em_bonds",
+    "source": "cboe",
+    "code": "EMB",
+    "kind": "etf"
+   },
+   {
+    "symbol": "EMLC",
+    "name": "Local-currency EM government bonds (VanEck J.P. Morgan EM LC)",
+    "group": "em_bonds",
+    "source": "cboe",
+    "code": "EMLC",
+    "kind": "etf"
+   },
+   {
+    "symbol": "VWOB",
+    "name": "USD EM government bonds (Vanguard)",
+    "group": "em_bonds",
+    "source": "cboe",
+    "code": "VWOB",
+    "kind": "etf"
+   }
+  ]
+ },
+ "curves": {
+  "tenors": [
+   "3M",
+   "6M",
+   "1Y",
+   "2Y",
+   "3Y",
+   "5Y",
+   "7Y",
+   "10Y",
+   "20Y",
+   "30Y"
+  ],
+  "dm": [
+   "US",
+   "DE",
+   "FR",
+   "IT",
+   "ES",
+   "GB",
+   "JP",
+   "CA",
+   "AU",
+   "CH",
+   "NL",
+   "SE"
+  ],
+  "reference": [
+   "EA"
+  ],
+  "em_candidates": [
+   "CN",
+   "IN",
+   "BR",
+   "RU",
+   "KR",
+   "MX",
+   "ID",
+   "TR",
+   "SA",
+   "PL",
+   "TH",
+   "ZA",
+   "AR",
+   "AE",
+   "MY",
+   "PH",
+   "EG",
+   "CO",
+   "CL"
+  ],
+  "em_count": 10,
+  "aliases": {
+   "UK": "GB"
+  },
+  "us": {
+   "serves": "/v1/curves/ust_par"
+  },
+  "every_s": 21600,
+  "feeds": [
+   {
+    "id": "ecb_yc_aaa",
+    "source": "ecb_data",
+    "format": "csv_long",
+    "path": "/YC/B.U2.EUR.4F.G_N_A.SV_C_YM.SR_3M+SR_6M+SR_1Y+SR_2Y+SR_3Y+SR_5Y+SR_7Y+SR_10Y+SR_20Y+SR_30Y",
+    "params": {
+     "format": "csvdata",
+     "lastNObservations": "5"
+    },
+    "key_col": "DATA_TYPE_FM",
+    "date_col": "TIME_PERIOD",
+    "value_col": "OBS_VALUE",
+    "map": {
+     "SR_3M": "curve:EA:3M",
+     "SR_6M": "curve:EA:6M",
+     "SR_1Y": "curve:EA:1Y",
+     "SR_2Y": "curve:EA:2Y",
+     "SR_3Y": "curve:EA:3Y",
+     "SR_5Y": "curve:EA:5Y",
+     "SR_7Y": "curve:EA:7Y",
+     "SR_10Y": "curve:EA:10Y",
+     "SR_20Y": "curve:EA:20Y",
+     "SR_30Y": "curve:EA:30Y"
+    },
+    "method": "ECB euro area AAA government spot curve (Svensson)"
+   },
+   {
+    "id": "ecb_irs_10y",
+    "source": "ecb_data",
+    "format": "csv_long",
+    "path": "/IRS/M.DE+FR+IT+ES+NL.L.L40.CI.0000.EUR.N.Z",
+    "params": {
+     "format": "csvdata",
+     "lastNObservations": "3"
+    },
+    "key_col": "REF_AREA",
+    "date_col": "TIME_PERIOD",
+    "value_col": "OBS_VALUE",
+    "map": {
+     "DE": "curve:DE:10Y",
+     "FR": "curve:FR:10Y",
+     "IT": "curve:IT:10Y",
+     "ES": "curve:ES:10Y",
+     "NL": "curve:NL:10Y"
+    },
+    "method": "ECB long-term interest rate for convergence purposes (10-year benchmark, monthly average)"
+   },
+   {
+    "id": "bbk_de",
+    "source": "bundesbank",
+    "format": "csv_long",
+    "path": "/BBSIS/D.I.ZST.ZI.EUR.S1311.B.A604.R01XX+R02XX+R03XX+R05XX+R07XX+R10XX+R20XX+R30XX.R.A.A._Z._Z.A",
+    "params": {
+     "format": "sdmx_csv",
+     "lastNObservations": "5"
+    },
+    "delimiter": ";",
+    "key_col": "BBK_SEIS_MATURITY",
+    "date_col": "TIME_PERIOD",
+    "value_col": "OBS_VALUE",
+    "map": {
+     "R01XX": "curve:DE:1Y",
+     "R02XX": "curve:DE:2Y",
+     "R03XX": "curve:DE:3Y",
+     "R05XX": "curve:DE:5Y",
+     "R07XX": "curve:DE:7Y",
+     "R10XX": "curve:DE:10Y",
+     "R20XX": "curve:DE:20Y",
+     "R30XX": "curve:DE:30Y"
+    },
+    "method": "Deutsche Bundesbank term structure of listed Federal securities (daily)"
+   },
+   {
+    "id": "boe_gb",
+    "source": "boe",
+    "format": "csv_wide",
+    "path": "/boeapps/database/_iadb-fromshowcolumns.asp",
+    "params": {
+     "csv.x": "yes",
+     "Datefrom": "{from_dmy}",
+     "Dateto": "now",
+     "SeriesCodes": "IUDSNPY,IUDMNPY,IUDLNPY",
+     "CSVF": "TN",
+     "UsingCodes": "Y"
+    },
+    "header": "DATE",
+    "date_fmt": "%d %b %Y",
+    "map": {
+     "IUDSNPY": "curve:GB:5Y",
+     "IUDMNPY": "curve:GB:10Y",
+     "IUDLNPY": "curve:GB:20Y"
+    },
+    "lookback_days": 20,
+    "method": "Bank of England nominal par yields (5, 10, 20 years)"
+   },
+   {
+    "id": "mof_jp",
+    "source": "mof_jgb",
+    "format": "csv_wide",
+    "path": "/english/policy/jgbs/reference/interest_rate/jgbcme.csv",
+    "params": {},
+    "header": "Date",
+    "date_fmt": "%Y/%m/%d",
+    "map": {
+     "1Y": "curve:JP:1Y",
+     "2Y": "curve:JP:2Y",
+     "3Y": "curve:JP:3Y",
+     "5Y": "curve:JP:5Y",
+     "7Y": "curve:JP:7Y",
+     "10Y": "curve:JP:10Y",
+     "20Y": "curve:JP:20Y",
+     "30Y": "curve:JP:30Y"
+    },
+    "method": "Ministry of Finance Japan JGB benchmark yields (current month file)"
+   },
+   {
+    "id": "boc_ca",
+    "source": "boc",
+    "format": "valet",
+    "path": "/valet/observations/BD.CDN.2YR.DQ.YLD,BD.CDN.3YR.DQ.YLD,BD.CDN.5YR.DQ.YLD,BD.CDN.7YR.DQ.YLD,BD.CDN.10YR.DQ.YLD,BD.CDN.LONG.DQ.YLD,TB.CDN.90D.MID,TB.CDN.180D.MID,TB.CDN.1Y.MID/json",
+    "params": {
+     "recent": "5"
+    },
+    "map": {
+     "TB.CDN.90D.MID": "curve:CA:3M",
+     "TB.CDN.180D.MID": "curve:CA:6M",
+     "TB.CDN.1Y.MID": "curve:CA:1Y",
+     "BD.CDN.2YR.DQ.YLD": "curve:CA:2Y",
+     "BD.CDN.3YR.DQ.YLD": "curve:CA:3Y",
+     "BD.CDN.5YR.DQ.YLD": "curve:CA:5Y",
+     "BD.CDN.7YR.DQ.YLD": "curve:CA:7Y",
+     "BD.CDN.10YR.DQ.YLD": "curve:CA:10Y",
+     "BD.CDN.LONG.DQ.YLD": "curve:CA:30Y"
+    },
+    "method": "Bank of Canada benchmark bond yields and Treasury bill mid yields (the long benchmark is the 30-year bond)"
+   },
+   {
+    "id": "rba_au",
+    "source": "rba",
+    "format": "csv_wide",
+    "path": "/statistics/tables/csv/f2-data.csv",
+    "params": {},
+    "header": "Series ID",
+    "date_fmt": "%d-%b-%Y",
+    "map": {
+     "FCMYGBAG2D": "curve:AU:2Y",
+     "FCMYGBAG3D": "curve:AU:3Y",
+     "FCMYGBAG5D": "curve:AU:5Y",
+     "FCMYGBAG10D": "curve:AU:10Y"
+    },
+    "method": "Reserve Bank of Australia F2 government bond yields (interpolated)"
+   },
+   {
+    "id": "snb_ch",
+    "source": "snb",
+    "format": "csv_long",
+    "path": "/api/cube/rendoblid/data/csv/en",
+    "params": {
+     "fromDate": "{from}"
+    },
+    "delimiter": ";",
+    "header": "Date",
+    "key_col": "D0",
+    "date_col": "Date",
+    "value_col": "Value",
+    "map": {
+     "1J": "curve:CH:1Y",
+     "2J": "curve:CH:2Y",
+     "3J": "curve:CH:3Y",
+     "5J": "curve:CH:5Y",
+     "7J": "curve:CH:7Y",
+     "10J0": "curve:CH:10Y",
+     "20J": "curve:CH:20Y",
+     "30J": "curve:CH:30Y"
+    },
+    "lookback_days": 730,
+    "method": "Swiss National Bank spot interest rates on Confederation bonds (monthly)"
+   },
+   {
+    "id": "oecd_10y",
+    "source": "dbnomics",
+    "format": "dbnomics",
+    "path": "/series",
+    "params": {
+     "series_ids": "OECD/DSD_KEI@DF_KEI/SWE.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/CHN.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/IND.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/BRA.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/RUS.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/KOR.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/MEX.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/IDN.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/TUR.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/SAU.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/POL.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/THA.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/ZAF.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/ARG.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/ARE.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/MYS.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/PHL.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/EGY.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/COL.M.IRLT.PA._Z._Z._Z,OECD/DSD_KEI@DF_KEI/CHL.M.IRLT.PA._Z._Z._Z",
+     "observations": "1",
+     "limit": "100"
+    },
+    "map": {
+     "SWE.M.IRLT.PA._Z._Z._Z": "curve:SE:10Y",
+     "CHN.M.IRLT.PA._Z._Z._Z": "curve:CN:10Y",
+     "IND.M.IRLT.PA._Z._Z._Z": "curve:IN:10Y",
+     "BRA.M.IRLT.PA._Z._Z._Z": "curve:BR:10Y",
+     "RUS.M.IRLT.PA._Z._Z._Z": "curve:RU:10Y",
+     "KOR.M.IRLT.PA._Z._Z._Z": "curve:KR:10Y",
+     "MEX.M.IRLT.PA._Z._Z._Z": "curve:MX:10Y",
+     "IDN.M.IRLT.PA._Z._Z._Z": "curve:ID:10Y",
+     "TUR.M.IRLT.PA._Z._Z._Z": "curve:TR:10Y",
+     "SAU.M.IRLT.PA._Z._Z._Z": "curve:SA:10Y",
+     "POL.M.IRLT.PA._Z._Z._Z": "curve:PL:10Y",
+     "THA.M.IRLT.PA._Z._Z._Z": "curve:TH:10Y",
+     "ZAF.M.IRLT.PA._Z._Z._Z": "curve:ZA:10Y",
+     "ARG.M.IRLT.PA._Z._Z._Z": "curve:AR:10Y",
+     "ARE.M.IRLT.PA._Z._Z._Z": "curve:AE:10Y",
+     "MYS.M.IRLT.PA._Z._Z._Z": "curve:MY:10Y",
+     "PHL.M.IRLT.PA._Z._Z._Z": "curve:PH:10Y",
+     "EGY.M.IRLT.PA._Z._Z._Z": "curve:EG:10Y",
+     "COL.M.IRLT.PA._Z._Z._Z": "curve:CO:10Y",
+     "CHL.M.IRLT.PA._Z._Z._Z": "curve:CL:10Y"
+    },
+    "method": "OECD long-term interest rate (10-year government benchmark, monthly) via DBnomics"
+   }
+  ],
+  "gdp": {
+   "source": "worldbank",
+   "path": "/country/{countries}/indicator/NY.GDP.MKTP.CD",
+   "params": {
+    "format": "json",
+    "mrnev": "1",
+    "per_page": "300"
+   },
+   "every_s": 604800
+  }
+ },
+ "em_bonds": {
+  "horizons_years": [
+   1,
+   10,
+   25
+  ],
+  "ccy": {
+   "CN": "CNY",
+   "IN": "INR",
+   "BR": "BRL",
+   "RU": "RUB",
+   "KR": "KRW",
+   "MX": "MXN",
+   "ID": "IDR",
+   "TR": "TRY",
+   "SA": "SAR",
+   "PL": "PLN",
+   "TH": "THB",
+   "ZA": "ZAR",
+   "AR": "ARS",
+   "AE": "AED",
+   "MY": "MYR",
+   "PH": "PHP",
+   "EG": "EGP",
+   "CO": "COP",
+   "CL": "CLP"
+  },
+  "tenor": "10Y",
+  "fx": {
+   "source": "frankfurter",
+   "path": "/v1/{fx_from}..{fx_to}",
+   "page_days": 366,
+   "params": {
+    "base": "USD",
+    "symbols": "BRL,CNY,IDR,INR,KRW,MXN,MYR,PHP,PLN,THB,TRY,ZAR"
+   },
+   "every_s": 86400,
+   "first": "1999-01-04"
+  },
+  "proxies": [
+   "EMB",
+   "EMLC",
+   "VWOB"
+  ],
+  "method": "Unhedged USD total return of a constant-maturity 10-year local government bond, monthly: r_local = y(t-1)/12 - D(t-1) x (y(t) - y(t-1)), D the modified duration of a 10-year par bond with semiannual coupons at y(t-1); r_usd = (1 + r_local) x FX(t-1)/FX(t) - 1, FX in local currency per USD (ECB reference rates); annualised over the trailing 1, 10 and 25 years; null when any month in the window lacks a yield or a rate. Yields: OECD 10-year benchmark (monthly averages). An approximation: no convexity, no reinvestment timing, no credit events, no taxes."
+ },
+ "earnings": {
+  "source": "sec_edgar",
+  "path": "/submissions/CIK{cik}.json",
+  "every_s": 86400,
+  "lookback_days": 120,
+  "method": "Reported: 8-K filings whose items include 2.02 (Results of Operations and Financial Condition). Expected: the latest 2.02 date plus the median gap between the company's recent 2.02 filings (an estimate, never a company-confirmed date).",
+  "companies": {
+   "NVDA": "0001045810",
+   "MSFT": "0000789019",
+   "AAPL": "0000320193",
+   "AMZN": "0001018724",
+   "GOOGL": "0001652044",
+   "META": "0001326801",
+   "AVGO": "0001730168",
+   "TSLA": "0001318605",
+   "BRK-B": "0001067983",
+   "JPM": "0000019617",
+   "WMT": "0000104169",
+   "LLY": "0000059478",
+   "V": "0001403161",
+   "ORCL": "0001341439",
+   "MA": "0001141391",
+   "NFLX": "0001065280",
+   "XOM": "0002115436",
+   "COST": "0000909832",
+   "JNJ": "0000200406",
+   "HD": "0000354950",
+   "PG": "0000080424",
+   "BAC": "0000070858",
+   "ABBV": "0001551152",
+   "PLTR": "0001321655",
+   "KO": "0000021344",
+   "AMD": "0000002488",
+   "UNH": "0000731766",
+   "CSCO": "0000858877",
+   "CVX": "0000093410",
+   "GE": "0000040545",
+   "WFC": "0000072971",
+   "IBM": "0000051143",
+   "PM": "0001413329",
+   "MS": "0000895421",
+   "GS": "0000886982",
+   "CRM": "0001108524",
+   "ABT": "0000001800",
+   "MCD": "0000063908",
+   "LIN": "0001707925",
+   "INTU": "0000896878",
+   "DIS": "0001744489",
+   "T": "0000732717",
+   "MRK": "0000310158",
+   "AXP": "0000004962",
+   "CAT": "0000018230",
+   "PEP": "0000077476",
+   "RTX": "0000101829",
+   "VZ": "0000732712",
+   "TMO": "0000097745",
+   "NOW": "0001373715"
+  }
+ }
+}
