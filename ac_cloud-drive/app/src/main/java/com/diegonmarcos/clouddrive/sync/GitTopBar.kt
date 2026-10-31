@@ -1,5 +1,18 @@
 package com.diegonmarcos.clouddrive.sync
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -134,11 +146,58 @@ internal fun GitJobLine(job: GitJobs.State?, labels: (String) -> String, onCance
 @Composable
 internal fun GitSearchRow(decl: Declarations.GitTopBarDecl, query: String, onQuery: (String) -> Unit, active: Int, onFilters: () -> Unit, onClear: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
-        if (decl.search) OutlinedTextField(query, onQuery, Modifier.weight(1f).testTag(DriveTags.SYNC_GIT_SEARCH), singleLine = true, placeholder = { Text(decl.searchPlaceholder) }, textStyle = MaterialTheme.typography.bodySmall)
+        if (decl.search) GitSearchField(query, onQuery, decl.searchPlaceholder, Modifier.weight(1f).testTag(DriveTags.SYNC_GIT_SEARCH))
         else Spacer(Modifier.weight(1f))
         Pill(decl.label("filters") + (if (active > 0) " ($active)" else ""), onFilters, filled = active > 0, modifier = Modifier.testTag(DriveTags.SYNC_GIT_FILTERS_BUTTON))
         if (active > 0 || query.isNotBlank()) Pill(decl.label("clear") + " ×", onClear)
     }
+}
+
+/**
+ * #1356 the compact search field: the shape of libs:ui-kit's KitSearchBar (the fleet's compact search)
+ * at 40dp: a hairline-bordered row, the magnifier inline, small text, a clear (x) only while there is
+ * text. No Material outlined field (56dp plus its label space) and no extra margins.
+ */
+@Composable
+internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(GitSearchMetrics.corner)
+    val ink = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier.height(GitSearchMetrics.height).clip(shape).background(MaterialTheme.colorScheme.surface)
+            .border(GitSearchMetrics.rule, MaterialTheme.colorScheme.outlineVariant, shape)
+            .padding(start = GitSearchMetrics.inset),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Search, null, Modifier.size(GitSearchMetrics.icon), tint = ink)
+        Spacer(Modifier.width(GitSearchMetrics.gap))
+        val style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface)
+        BasicTextField(
+            value = query, onValueChange = onQuery, singleLine = true, textStyle = style,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.weight(1f).testTag(DriveTags.SYNC_GIT_SEARCH + ":field"),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (query.isEmpty()) Text(placeholder, style = style.copy(color = ink), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    inner()
+                }
+            },
+        )
+        if (query.isNotEmpty()) Box(
+            Modifier.size(GitSearchMetrics.height).clickable(onClickLabel = "Clear search") { onQuery("") }.testTag(DriveTags.SYNC_GIT_SEARCH + ":clear"),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Filled.Close, "Clear search", Modifier.size(GitSearchMetrics.icon), tint = ink) }
+        else Spacer(Modifier.width(GitSearchMetrics.inset))
+    }
+}
+
+/** #1356 the compact search field's sizes (KitSearchBar's scale, 40dp tall). */
+internal object GitSearchMetrics {
+    val height = 40.dp
+    val icon = 16.dp
+    val inset = 10.dp
+    val gap = 6.dp
+    val corner = 8.dp
+    val rule = 1.dp
 }
 
 /** The quick-filter rail: every option declared `quick`, with its live count; a tap selects it (or its filter's default when already on). */

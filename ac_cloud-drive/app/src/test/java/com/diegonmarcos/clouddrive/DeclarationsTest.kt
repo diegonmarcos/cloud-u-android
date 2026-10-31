@@ -292,6 +292,8 @@ class DeclarationsTest {
         val sync = sync()
         val pageIds = sync.pages.map { it.id }
         assertTrue("no RSync tile: the page is Fsync now", apps.none { it.label == "RSync" })
+        // #1356 the Git page's terminal icon moved here: one Termux tile that leaves the app (no route).
+        assertEquals("the Termux tile routes nowhere", "", apps.single { it.label == "Termux" }.routeTab)
         listOf("GitSync", "Fsync").forEach { label ->
             val tile = apps.single { it.label == label }
             assertEquals("a routed tile carries no package", "", tile.packageName)

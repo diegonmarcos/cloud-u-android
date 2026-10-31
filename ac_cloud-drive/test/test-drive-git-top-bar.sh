@@ -83,4 +83,32 @@ printf '%s\n' "$(cat "$SYNC/RepoFilters.kt")" '    private fun rogue(k: String) 
 f1 "$BJ" "$tmp/F.kt" >/dev/null 2>&1 && fail "F1 passed a Kind named in Kotlin (vacuous)" || pass "a Kind in RepoFilters → F1 RED"
 t1 "$BJ" "$PAGE" >/dev/null && t2 "$PAGE" >/dev/null && f1 "$BJ" "$SYNC/RepoFilters.kt" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
+
+# T3 #1356 no Git title row, compact search: ui.sections[git].title_row is false and GitPageScreen draws no ToolbarIsland
+#    (nor the terminal action it carried); the search is GitSearchField at ui.sync.git.top_bar.search_height_dp (40), never an
+#    OutlinedTextField; Home ▸ Apps carries the Termux tile (fleet termux) that replaced the row's terminal icon.
+t3() { python3 - "$BJ" "$1" "$2" "$APP/data/drive-apps.json" <<'PY'
+import json, re, sys
+bj = json.load(open(sys.argv[1])); screen = open(sys.argv[2]).read(); bar = open(sys.argv[3]).read(); apps = json.load(open(sys.argv[4]))["apps"]
+git = next(s for s in bj["ui"]["sections"] if s["id"] == "git"); h = bj["ui"]["sync"]["git"]["top_bar"].get("search_height_dp")
+m = re.search(r'fun GitPageScreen\((.*?)\n}\n', screen, re.S); body = m.group(1) if m else ""
+bad = []
+if git.get("title_row") is not False: bad.append("ui.sections[git].title_row is not false")
+if not body: bad.append("GitPageScreen not found")
+if "ToolbarIsland(" in body or "TerminalIslandAction(" in body: bad.append("GitPageScreen still draws a title row / terminal icon")
+if h != 40: bad.append("search_height_dp is %r, want 40" % h)
+if not re.search(r'val height = %s\.dp' % h, bar): bad.append("GitSearchMetrics.height differs from search_height_dp")
+if "OutlinedTextField" in bar or "GitSearchField(query" not in bar: bad.append("the Git search is not the compact GitSearchField")
+if "Icons.Filled.Search" not in bar or "Icons.Filled.Close" not in bar: bad.append("no inline magnifier or clear (x)")
+if not any(a.get("fleet") == "termux" and a.get("label") == "Termux" for a in apps): bad.append("no Termux tile (fleet termux) on Home ▸ Apps")
+print("\n".join(bad)); sys.exit(1 if bad else 0)
+PY
+}
+echo "== T3 no Git title row, compact search, Termux tile =="
+out=$(t3 "$SYNC/SyncScreen.kt" "$SYNC/GitTopBar.kt") && pass "Git page has no title row; search is 40dp compact; Termux tile on Home ▸ Apps" || fail "T3: $out"
+sed 's|NavBarTopSecondRow(pages = pages|ToolbarIsland(title = ""); NavBarTopSecondRow(pages = pages|' "$SYNC/SyncScreen.kt" > "$tmp/S.kt"
+t3 "$tmp/S.kt" "$SYNC/GitTopBar.kt" >/dev/null 2>&1 && fail "T3 passed a title row (vacuous)" || pass "a ToolbarIsland back on the Git page → T3 RED"
+sed 's|GitSearchField(query, onQuery|OutlinedTextField(query, onQuery|' "$SYNC/GitTopBar.kt" > "$tmp/B.kt"
+t3 "$SYNC/SyncScreen.kt" "$tmp/B.kt" >/dev/null 2>&1 && fail "T3 passed an outlined search (vacuous)" || pass "an OutlinedTextField search → T3 RED"
+
 [ "$FAILURES" -eq 0 ] && { echo "test-drive-git-top-bar: all green"; exit 0; } || { echo "test-drive-git-top-bar: $FAILURES failure(s)"; exit 1; }

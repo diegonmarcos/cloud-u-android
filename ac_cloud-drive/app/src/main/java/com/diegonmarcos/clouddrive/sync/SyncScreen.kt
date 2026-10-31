@@ -45,7 +45,6 @@ import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Terminal
 import com.diegonmarcos.clouddrive.ui.Pill
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -81,11 +80,8 @@ fun GitPageScreen(
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(
-            title = Declarations.nav.section(Declarations.SECTION_GIT)?.label.orEmpty(),
-            subtitle = pages.firstOrNull { it.id == current }?.label,
-            actions = { TerminalIslandAction(actions, ::say) },
-        )
+        // #1356 no title row: the Git page opens on its sub-page strip (ui.sections[git].title_row = false);
+        // the terminal shortcut it carried is the Termux tile of Home ▸ Apps (data/drive-apps.json).
         // #868 the strip is libs:bottomnav's PageTabs over ui.sections[git].pages.
         NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "git_page", modifier = Modifier.weight(1f)) { id ->
