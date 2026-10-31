@@ -71,10 +71,15 @@ jobs:
               print("::warning::no '%s' on screen" % label); return False
           def shot(name, wait=0):
               time.sleep(wait)
-              with open("%s/%s.png" % (OUT, name), "wb") as f:
-                  f.write(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout)
+              try:
+                  png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=90).stdout
+              except subprocess.TimeoutExpired:
+                  print("::warning::screencap hung on %s (emulator GPU stalled)" % name); return
+              with open("%s/%s.png" % (OUT, name), "wb") as f: f.write(png)
               print("shot", name)
           def texts(name):
+              try: dump()
+              except subprocess.TimeoutExpired: return
               with open("%s/%s.txt" % (OUT, name), "w") as f:
                   f.write("\n".join(t or d for t, d, _ in nodes(dump()) if t or d))
           def launch(pkg, wait=25):
@@ -89,7 +94,8 @@ jobs:
               tap("Galaxy"); time.sleep(2)
               tap("Food for Fish", scroll=12); shot("omniverse-02-foodforfish-mobile", 30); texts("omniverse-02-foodforfish-mobile")
               tap("Desktop mode"); shot("omniverse-03-foodforfish-desktop", 35); texts("omniverse-03-foodforfish-desktop")
-              tap("Close"); time.sleep(2)
+              sh("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(3)
+              launch(p, 15); tap("Galaxy"); time.sleep(2)
               tap("WebGL Fluid Simulation", scroll=12); shot("omniverse-04-webgl-world", 25)
           if (p := find("cloudbrowser")):
               view(p, "https://foodforfish.org/"); shot("browser-01-foodforfish")
