@@ -68,6 +68,8 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
     }
 
     private var navHeight = 0
+    /** The native shell; the theme callback reaches it (#1369). */
+    private var shell: NotesShell? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -93,7 +95,7 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
         )
         val container = bridge.webView.parent as CoordinatorLayout
         val run: (String) -> Unit = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
-        val shell = NotesShell(NativeNav(decl, run), BuildConfig.AI_GATEWAY_URL, run)
+        val shell = NotesShell(NativeNav(decl, run), BuildConfig.AI_GATEWAY_URL, run).also { this.shell = it }
         // the editor's scroll bridge (NavChrome) must be on the WebView in the turn that starts its load: a JavaScript interface added
         // later never reaches the already-loaded single page; the shell sets the collapse target when it composes
         com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(bridge.webView, null)
@@ -218,8 +220,8 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
     }
 
     override fun onThemeChanged(darkMode: Boolean) {
-        // The Cloud Notes Theme plugin's only callback; the editor sets the system
-        // bar appearance through it. Nothing else to do in the de-clouded build.
+        // #1369 the web half's resolved theme drives the native shell (Obsidian light or dark).
+        runOnUiThread { shell?.setDark(darkMode) }
     }
 
     override fun getSystemNavBarHeight(): Int {

@@ -1,0 +1,313 @@
+{
+  "_doc": "#1369 THE Cloud Notes theme: Obsidian's default theme, as data. base/accent/extended are Obsidian's documented CSS variables (docs.obsidian.md Reference > CSS variables > Foundations); semantic is the default theme's mapping (app.css 1.x) of Obsidian's names onto them; affine maps every AFFiNE variable the app paints with onto an Obsidian name, so the editor, canvas, sidebars and dialogs all wear Obsidian's colours. scripts/gen-obsidian-theme.py writes the web sheet (component/src/theme/obsidian.gen.css) and the native tokens (apps/android .../theme/ObsidianTokens.kt) from this file; test/test-obsidian-theme.sh fails on drift and proves each mapping red by mutation. A value is a hex, a ref (\"base-30\", \"accent\", \"red\") or \"<ref>@<alpha>\".",
+  "accent_hsl": [
+    258,
+    88,
+    66
+  ],
+  "accent": {
+    "accent": "#8a5cf5",
+    "accent-1": {
+      "light": "#9873f7",
+      "dark": "#a68af9"
+    },
+    "accent-2": {
+      "light": "#a88af9",
+      "dark": "#c5b6fc"
+    }
+  },
+  "base": {
+    "light": {
+      "00": "#ffffff",
+      "05": "#fcfcfc",
+      "10": "#fafafa",
+      "20": "#f6f6f6",
+      "25": "#efefef",
+      "30": "#e4e4e4",
+      "35": "#dadada",
+      "40": "#bdbdbd",
+      "50": "#ababab",
+      "60": "#707070",
+      "70": "#5c5c5c",
+      "100": "#222222"
+    },
+    "dark": {
+      "00": "#1c1c1c",
+      "05": "#212121",
+      "10": "#232323",
+      "20": "#282828",
+      "25": "#2e2e2e",
+      "30": "#333333",
+      "35": "#3f3f3f",
+      "40": "#555555",
+      "50": "#666666",
+      "60": "#999999",
+      "70": "#b3b3b3",
+      "100": "#dadada"
+    }
+  },
+  "extended": {
+    "light": {
+      "red": "#e93147",
+      "orange": "#ec7500",
+      "yellow": "#e0ac00",
+      "green": "#08b94e",
+      "cyan": "#00bfbc",
+      "blue": "#086ddd",
+      "purple": "#7852ee",
+      "pink": "#d53984"
+    },
+    "dark": {
+      "red": "#fb464c",
+      "orange": "#e9973f",
+      "yellow": "#e0de71",
+      "green": "#44cf6e",
+      "cyan": "#53dfdd",
+      "blue": "#027aff",
+      "purple": "#a882ff",
+      "pink": "#fa99cd"
+    }
+  },
+  "semantic": {
+    "background-primary": {
+      "light": "base-00",
+      "dark": "base-00"
+    },
+    "background-primary-alt": {
+      "light": "base-10",
+      "dark": "base-10"
+    },
+    "background-secondary": {
+      "light": "base-20",
+      "dark": "base-20"
+    },
+    "background-secondary-alt": {
+      "light": "base-05",
+      "dark": "base-05"
+    },
+    "background-modifier-hover": {
+      "light": "#000000@0.067",
+      "dark": "#ffffff@0.075"
+    },
+    "background-modifier-active-hover": {
+      "light": "accent@0.15",
+      "dark": "accent@0.15"
+    },
+    "background-modifier-border": {
+      "light": "base-30",
+      "dark": "base-30"
+    },
+    "background-modifier-border-hover": {
+      "light": "base-35",
+      "dark": "base-35"
+    },
+    "background-modifier-border-focus": {
+      "light": "base-40",
+      "dark": "base-40"
+    },
+    "background-modifier-error": {
+      "light": "red",
+      "dark": "red"
+    },
+    "background-modifier-success": {
+      "light": "green",
+      "dark": "green"
+    },
+    "background-modifier-cover": {
+      "light": "#dcdcdc@0.4",
+      "dark": "#0a0a0a@0.4"
+    },
+    "text-normal": {
+      "light": "base-100",
+      "dark": "base-100"
+    },
+    "text-muted": {
+      "light": "base-70",
+      "dark": "base-70"
+    },
+    "text-faint": {
+      "light": "base-50",
+      "dark": "base-50"
+    },
+    "text-on-accent": {
+      "light": "#ffffff",
+      "dark": "#ffffff"
+    },
+    "text-accent": {
+      "light": "accent",
+      "dark": "accent-1"
+    },
+    "text-accent-hover": {
+      "light": "accent-2",
+      "dark": "accent-2"
+    },
+    "text-error": {
+      "light": "red",
+      "dark": "red"
+    },
+    "text-success": {
+      "light": "green",
+      "dark": "green"
+    },
+    "text-warning": {
+      "light": "orange",
+      "dark": "orange"
+    },
+    "text-selection": {
+      "light": "accent@0.2",
+      "dark": "accent@0.25"
+    },
+    "text-highlight-bg": {
+      "light": "yellow@0.4",
+      "dark": "yellow@0.4"
+    },
+    "interactive-normal": {
+      "light": "base-00",
+      "dark": "base-30"
+    },
+    "interactive-hover": {
+      "light": "base-10",
+      "dark": "base-35"
+    },
+    "interactive-accent": {
+      "light": "accent",
+      "dark": "accent"
+    },
+    "interactive-accent-hover": {
+      "light": "accent-1",
+      "dark": "accent-1"
+    },
+    "tag-background": {
+      "light": "accent@0.1",
+      "dark": "accent@0.15"
+    },
+    "scrollbar-thumb": {
+      "light": "#000000@0.1",
+      "dark": "#ffffff@0.1"
+    },
+    "shadow": {
+      "light": "#000000@0.12",
+      "dark": "#000000@0.5"
+    },
+    "background-tint-error": {
+      "light": "red@0.1",
+      "dark": "red@0.12"
+    },
+    "background-tint-success": {
+      "light": "green@0.1",
+      "dark": "green@0.12"
+    },
+    "background-tint-warning": {
+      "light": "orange@0.1",
+      "dark": "orange@0.12"
+    }
+  },
+  "affine": {
+    "_doc": "AFFiNE variable (without the leading --) -> Obsidian semantic name. Both the v1 (--affine-*) and v2 (--affine-v2-*) names the app paints with.",
+    "affine-background-primary-color": "background-primary",
+    "affine-background-secondary-color": "background-secondary",
+    "affine-background-tertiary-color": "background-primary-alt",
+    "affine-background-overlay-panel-color": "background-primary",
+    "affine-background-modal-color": "background-modifier-cover",
+    "affine-background-error-color": "background-tint-error",
+    "affine-background-success-color": "background-tint-success",
+    "affine-text-primary-color": "text-normal",
+    "affine-text-secondary-color": "text-muted",
+    "affine-text-disable-color": "text-faint",
+    "affine-text-emphasis-color": "text-accent",
+    "affine-primary-color": "interactive-accent",
+    "affine-brand-color": "interactive-accent",
+    "affine-border-color": "background-modifier-border",
+    "affine-hover-color": "background-modifier-hover",
+    "affine-icon-color": "text-muted",
+    "affine-v2-layer-background-primary": "background-primary",
+    "affine-v2-layer-background-secondary": "background-secondary",
+    "affine-v2-layer-background-tertiary": "background-primary-alt",
+    "affine-v2-layer-background-overlayPanel": "background-primary",
+    "affine-v2-layer-background-modal": "background-modifier-cover",
+    "affine-v2-layer-background-hoverOverlay": "background-modifier-hover",
+    "affine-v2-layer-background-codeBlock": "background-primary-alt",
+    "affine-v2-layer-background-mobile-primary": "background-primary",
+    "affine-v2-layer-background-mobile-secondary": "background-secondary",
+    "affine-v2-layer-background-mobile-tertiary": "background-primary-alt",
+    "affine-v2-layer-background-mobile-modal": "background-primary",
+    "affine-v2-layer-insideBorder-border": "background-modifier-border",
+    "affine-v2-layer-insideBorder-primaryBorder": "interactive-accent",
+    "affine-v2-text-primary": "text-normal",
+    "affine-v2-text-secondary": "text-muted",
+    "affine-v2-text-tertiary": "text-faint",
+    "affine-v2-text-disable": "text-faint",
+    "affine-v2-text-placeholder": "text-faint",
+    "affine-v2-text-emphasis": "text-accent",
+    "affine-v2-text-link": "text-accent",
+    "affine-v2-text-listDotAndNumber": "text-faint",
+    "affine-v2-icon-primary": "text-muted",
+    "affine-v2-icon-secondary": "text-faint",
+    "affine-v2-icon-tertiary": "text-faint",
+    "affine-v2-icon-activated": "interactive-accent",
+    "affine-v2-button-primary": "interactive-accent",
+    "affine-v2-button-secondary": "interactive-normal",
+    "affine-v2-button-checkBox": "interactive-accent",
+    "affine-v2-input-background": "background-primary",
+    "affine-v2-input-border-default": "background-modifier-border",
+    "affine-v2-input-border-active": "interactive-accent",
+    "affine-v2-input-border-error": "background-modifier-error",
+    "affine-v2-backlinks-blockBackgroundColor": "background-primary-alt",
+    "affine-v2-backlinks-blockBorder": "background-modifier-border",
+    "affine-v2-backlinks-blockHover": "background-modifier-hover",
+    "affine-background-warning-color": "background-tint-warning"
+  },
+  "typography": {
+    "font-interface": "ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Inter, \"Helvetica Neue\", Arial, sans-serif",
+    "font-text": "ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Inter, \"Helvetica Neue\", Arial, sans-serif",
+    "font-monospace": "ui-monospace, SFMono-Regular, \"Cascadia Mono\", \"Roboto Mono\", \"DejaVu Sans Mono\", \"Liberation Mono\", Menlo, Monaco, Consolas, monospace",
+    "font-text-size": 16,
+    "font-ui-smaller": 12,
+    "font-ui-small": 13,
+    "font-ui-medium": 15,
+    "font-ui-large": 20,
+    "line-height-normal": 1.5,
+    "line-height-tight": 1.3,
+    "h1": 1.618,
+    "h2": 1.462,
+    "h3": 1.318,
+    "h4": 1.188,
+    "h5": 1.076,
+    "h6": 1.0
+  },
+  "radius": {
+    "radius-s": 4,
+    "radius-m": 8,
+    "radius-l": 12,
+    "radius-xl": 16
+  },
+  "affine_typography": {
+    "_doc": "AFFiNE typography variable -> Obsidian typography key.",
+    "affine-font-family": "font-interface",
+    "affine-font-mono-family": "font-monospace",
+    "affine-font-code-family": "font-monospace"
+  },
+  "native": {
+    "_doc": "Field of the native CloudNotesColorScheme (theme/Colors.kt) -> Obsidian semantic name. Generated into ObsidianTokens.kt.",
+    "textPrimary": "text-normal",
+    "textSecondary": "text-muted",
+    "textDisable": "text-faint",
+    "textEmphasis": "text-accent",
+    "backgroundPrimary": "background-primary",
+    "backgroundSecondary": "background-secondary",
+    "backgroundOverlayPanel": "background-primary",
+    "backgroundTertiary": "background-primary-alt",
+    "backgroundCodeBlock": "background-primary-alt",
+    "backgroundModal": "background-modifier-cover",
+    "backgroundSuccess": "background-tint-success",
+    "backgroundError": "background-tint-error",
+    "backgroundWarning": "background-tint-warning",
+    "backgroundProgressing": "background-modifier-active-hover",
+    "iconPrimary": "text-muted",
+    "iconSecondary": "text-faint",
+    "iconTertiary": "text-faint",
+    "iconDisable": "text-faint",
+    "iconActivated": "interactive-accent",
+    "divider": "background-modifier-border"
+  }
+}

@@ -150,7 +150,7 @@ const PluginRows = ({ title, list }: { title: string; list: PluginReport[] }) =>
   <section>
     <h3>{title} ({list.length})</h3>
     {list.map(p => (
-      <div key={p.id} style={{ padding: '6px 0', borderBottom: '1px solid rgba(128,128,128,.2)' }} data-testid={`plugin-${p.id}`}>
+      <div key={p.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--background-modifier-border)' }} data-testid={`plugin-${p.id}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <strong>{p.name ?? p.id}</strong>
           <span data-status={p.status}>{p.kind === 'core' && !p.enabled ? 'off, ' : ''}{STATUS_LABEL[p.status]}</span>

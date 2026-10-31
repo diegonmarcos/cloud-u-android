@@ -64,6 +64,45 @@ class NavUiTest {
         assertEquals("Gym", m.subPageName)
     }
 
+    // ── #1369 the app's actions in the drawer (nav_ui.actions = "drawer") ──
+
+    private val notesLike = listOf(
+        section("home"),
+        section("pages", NavPage("all", "All", "description"), NavPage("new", "New page", "edit", action = "launch")),
+        section("canvas", NavPage("boards", "Boards", "dashboard"), NavPage("new", "New board", "add", action = "launch")),
+    )
+
+    @Test fun `with actions in the drawer every launch page of every section is the AppActions row, after the icons`() {
+        val m = cleanDrawerModel(notesLike, notesLike[1], "all", actionsInDrawer = true)
+        assertEquals(listOf("pages/new", "canvas/new"), m.appActions.map { it.id })
+        assertEquals(listOf("New page", "New board"), m.appActions.map { it.label })
+        assertEquals(listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.AppActions, DrawerRow.SubPageDropdown), m.rows)
+        assertEquals("a launch page is still no sub-page", listOf("all"), m.subPages.map { it.id })
+    }
+
+    @Test fun `without the declaration the drawer has no AppActions row`() {
+        val m = cleanDrawerModel(notesLike, notesLike[1], "all")
+        assertTrue(m.appActions.isEmpty())
+        assertFalse(DrawerRow.AppActions in m.rows)
+    }
+
+    @Test fun `with actions in the drawer the strips carry no launch page, otherwise they keep them`() {
+        val drawer = NavUiSettings(NavUiMode.Clean, true, NavActionsPlace.Drawer)
+        assertEquals(listOf("all"), NavUiDecl.stripPages(drawer, notesLike[1].pages).map { it.id })
+        assertEquals(listOf("all", "new"), NavUiDecl.stripPages(NavUiSettings(NavUiMode.Clean), notesLike[1].pages).map { it.id })
+        assertEquals("Classic has no Clean drawer: the strip keeps them", listOf("all", "new"),
+            NavUiDecl.stripPages(NavUiSettings(NavUiMode.Classic, true, NavActionsPlace.Drawer), notesLike[1].pages).map { it.id })
+    }
+
+    @Test fun `nav_ui actions is parsed, kept over the user's mode choice, and an action id names its section and page`() {
+        val parsed = NavUiDecl.parse("""{"mode": "clean", "scroll_hide": true, "actions": "drawer"}""")
+        assertEquals(NavActionsPlace.Drawer, parsed.actions)
+        assertEquals(NavActionsPlace.Strip, NavUiDecl.parse("""{"mode": "clean"}""").actions)
+        assertTrue(resolveNavUi(parsed, MemoryNavUiStore(NavUiMode.Classic, false)).actionsInDrawer)
+        assertEquals("canvas" to "new", appActionTarget(appActionId("canvas", "new")))
+        assertNull(appActionTarget("broken"))
+    }
+
     // ── the first row is transparent in every mode ──
 
     @Test fun `the first row has no fill in any mode`() {

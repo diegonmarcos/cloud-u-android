@@ -177,13 +177,15 @@ public fun NavBarTopSecondRow(
     /** HIDDEN scroll state (a downward drag in progress): the whole row is away. Default: the chrome's shared state. */
     hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
-    if (pages.isEmpty()) return
+    // #1369 an app that declares nav_ui.actions = "drawer" keeps its launch pages in the Clean drawer's actions row, not here.
+    val shown = NavUiDecl.stripPages(currentNavUi(), pages)
+    if (shown.isEmpty()) return
     ReportShownPage(selectedId)
     val requests = LocalSubPageRequests.current
     val pending = requests?.pending
-    LaunchedEffect(pending, pages, selectedId) {
+    LaunchedEffect(pending, shown, selectedId) {
         val want = pending ?: return@LaunchedEffect
-        val target = pages.firstOrNull { it.holds(want) } ?: return@LaunchedEffect
+        val target = shown.firstOrNull { it.holds(want) } ?: return@LaunchedEffect
         if (target.id == want) { requests?.consume(); if (target.id != selectedId) onSelect(target) }
         else if (target.id != selectedId) onSelect(target)
     }
@@ -213,13 +215,13 @@ public fun NavBarTopSecondRow(
             .padding(vertical = SecondRowSpec.STRIP_PAD_V)
             .widthIn(min = maxWidth)
             .selectableGroup()
-            .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = pages.size) },
+            .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = shown.size) },
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        pages.forEachIndexed { i, page ->
+        shown.forEachIndexed { i, page ->
             SecondRowTab(
-                page, i, pages.size, page.id == selectedId,
+                page, i, shown.size, page.id == selectedId,
                 // #1159 at rest EVERY tab shows its name; scrolled down only the selected one does, and the tab is shorter.
                 named = !compact || page.id == selectedId,
                 palette = palette, tabHeight = tabHeight, tab = tab, iconFor = iconFor,

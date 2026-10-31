@@ -322,6 +322,7 @@ mutate "a Classic default but the ledger says Clean"          "$DATA" "$(J "d['n
 mutate "a pending entry for an app that exposes the card"     "$DATA" "$(J "d['nav_ui']['pending']['ac_cloud-fix']='the fixture says it does not expose the card yet, long enough'")" "N13 $FIX: exposes Configs > UI now"
 mutate "the lib's mode names drift from the ledger"           "$NAVUI" "s=s.replace('Clean(\"clean\")','Clean(\"cleaner\")')" "NavUiMode declares ['classic', 'cleaner']"
 mutate "the Clean drawer loses its icons row"                 "$NAVUI" "s=s.replace('listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.SubPageDropdown)','listOf(DrawerRow.PageDropdown, DrawerRow.SubPageDropdown)')" "CLEAN_DRAWER_ROWS is"
+mutate "#1369 the Clean drawer loses the app's actions row"   "$NAVUI" "s=s.replace('DrawerRow.Actions, DrawerRow.AppActions, DrawerRow.SubPageDropdown','DrawerRow.Actions, DrawerRow.SubPageDropdown')" "CLEAN_DRAWER_ROWS_WITH_ACTIONS is"
 mutate "the Clean drawer's icons drift"                       "$NAVUI" "s=s.replace('NavQuickAction(public val declared: String) {\n    Ai(\"ai\"),','NavQuickAction(public val declared: String) {\n    Ai(\"assistant\"),')" "NavQuickAction declares"
 mutate "Clean keeps the second row"                           "$NAVUI" "s=s.replace('secondRow = !clean','secondRow = true')" "plan(): Clean must have the hamburger, no second row and no bottom labels"
 mutate "Clean loses the hamburger"                            "$NAVUI" "s=s.replace('hamburger = clean','hamburger = false')" "plan(): Clean must have the hamburger"

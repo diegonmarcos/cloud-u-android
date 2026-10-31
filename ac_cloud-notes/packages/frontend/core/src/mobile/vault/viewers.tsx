@@ -131,7 +131,7 @@ export const JsonView = ({ tab }: { tab: Tab }) => {
         >
           <span style={{ width: 12 }}>{r.expandable ? (r.expanded ? 'v' : '>') : ''}</span>
           <span style={{ opacity: 0.75 }}>{r.key}</span>
-          <span style={{ color: r.kind === 'string' ? '#7bd88f' : r.kind === 'number' ? '#f2a65a' : r.kind === 'boolean' || r.kind === 'null' ? '#c792ea' : undefined }}>
+          <span style={{ color: r.kind === 'string' ? 'var(--color-green)' : r.kind === 'number' ? 'var(--color-orange)' : r.kind === 'boolean' || r.kind === 'null' ? 'var(--color-purple)' : undefined }}>
             {r.preview}
           </span>
         </div>

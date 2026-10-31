@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.AppTopBarController
 import com.diegonmarcos.superapp.bottomnav.LocalNavUiSettings
 import com.diegonmarcos.superapp.bottomnav.NavUiDecl
+import com.diegonmarcos.superapp.bottomnav.appActionTarget
 import com.diegonmarcos.superapp.bottomnav.cleanDrawerModel
 import com.diegonmarcos.superapp.bottomnav.currentNavUi
 import com.diegonmarcos.superapp.bottomnav.navTopRowFill
@@ -433,7 +434,7 @@ public fun NavBarTopFirstRowScaffold(
     val here = followed.firstOrNull { it.depth == 0 }
     val bottom = sections.ifEmpty { listOfNotNull(here?.let { NavSection(it.sectionId, it.label, "") }) }
     val current = sections.firstOrNull { it.id == here?.sectionId }
-    val cleanModel = cleanDrawerModel(bottom, current, followed.lastOrNull { it.depth > 0 && it.selected }?.id)
+    val cleanModel = cleanDrawerModel(bottom, current, followed.lastOrNull { it.depth > 0 && it.selected }?.id, actionsInDrawer = ui.actionsInDrawer)
     val cleanDrawerBody: @Composable ColumnScope.(close: () -> Unit) -> Unit = { close ->
         CleanDrawerContent(
             model = cleanModel, labels = labels,
@@ -442,6 +443,8 @@ public fun NavBarTopFirstRowScaffold(
             onAi = { if (onAi != null) onAi() else controller.toggleAi() },
             onProfile = onAccount, onConfigs = onConfigs, close = close,
             onConfigsUi = openGeneral, onConfigsAbout = openAbout,
+            // #1369 an action runs as its launch page does: the app opens <section>/<page> (a launch page creates, the strip stays).
+            onAppAction = { e -> appActionTarget(e.id)?.let { (sec, page) -> onNavigate(HierarchyEntry(page, e.label, 1, sec)) } },
         )
     }
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.

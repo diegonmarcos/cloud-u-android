@@ -1,5 +1,8 @@
 package app.cloudnotes.pro
 
+import app.cloudnotes.pro.theme.ThemeMode
+import app.cloudnotes.pro.theme.CloudNotesTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -15,7 +18,6 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -74,6 +76,14 @@ internal class NotesShell(
     /** The editor's pages, newest first, as the web half last reported them. */
     private var docs by mutableStateOf(emptyList<DrawerDoc>())
 
+    /**
+     * #1369 the theme the web half resolved (CloudNotesTheme.onThemeChanged -> MainActivity -> [setDark]); the whole shell wears
+     * Obsidian's light or dark theme with it. Starts on the system's until the web half reports.
+     */
+    private var darkState by mutableStateOf<Boolean?>(null)
+
+    fun setDark(dark: Boolean) { darkState = dark }
+
     /** Configs > UI (the shared nav UI card) is open; its "All settings" opens the web half's own settings. */
     private var configsOpen by mutableStateOf(false)
 
@@ -89,12 +99,12 @@ internal class NotesShell(
 
     @Composable
     fun Content(container: ViewGroup, web: WebView) {
-        val dark = true
+        val dark = darkState ?: isSystemInDarkTheme()
         val section = nav.decl.section(nav.sectionId)
         val entries = nav.decl.bottomSections().map { navEntry(it.id, it.label, it.icon) }
         // The nav mode Cloud Notes starts in is build.json::ui.nav_ui (CLEAN); the user's own choice in Configs > UI wins.
         CompositionLocalProvider(LocalNavUiDefault provides NavUiDecl.fromBuildConfig(BuildConfig.UI_NAV_UI_B64)) {
-        MaterialTheme(colorScheme = darkColorScheme()) {
+        CloudNotesTheme(if (dark) ThemeMode.Dark else ThemeMode.Light) {
             if (configsOpen) ConfigsUi(dark)
             NavBarTopFirstRowScaffold(
                 title = section?.label ?: nav.sectionId,

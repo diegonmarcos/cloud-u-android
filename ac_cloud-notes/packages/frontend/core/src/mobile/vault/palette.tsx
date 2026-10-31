@@ -1,4 +1,5 @@
-// Command palette (Ctrl+P) and quick switcher (Ctrl+O): one overlay, two sources.
+// Command palette (Ctrl+P) and quick switcher (Ctrl+O): one overlay, two sources, drawn like Obsidian's (#1369):
+// prompt input with a divider, suggestion rows, the instructions footer.
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CommandRow } from './decl-types';
@@ -41,7 +42,6 @@ export const Palette = ({ mode, commands, paths, onRun, onOpen, onClose }: Palet
         <input
           ref={input}
           className="cnv-input"
-          style={{ border: 0, borderBottom: '1px solid rgba(128,128,128,.3)', borderRadius: 0 }}
           placeholder={mode === 'files' ? 'Find or create a note' : 'Type a command'}
           value={q}
           onChange={e => { setQ(e.target.value); setAt(0); }}
@@ -60,6 +60,11 @@ export const Palette = ({ mode, commands, paths, onRun, onOpen, onClose }: Palet
             </button>
           ))}
           {items.length === 0 && <div className="cnv-dim" style={{ padding: 8 }}>No match.</div>}
+        </div>
+        <div className="cnv-palette-foot" aria-hidden="true">
+          <span>↑↓ to navigate</span>
+          <span>↵ to {mode === 'files' ? 'open' : 'use'}</span>
+          <span>esc to dismiss</span>
         </div>
       </div>
     </div>

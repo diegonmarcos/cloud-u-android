@@ -17,6 +17,10 @@ import { CanvasPane, HtmlView, ImageView, JsonView, MarkdownView, MermaidView, S
 const PANE_LABEL: Record<string, string> = {
   files: 'Files', search: 'Search', outline: 'Outline', backlinks: 'Backlinks', outgoing: 'Links', tags: 'Tags',
 };
+// Obsidian's sidebar tabs are icons (Lucide, see icons.tsx).
+const PANE_ICON: Record<string, string> = {
+  files: 'folder', search: 'search', outline: 'outline', backlinks: 'backlinks', outgoing: 'outgoing', tags: 'tags',
+};
 const VIEW_LABEL: Record<string, string> = {
   preview: 'Reading', source: 'Source', canvas: 'Canvas', tree: 'Tree', render: 'Render', image: 'Image',
 };
@@ -167,11 +171,25 @@ export const VaultShell = ({ api, decl }: { api: VaultApi; decl: VaultDecl }) =>
     : rightPane === 'outgoing' ? <OutgoingPane api={api} />
     : <TagsPane api={api} onTag={t => { setSearchSeed('#' + t); showLeft('search'); }} />;
 
+  // Obsidian mobile has no ribbon strip: on a narrow screen the ribbon's actions are a labelled row at the top of the left
+  // drawer (data-testid vault-drawer-actions); on a wide screen they stay the vertical ribbon at the far left (#1369).
+  const ribbonButtons = (labelled: boolean) => decl.layout.ribbon.map(r => (
+    <button key={r.id} type="button" className={labelled ? 'cnv-row' : 'cnv-btn'} title={r.label} aria-label={r.label} data-ribbon={r.id}
+      onClick={() => { if (labelled) setLeftOpen(false); ribbonAction(r.action); }}>
+      <Icon name={r.icon} />{labelled && <span>{r.label}</span>}
+    </button>
+  ));
+
   const sidebar = (side: 'left' | 'right', panes: string[], current: string, setCurrent: (p: string) => void, body: ReactElement) => (
     <div className={`cnv-side${side === 'right' ? ' cnv-right' : ''}${narrow ? ' cnv-drawer' : ''}`} data-testid={`sidebar-${side}`}>
-      <div className="cnv-tabbar" role="tablist">
+      {side === 'left' && narrow && (
+        <nav className="cnv-drawer-actions" aria-label="Actions" data-testid="vault-drawer-actions">{ribbonButtons(true)}</nav>
+      )}
+      <div className="cnv-tabbar cnv-side-tabs" role="tablist">
         {panes.map(p => (
-          <button key={p} type="button" role="tab" className="cnv-tab" aria-selected={p === current} onClick={() => setCurrent(p)}>{PANE_LABEL[p] ?? p}</button>
+          <button key={p} type="button" role="tab" className="cnv-tab" title={PANE_LABEL[p] ?? p} aria-label={PANE_LABEL[p] ?? p} aria-selected={p === current} onClick={() => setCurrent(p)}>
+            <Icon name={PANE_ICON[p] ?? 'file'} size={16} />
+          </button>
         ))}
       </div>
       {body}
@@ -181,14 +199,9 @@ export const VaultShell = ({ api, decl }: { api: VaultApi; decl: VaultDecl }) =>
   return (
     <div className="cnv-root" ref={rootRef} data-testid="vault-shell">
       <div className="cnv-body" style={{ flexDirection: narrow ? 'column' : 'row' }}>
-        <nav className={`cnv-ribbon${narrow ? ' cnv-narrow' : ''}`} aria-label="Ribbon" data-testid="ribbon">
-          {decl.layout.ribbon.map(r => (
-            <button key={r.id} type="button" className="cnv-btn" title={r.label} aria-label={r.label} data-ribbon={r.id} onClick={() => ribbonAction(r.action)}>
-              <Icon name={r.icon} />
-            </button>
-          ))}
-        </nav>
+        {!narrow && <nav className="cnv-ribbon" aria-label="Ribbon" data-testid="ribbon">{ribbonButtons(false)}</nav>}
         <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, position: 'relative' }}>
+          {narrow && (leftOpen || rightOpen) && <div className="cnv-scrim" onClick={() => { setLeftOpen(false); setRightOpen(false); }} />}
           {leftOpen && sidebar('left', decl.layout.left_panes, leftPane, setLeftPane, leftBody)}
           <div className="cnv-main">
             <div className="cnv-tabbar" role="tablist" data-testid="tabbar">
@@ -216,7 +229,7 @@ export const VaultShell = ({ api, decl }: { api: VaultApi; decl: VaultDecl }) =>
       <div className="cnv-status" data-testid="status-bar">
         {decl.layout.status.map(id => <span key={id}>{statusItem(id)}</span>)}
         {api.indexing && <span>indexing {api.indexing.parsed}/{api.indexing.total}</span>}
-        {api.error && <span style={{ color: '#fb464c' }} onClick={() => api.setError(null)}>{api.error}</span>}
+        {api.error && <span style={{ color: 'var(--text-error)' }} onClick={() => api.setError(null)}>{api.error}</span>}
       </div>
       {palette && (
         <Palette mode={palette} commands={decl.commands} paths={api.allPaths} onRun={run} onOpen={openPath} onClose={() => setPalette(null)} />

@@ -11,8 +11,8 @@ const SIZE = 1000;
 const chip = (on: boolean): CSSProperties => ({
   padding: '6px 12px',
   borderRadius: 16,
-  border: '1px solid rgba(140,150,170,0.5)',
-  background: on ? 'rgba(122,140,255,0.28)' : 'transparent',
+  border: '1px solid var(--background-modifier-border)',
+  background: on ? 'var(--background-modifier-active-hover)' : 'transparent',
   color: 'inherit',
   fontSize: 13,
 });

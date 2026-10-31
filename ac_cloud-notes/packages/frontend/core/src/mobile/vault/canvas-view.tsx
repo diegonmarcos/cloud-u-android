@@ -196,7 +196,7 @@ export const CanvasView = ({ text, onChange, onOpenFile }: CanvasViewProps) => {
               if (!a || !b) return null;
               const pa = anchor(a, ed.fromSide, { x: b.x + b.width / 2, y: b.y + b.height / 2 });
               const pb = anchor(b, ed.toSide, { x: a.x + a.width / 2, y: a.y + a.height / 2 });
-              const color = canvasColor(ed.color) ?? 'rgba(150,150,150,.9)';
+              const color = canvasColor(ed.color) ?? 'var(--text-faint)';
               return (
                 <g key={ed.id} style={{ color }}>
                   <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke="transparent" strokeWidth={18} data-edge={ed.id} style={{ pointerEvents: 'stroke' }} />
@@ -286,7 +286,7 @@ export const CanvasView = ({ text, onChange, onOpenFile }: CanvasViewProps) => {
         {n.type === 'link' && <div><strong>Link</strong><div className="cnv-dim" style={{ overflowWrap: 'anywhere' }}>{n.url}</div></div>}
         {n.type === 'group' && <strong style={{ color }}>{n.label}</strong>}
         {isSel && (
-          <div data-resize="1" style={{ position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, cursor: 'nwse-resize', background: 'rgba(122,140,255,.6)', borderTopLeftRadius: 8 }} />
+          <div data-resize="1" style={{ position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, cursor: 'nwse-resize', background: 'var(--interactive-accent)', borderTopLeftRadius: 8 }} />
         )}
       </div>
     );

@@ -39,6 +39,10 @@
       "actions",
       "sub_page_dropdown"
     ],
+    "clean_drawer_rows_with_actions": ["page_dropdown", "actions", "app_actions", "sub_page_dropdown"],
+    "drawer_rows": ["page_dropdown", "actions", "sub_page_dropdown", "app_actions"],
+    "actions_places": ["strip", "drawer"],
+    "_doc_actions": "#1369 an app may declare build.json::ui.nav_ui.actions = \"drawer\": its launch pages (pages with a non-blank action, every section) leave the strips (NavUiDecl.stripPages) and become the Clean drawer's app_actions row, after the AI/Profile/Settings icons (clean_drawer_rows_with_actions). Default \"strip\" keeps every other app unchanged.",
     "clean_drawer_actions": [
       "ai",
       "profile",
@@ -127,7 +131,17 @@
             "file": "ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NotesShell.kt",
             "needle": "LocalNavUiDefault provides NavUiDecl.fromBuildConfig(BuildConfig.UI_NAV_UI_B64)",
             "why": "Cloud Notes' declared default (build.json ui.nav_ui) reaches the scaffold"
-        }
+        },
+      {
+        "file": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
+        "needle": "pages.filter { it.action.isBlank() }",
+        "why": "#1369 with nav_ui.actions = drawer the strips carry no launch page (they are the drawer's actions row)"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavCleanDrawer.kt",
+        "needle": "DrawerRow.AppActions ->",
+        "why": "#1369 the Clean drawer draws the app's actions row"
+      }
     ],
     "app_defaults": {
       "_doc": "Apps whose declared default mode is not classic (build.json::ui.nav_ui.mode must equal it).",

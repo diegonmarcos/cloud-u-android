@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Settings
@@ -54,6 +56,8 @@ public object CleanDrawerTags {
     public const val PAGE_DROPDOWN: String = "navclean_page"
     public const val ACTIONS: String = "navclean_actions"
     public const val SUB_DROPDOWN: String = "navclean_sub"
+    /** #1369 the app's actions row (DrawerRow.AppActions). */
+    public const val APP_ACTIONS: String = "navclean_app_actions"
     public const val CONFIGS_GENERAL: String = "navclean_configs_general"
     public const val CONFIGS_ABOUT: String = "navclean_configs_about"
     /** The former "Configs > UI" entry: the card is a section of Configs > General now. */
@@ -61,6 +65,8 @@ public object CleanDrawerTags {
     public fun pageEntry(id: String): String = "navclean_page_$id"
     public fun subEntry(id: String): String = "navclean_sub_$id"
     public fun action(a: NavQuickAction): String = "navclean_action_${a.declared}"
+    /** One entry of the app's actions row, by its `<section>/<page>` id. */
+    public fun appAction(id: String): String = "navclean_app_action_$id"
     public fun row(r: DrawerRow): String = "navclean_row_${r.declared}"
 }
 
@@ -83,6 +89,8 @@ public fun ColumnScope.CleanDrawerContent(
     onConfigsUi: (() -> Unit)? = null,
     /** Non-null: an entry "Configs > About" follows it. */
     onConfigsAbout: (() -> Unit)? = null,
+    /** #1369 a pick in the app's actions row ([DrawerRow.AppActions]); its id is `<section>/<page>` (appActionTarget). */
+    onAppAction: (CleanDrawerEntry) -> Unit = {},
 ) {
     val rowHeight = NavTokens().cleanDrawerRowHeight
     for (row in model.rows) when (row) {
@@ -99,6 +107,22 @@ public fun ColumnScope.CleanDrawerContent(
                 NavQuickAction.Ai -> ActionIcon(Icons.Filled.AutoAwesome, labels.ai, CleanDrawerTags.action(a), rowHeight) { close(); onAi() }
                 NavQuickAction.Profile -> ActionIcon(Icons.Filled.AccountCircle, labels.account, CleanDrawerTags.action(a), rowHeight) { close(); onProfile() }
                 NavQuickAction.Settings -> ActionIcon(Icons.Filled.Settings, labels.configs, CleanDrawerTags.action(a), rowHeight) { close(); onConfigs() }
+            }
+        }
+        DrawerRow.AppActions -> Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag(CleanDrawerTags.APP_ACTIONS)) {
+            Text(
+                "Actions", Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                color = LocalContentColor.current.copy(alpha = 0.6f), fontWeight = FontWeight.SemiBold,
+            )
+            for (e in model.appActions) Row(
+                Modifier.fillMaxWidth().heightIn(min = rowHeight).clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button) { close(); onAppAction(e) }
+                    .padding(horizontal = 14.dp).testTag(CleanDrawerTags.appAction(e.id)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(e.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         DrawerRow.SubPageDropdown -> UrlBarDropdown(

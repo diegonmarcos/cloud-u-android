@@ -43,7 +43,7 @@ export const VaultView = () => {
             <Icon name="folder" /> Open folder as vault
           </button>
           {!api.hasNative && <p className="cnv-dim">Folder access needs the Android app; this page is a preview.</p>}
-          {api.error && <p style={{ color: '#fb464c' }} data-testid="vault-error">{api.error}</p>}
+          {api.error && <p style={{ color: 'var(--text-error)' }} data-testid="vault-error">{api.error}</p>}
 
           {api.recent.length > 0 && (
             <>

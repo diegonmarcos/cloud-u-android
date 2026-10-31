@@ -40,6 +40,23 @@ public enum class DrawerRow(public val declared: String) {
     Actions("actions"),
     /** A dropdown selecting the child pages (sub-pages) of the current page. */
     SubPageDropdown("sub_page_dropdown"),
+    /**
+     * The app's ACTIONS: every launch page ([NavPage.action] non-blank: "new page", "new board"...) of every bottom section, as a
+     * labelled list. Drawn only when the app declares `nav_ui.actions = "drawer"` ([NavUiSettings.actionsInDrawer]); the launch
+     * pages then leave the bottom nav's strips ([NavUiDecl.stripPages]), like Obsidian mobile's ribbon menu (#1369).
+     */
+    AppActions("app_actions"),
+}
+
+/** Where an app's launch pages live: on the strips of the bottom nav (the default), or in the drawer's [DrawerRow.AppActions] row. */
+public enum class NavActionsPlace(public val declared: String) {
+    Strip("strip"),
+    Drawer("drawer");
+
+    public companion object {
+        public fun of(text: String?): NavActionsPlace? =
+            if (text.isNullOrBlank()) Strip else entries.firstOrNull { it.declared == text.trim() }
+    }
 }
 
 /** The icons of the drawer's [DrawerRow.Actions] row. */
@@ -53,7 +70,11 @@ public enum class NavQuickAction(public val declared: String) {
 public data class NavUiSettings(
     val mode: NavUiMode = NavUiMode.Classic,
     val scrollHide: Boolean = true,
+    /** `nav_ui.actions`: the launch pages move from the bottom nav's strips to the drawer's [DrawerRow.AppActions] row. */
+    val actions: NavActionsPlace = NavActionsPlace.Strip,
 ) {
+    public val actionsInDrawer: Boolean get() = actions == NavActionsPlace.Drawer
+
     /** How the chrome reacts to a scroll: hide every bar (sticky), or stay put. */
     public fun scrollPolicy(): ChromeScrollPolicy = if (scrollHide) ChromeScrollPolicy.Hide else ChromeScrollPolicy.Pinned
 }
@@ -87,6 +108,18 @@ public object NavUiDecl {
     public val CLEAN_DRAWER_ROWS: List<DrawerRow> = listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.SubPageDropdown)
     public val CLEAN_DRAWER_ACTIONS: List<NavQuickAction> = listOf(NavQuickAction.Ai, NavQuickAction.Profile, NavQuickAction.Settings)
 
+    /** The Clean drawer with the app's actions: the [DrawerRow.AppActions] row right after the AI / Profile / Settings icons. */
+    public val CLEAN_DRAWER_ROWS_WITH_ACTIONS: List<DrawerRow> =
+        listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.AppActions, DrawerRow.SubPageDropdown)
+
+    /**
+     * The pages a bottom section's strip shows under [settings]: all of them, or, with the actions in the drawer, all but the launch
+     * pages (they are the Clean drawer's [DrawerRow.AppActions] row then). Classic has no such drawer, so it keeps them on the
+     * strip. The ONE filter every strip uses.
+     */
+    public fun stripPages(settings: NavUiSettings, pages: List<NavPage>): List<NavPage> =
+        if (!settings.actionsInDrawer || settings.mode != NavUiMode.Clean) pages else pages.filter { it.action.isBlank() }.map { it.copy(pages = stripPages(settings, it.pages)) }
+
     /** The mode and the scroll-hide an app wears when neither its build.json nor its user chose. */
     public val DEFAULT: NavUiSettings = NavUiSettings(NavUiMode.Classic, scrollHide = true)
 
@@ -113,6 +146,7 @@ public object NavUiDecl {
         NavUiSettings(
             mode = NavUiMode.of(o["mode"] as? String) ?: DEFAULT.mode,
             scrollHide = (o["scroll_hide"] as? Boolean) ?: DEFAULT.scrollHide,
+            actions = NavActionsPlace.of(o["actions"] as? String) ?: DEFAULT.actions,
         )
     }.getOrDefault(DEFAULT)
 
@@ -149,7 +183,7 @@ public class MemoryNavUiStore(mode: NavUiMode? = null, scrollHide: Boolean? = nu
 
 /** The settings in force: the user's choice in [store], else the app's declared [default]. */
 public fun resolveNavUi(default: NavUiSettings, store: NavUiStore?): NavUiSettings =
-    NavUiSettings(store?.mode() ?: default.mode, store?.scrollHide() ?: default.scrollHide)
+    NavUiSettings(store?.mode() ?: default.mode, store?.scrollHide() ?: default.scrollHide, default.actions)
 
 /** The app's declared default ([NavUiDecl.fromBuildConfig]); an app that declares none wears [NavUiDecl.DEFAULT]. */
 public val LocalNavUiDefault = staticCompositionLocalOf { NavUiDecl.DEFAULT }
@@ -231,13 +265,28 @@ public data class CleanDrawerModel(
     val subPages: List<CleanDrawerEntry>,
     /** Row 3: the face of the dropdown (the selected child page, else the first). */
     val subPageName: String,
+    /** [DrawerRow.AppActions]: every launch page of every section, id `<section>/<page>`; empty = the row is not drawn. */
+    val appActions: List<CleanDrawerEntry> = emptyList(),
 )
+
+/** A [CleanDrawerModel.appActions] id: `<section>/<page>`. */
+public fun appActionId(sectionId: String, pageId: String): String = "$sectionId/$pageId"
+
+/** The (section, page) of an [appActionId]; null for a malformed id. */
+public fun appActionTarget(id: String): Pair<String, String>? =
+    id.indexOf('/').takeIf { it > 0 && it < id.length - 1 }?.let { id.substring(0, it) to id.substring(it + 1) }
 
 /**
  * The Clean drawer for [section] (the open bottom page) among [bottom] (the bottom nav's sections), with [currentPageId] the open
  * child page. Pure: the drawer's content is testable without drawing. Launch tabs ([NavPage.action]) are not destinations and are left out.
  */
-public fun cleanDrawerModel(bottom: List<NavSection>, section: NavSection?, currentPageId: String?): CleanDrawerModel {
+public fun cleanDrawerModel(
+    bottom: List<NavSection>,
+    section: NavSection?,
+    currentPageId: String?,
+    /** `nav_ui.actions = "drawer"`: the launch pages of every section become the [DrawerRow.AppActions] row. */
+    actionsInDrawer: Boolean = false,
+): CleanDrawerModel {
     val pages = bottom.map { CleanDrawerEntry(it.id, it.label, it.id == section?.id) }
     val onPath = section?.path(currentPageId)?.map { it.id }.orEmpty().toSet()
     val subs = ArrayList<CleanDrawerEntry>()
@@ -249,12 +298,24 @@ public fun cleanDrawerModel(bottom: List<NavSection>, section: NavSection?, curr
     }
     if (section != null) walk(section.pages, 0)
     val face = subs.lastOrNull { it.selected } ?: subs.firstOrNull()
+    val actions = ArrayList<CleanDrawerEntry>()
+    if (actionsInDrawer) {
+        fun launches(sectionId: String, list: List<NavPage>) {
+            for (p in list) {
+                if (p.action.isNotBlank()) actions += CleanDrawerEntry(appActionId(sectionId, p.id), p.label, false)
+                launches(sectionId, p.pages)
+            }
+        }
+        for (b in bottom) launches(b.id, b.pages)
+    }
+    val declared = if (actionsInDrawer) NavUiDecl.CLEAN_DRAWER_ROWS_WITH_ACTIONS else NavUiDecl.CLEAN_DRAWER_ROWS
     return CleanDrawerModel(
-        rows = NavUiDecl.CLEAN_DRAWER_ROWS.filter { it != DrawerRow.SubPageDropdown || subs.isNotEmpty() },
+        rows = declared.filter { (it != DrawerRow.SubPageDropdown || subs.isNotEmpty()) && (it != DrawerRow.AppActions || actions.isNotEmpty()) },
         pageName = section?.label ?: "",
         pages = pages,
         actions = NavUiDecl.CLEAN_DRAWER_ACTIONS,
         subPages = subs,
         subPageName = face?.label ?: "",
+        appActions = actions,
     )
 }

@@ -638,18 +638,26 @@ def check_nav_ui(root, apps, uis, exempt, spec, bad):
     if not kt:
         bad.append(f"N13 {nu['kotlin']} is gone — the nav UI declaration (modes, drawer rows, scroll policy) lives there")
     else:
-        for enum, key in (("NavUiMode", "modes"), ("DrawerRow", "clean_drawer_rows"), ("NavQuickAction", "clean_drawer_actions")):
+        # DrawerRow: every row the Clean drawer can draw (drawer_rows; older declarations list only clean_drawer_rows).
+        # NavActionsPlace: where an app's launch pages live (actions_places, #1369).
+        for enum, key in (("NavUiMode", "modes"), ("DrawerRow", "drawer_rows" if "drawer_rows" in nu else "clean_drawer_rows"),
+                          ("NavQuickAction", "clean_drawer_actions"), ("NavActionsPlace", "actions_places")):
+            if key not in nu:
+                continue
             if kotlin_strings(kt, enum) != nu.get(key):
                 bad.append(f"N13 {nu['kotlin']} {enum} declares {kotlin_strings(kt, enum)} but {DATA}::nav_ui.{key} is {nu.get(key)}")
         for const, key in (("SETTING_MODE", "settings_mode"), ("SETTING_SCROLL_HIDE", "settings_scroll_hide"), ("CONFIGS_UI_ID", "configs_ui_id")):
             m = re.search(r'const val %s: String = "([^"]*)"' % const, kt)
             if not m or m.group(1) != nu.get(key):
                 bad.append(f"N13 {nu['kotlin']} {const} is {m.group(1) if m else None!r} but {DATA}::nav_ui.{key} is {nu.get(key)!r}")
-        m = re.search(r"val CLEAN_DRAWER_ROWS[^=]*=\s*listOf\(([^)]*)\)", kt)
-        rows = [x.strip().split(".")[-1] for x in m.group(1).split(",")] if m else []
-        want = ["".join(w.capitalize() for w in r.split("_")) for r in nu["clean_drawer_rows"]]
-        if rows != want:
-            bad.append(f"N13 {nu['kotlin']} CLEAN_DRAWER_ROWS is {rows} but the declared rows are {want}")
+        for const, key in (("CLEAN_DRAWER_ROWS", "clean_drawer_rows"), ("CLEAN_DRAWER_ROWS_WITH_ACTIONS", "clean_drawer_rows_with_actions")):
+            if key not in nu:
+                continue
+            m = re.search(r"val %s\b[^=]*=\s*listOf\(([^)]*)\)" % const, kt)
+            rows = [x.strip().split(".")[-1] for x in m.group(1).split(",")] if m else []
+            want = ["".join(w.capitalize() for w in r.split("_")) for r in nu[key]]
+            if rows != want:
+                bad.append(f"N13 {nu['kotlin']} {const} is {rows} but the declared rows are {want}")
         if "ChromeScrollPolicy.Hide" not in kt or "Hidden" not in kt:
             bad.append(f"N13 {nu['kotlin']} no longer declares the scroll-hide policy (a downward scroll hides ALL bars)")
         if not re.search(r"secondRow\s*=\s*!clean", kt) or not re.search(r"hamburger\s*=\s*clean", kt) or not re.search(r"bottomLabels\s*=\s*!clean", kt):
