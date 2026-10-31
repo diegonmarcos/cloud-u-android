@@ -1,0 +1,79 @@
+name: "Test -> fleet Perms page, first run and revoke prompt (emulator)"
+
+# #1360 emulator proof of libs:perms on the key apps: first run asks what is missing, the Perms page shows every
+# declared grant with its live state (helper apps included), a shell grant reads Granted and a revoke brings the row's
+# Grant / Open button back. APKs come from the Ship runs of `sha` (default: the latest successful run of each).
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit whose Ship artifacts to test (empty = the latest successful Ship run of each app)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  perms-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the key apps' APKs from their Ship runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          set -u
+          mkdir -p apk
+          while read -r key wf prefer; do
+            q="repos/$REPO/actions/workflows/$wf/runs?status=success&per_page=20"
+            [ -n "$SHA" ] && q="$q&head_sha=$SHA"
+            id="$(gh api "$q" --jq '.workflow_runs[0].id // empty')"
+            [ -z "$id" ] && { echo "no successful run of $wf"; continue; }
+            name="$(gh api "repos/$REPO/actions/runs/$id/artifacts" --jq "[.artifacts[].name | select(test(\"$prefer\"))][0] // empty")"
+            [ -z "$name" ] && name="$(gh api "repos/$REPO/actions/runs/$id/artifacts" --jq '[.artifacts[].name | select(test("arm64"))][0] // empty')"
+            [ -z "$name" ] && { echo "no APK artifact in run $id"; continue; }
+            gh run download "$id" -R "$REPO" -n "$name" -D "dl-$key" && f="$(find "dl-$key" -name '*.apk' | head -1)" && cp "$f" "apk/$key.apk"
+            echo "$key <- run $id artifact $name"
+          done <<'APPS'
+          drive ship-cloud-drive.yml x86_64
+          me ship-cloud-me.yml x86_64
+          notes ship-cloud-notes.yml x86_64
+          finterm ship-capital-stack-finterminal.yml x86_64
+          browser ship-cloud-browser.yml x86_64
+          gallery ship-cloud-gallery.yml x86_64
+          APPS
+          ls -l apk
+
+      - name: Set up Android SDK (aapt2 for package names)
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "build-tools;35.0.0 platform-tools"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Boot emulator + first run, Perms page, grant, revoke per app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash 1_cicd/src/scripts/test/perms-emulator-proof.sh apk out
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perms-emulator-evidence
+          path: out/
+          if-no-files-found: warn
