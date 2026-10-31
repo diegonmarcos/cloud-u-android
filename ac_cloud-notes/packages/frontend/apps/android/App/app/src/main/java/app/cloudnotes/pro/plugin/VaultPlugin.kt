@@ -17,6 +17,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.diegonmarcos.superapp.perms.PermsGate
 import java.io.File
 
 /**
@@ -40,6 +41,8 @@ class VaultPlugin : Plugin() {
         private val DIRECT_ROOTS = listOf("/storage/emulated/0/")
         /** build.json::vault.open.store.authority */
         private const val STORE_AUTHORITY = "cld.termux.sharedstore"
+        /** The app that owns the store provider: its grants are this vault's helper grants (build.json::perms.helpers). */
+        private const val STORE_OWNER = "cld.termux"
         /** build.json::vault.limits.max_text_bytes */
         private const val MAX_TEXT = 5L * 1024 * 1024
         private const val MAX_BINARY = 25L * 1024 * 1024
@@ -274,12 +277,20 @@ class VaultPlugin : Plugin() {
         if (root.isEmpty()) return call.reject("No vault was given.", "NO_ROOT")
         try {
             body(root, backend(root))
-        } catch (e: Fail) {
-            call.reject(e.message ?: e.code, e.code)
-        } catch (e: SecurityException) {
-            call.reject("Access to this folder was revoked. Open the vault again.", "PERMISSION_DENIED")
         } catch (e: Exception) {
-            call.reject("${e.message ?: "unknown error"}", "IO_ERROR")
+            // #1360 a missing grant is named, never a generic error: the store route runs in cld.termux (its All files
+            // access), a plain path needs this app's own. The Perms page opens on the missing rows (the in-place prompt).
+            val missing = runCatching {
+                if (root.startsWith("store:")) PermsGate.prompt(context, emptyList(), STORE_OWNER, "vault")
+                else if (!root.startsWith("content:")) PermsGate.prompt(context, listOf("all_files"), null, "vault")
+                else null
+            }.getOrNull()
+            when {
+                missing != null -> call.reject(missing, "MISSING_PERMISSION")
+                e is Fail -> call.reject(e.message ?: e.code, e.code)
+                e is SecurityException -> call.reject("Access to this folder was revoked. Open the vault again.", "PERMISSION_DENIED")
+                else -> call.reject("${e.message ?: "unknown error"}", "IO_ERROR")
+            }
         }
     }
 

@@ -130,6 +130,14 @@ object PermStatusReader {
                     if (b == null) PermStatus(PermState.UNKNOWN) else bool(b <= UsageStatsManager.STANDBY_BUCKET_ACTIVE, "bucket $b")
                 }
             "appop" -> appop(ctx, e.appop)
+            "health_connect" -> Perms.declared(ctx).filter { it.startsWith("android.permission.health.") }.let { hp ->
+                val granted = hp.count { ctx.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+                when {
+                    hp.isEmpty() -> PermStatus(PermState.NOT_APPLICABLE, "no Health Connect data type in this app's manifest")
+                    Build.VERSION.SDK_INT < 34 -> PermStatus(PermState.UNKNOWN, "check it in the Health Connect app")
+                    else -> bool(granted == hp.size, "$granted of ${hp.size} data types allowed")
+                }
+            }
             "manual" -> PermStatus(PermState.UNKNOWN, "Android does not expose this: check it on the page")
             else -> if (e.permission.isNotEmpty()) bool(ctx.checkSelfPermission(e.permission) == PackageManager.PERMISSION_GRANTED, "only a shell can grant it")
                     else PermStatus(PermState.UNKNOWN)
@@ -161,9 +169,11 @@ object PermsSettings {
     const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
     const val EXTRA_SHOW_FRAGMENT_ARGS = ":settings:show_fragment_args"
 
-    /** The intents tried in order: Samsung component (on Samsung), the declared action, its fallbacks, App info. */
-    fun intents(ctx: Context, e: PermEntry, vars: Map<String, String> = Perms.vars(ctx)): List<Intent> {
-        val pkg = ctx.packageName
+    /**
+     * The intents tried in order: Samsung component (on Samsung), the declared action, its fallbacks, App info.
+     * [pkg] is the package whose grant the page changes: this app, or a helper app that does work for it (#1360).
+     */
+    fun intents(ctx: Context, e: PermEntry, vars: Map<String, String> = Perms.vars(ctx), pkg: String = ctx.packageName): List<Intent> {
         val t = e.settings ?: SettingsTarget(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri = true, highlightKey = "permission_settings")
         val key = t.highlightKey.replace(Regex("\\{([a-z0-9_]+)\\}")) { vars[it.groupValues[1]].orEmpty() }
         fun decorate(i: Intent, withData: Boolean): Intent = i.apply {
@@ -177,6 +187,7 @@ object PermsSettings {
             if (t.action == "android.app.action.ADD_DEVICE_ADMIN") ComponentName.unflattenFromString(vars["admin"].orEmpty())
                 ?.let { putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, it) }
             putExtra("android.provider.extra.APP_PACKAGE", pkg)
+            if (e.check == "health_connect") putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val out = ArrayList<Intent>()
@@ -193,8 +204,8 @@ object PermsSettings {
     }
 
     /** true = a page opened. */
-    fun open(ctx: Context, e: PermEntry): Boolean {
-        for (i in intents(ctx, e)) {
+    fun open(ctx: Context, e: PermEntry, pkg: String = ctx.packageName): Boolean {
+        for (i in intents(ctx, e, if (pkg == ctx.packageName) Perms.vars(ctx) else emptyMap(), pkg)) {
             if (runCatching { ctx.startActivity(i) }.isSuccess) return true
         }
         return false

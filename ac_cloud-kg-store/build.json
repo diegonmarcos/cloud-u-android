@@ -166,6 +166,7 @@
       "type": "library",
       "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
+    "libs:perms": {"dir": "../ab_cloud-libs-shared/libs/perms", "type": "library", "_doc": "#1360 the permission contract (libs:perms): Configs > General > Perms (AppPermsSection, linked by libs:ui-nav-bars), first run (PermsFirstRun), PermsGate, and the state provider helper apps are read through."},
     "libs:theme-background": {
       "dir": "../ab_cloud-libs-shared/libs/theme-background",
       "type": "library",
@@ -430,5 +431,11 @@
         }
       ]
     }
+  },
+  "perms": {
+    "_doc": "#1360 every grant this app needs, by libs:perms catalogue id (needs), and the fleet apps that do work for it with the grants THEY must hold (helpers). The ONE declaration: generated into assets/app-perms.json (cloud-android-perms-guard.py --write), drawn by Configs > General > Perms (libs:perms AppPermsSection) with live state, Grant / Open and Grant all, asked at first run (first_run), and reported as 'Missing permission X - Grant' when an operation fails (PermsGate). perms-guard fails when code uses a gated API or another app's engine that is not declared here, or when the manifest and this list disagree.",
+    "needs": [],
+    "helpers": [],
+    "first_run": "libs:perms"
   }
 }

@@ -295,13 +295,10 @@ public fun FleetAboutPage(decl: FleetConfigsDecl, c: ThemeColors) {
 @Composable
 private fun PermsSection(c: ThemeColors, tick: Int) {
     val ctx = LocalContext.current
-    val rows = remember(tick) { permissionRows(ctx) }
-    val runtime = rows.filter { it.dangerous }
-    if (runtime.isEmpty()) Body("This app asks for no runtime permission.", c)
-    runtime.forEach { r -> StatusRow(r.label, r.granted, c) }
-    val special = remember(tick) { specialAccess(ctx) }
-    special.forEach { (label, on) -> StatusRow(label, on, c) }
-    val normal = rows.count { !it.dangerous }
+    // #1360 the ONE shared section (libs:perms): every grant this app declares in build.json::perms (its own and its
+    // helper apps'), live state, Grant / Open per row and Grant all. Never a second list here.
+    com.diegonmarcos.superapp.perms.AppPermsSection(tick, com.diegonmarcos.superapp.perms.PermsStyle(ink = c.ink, dim = c.inkDim))
+    val normal = remember(tick) { permissionRows(ctx).count { !it.dangerous } }
     if (normal > 0) Text("$normal install-time permissions granted with the app.", color = c.inkDim, fontSize = 11.sp)
     ActionButton("Open app permissions", c, "fleetcfg_open_perms") { open(ctx, appDetails(ctx)) }
 }
@@ -317,13 +314,9 @@ private fun BatterySection(c: ThemeColors, tick: Int) {
         val restricted = remember(tick) { am.isBackgroundRestricted }
         StatusRow(if (restricted) "Background use restricted" else "Background use allowed", !restricted, c)
     }
-    val canAsk = remember { requested(ctx).contains(android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) }
     ActionButton(if (unrestricted) "Battery settings" else "Allow unrestricted battery", c, "fleetcfg_open_battery") {
-        open(
-            ctx,
-            if (!unrestricted && canAsk) Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName))
-            else Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-        )
+        // #1360 the exemption request (package-scoped when the manifest allows it) and its fallbacks live in libs:perms.
+        com.diegonmarcos.superapp.perms.Perms.catalogue(ctx).byId("battery_opt")?.let { com.diegonmarcos.superapp.perms.PermsSettings.open(ctx, it) }
     }
 }
 
@@ -344,7 +337,7 @@ private fun StorageSection(c: ThemeColors, tick: Int) {
         val all = remember(tick) { Environment.isExternalStorageManager() }
         StatusRow("All-files access", all, c)
         if (!all) ActionButton("Allow all-files access", c, "fleetcfg_open_allfiles") {
-            open(ctx, Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + ctx.packageName)))
+            com.diegonmarcos.superapp.perms.Perms.catalogue(ctx).byId("all_files")?.let { com.diegonmarcos.superapp.perms.PermsSettings.open(ctx, it) }
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -465,17 +458,8 @@ private fun permissionRows(ctx: Context): List<PermRow> {
     }.distinctBy { it.label }.sortedBy { it.label }
 }
 
-private fun specialAccess(ctx: Context): List<Pair<String, Boolean>> {
-    val req = requested(ctx)
-    val out = mutableListOf<Pair<String, Boolean>>()
-    if ("android.permission.SYSTEM_ALERT_WINDOW" in req) out += "Display over other apps" to Settings.canDrawOverlays(ctx)
-    if ("android.permission.MANAGE_EXTERNAL_STORAGE" in req && Build.VERSION.SDK_INT >= 30) out += "All-files access" to Environment.isExternalStorageManager()
-    if ("android.permission.REQUEST_INSTALL_PACKAGES" in req) out += "Install other apps" to ctx.packageManager.canRequestPackageInstalls()
-    return out
-}
-
 private fun appDetails(ctx: Context): Intent =
-    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null))
+    com.diegonmarcos.superapp.perms.PermsPages.appInfoIntent(ctx.packageName)
 
 private fun open(ctx: Context, url: String) {
     if (url.isNotBlank()) open(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))

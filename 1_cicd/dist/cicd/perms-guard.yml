@@ -1,0 +1,44 @@
+name: "perms guard — every permission an app's code needs is declared once, shown with Grant, asked at first run, and checked on the helper app that does the work"
+
+# WHY (#1360). Cloud Drive's git engine runs inside cld.termux; cld.termux had no All files access, so every clone and
+# sync failed with a generic error and nothing in Drive said which grant was missing. The same class showed elsewhere:
+# Nav queried UsageStatsManager without PACKAGE_USAGE_STATS (always empty), nix-on-droid and the C3 WebServer posted
+# notifications without POST_NOTIFICATIONS, and Configs > General > Perms listed manifest names with one App info
+# button. Every app now declares its grants in build.json::perms (own needs, helper apps and theirs, first run); libs:perms
+# draws them (AppPermsSection), asks them at first run (PermsFirstRun), reports a failure as "Missing permission X -
+# Grant" (PermsGate) and serves its own state to the apps it works for (PermsStateProvider). This guard fails when code
+# uses a permission-gated API or another app's engine without the declaration, when manifest and declaration disagree,
+# when the generated asset is stale, or when an app has needs and no page. Its mutation test proves each rule.
+#
+# Its own workflow and every push: the commit it has to catch can touch any app's code, manifest or build.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: perms-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
+jobs:
+  perms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The guard still fails for each way an app can lose a permission (mutation test)
+        run: bash 1_cicd/src/scripts/test/perms-guard.test.sh
+
+      - name: Every fleet app declares, shows and asks what its code needs
+        run: python3 1_cicd/src/scripts/cloud-android-perms-guard.py .
+
+      - name: The audit matrix (app x permission), for the run log
+        if: always()
+        run: python3 1_cicd/src/scripts/cloud-android-perms-guard.py . --matrix 2>/dev/null

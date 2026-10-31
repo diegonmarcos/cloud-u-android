@@ -203,6 +203,7 @@
       "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE from ab_cloud-libs-shared/libs/.",
       "dir": "../ab_cloud-libs-shared/libs/ui-nav-bars"
     },
+    "libs:perms": {"dir": "../ab_cloud-libs-shared/libs/perms", "type": "library", "_doc": "#1360 the permission contract (libs:perms): Configs > General > Perms (AppPermsSection, linked by libs:ui-nav-bars), first run (PermsFirstRun), PermsGate, and the state provider helper apps are read through."},
     "libs:core": {
       "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
       "_doc": "Pulled in by :libs:updater, which needs its NotificationStore to surface an install result. Also merges the signature-level CONSTELLATION_DATA permission into this app's manifest, which is what makes the constellation's same-key trust on by default.",
@@ -930,5 +931,15 @@
         }
       ]
     }
+  },
+  "perms": {
+    "_doc": "#1360 every grant this app needs, by libs:perms catalogue id (needs), and the fleet apps that do work for it with the grants THEY must hold (helpers). The ONE declaration: generated into assets/app-perms.json (cloud-android-perms-guard.py --write), drawn by Configs > General > Perms (libs:perms AppPermsSection) with live state, Grant / Open and Grant all, asked at first run (first_run), and reported as 'Missing permission X - Grant' when an operation fails (PermsGate). perms-guard fails when code uses a gated API or another app's engine that is not declared here, or when the manifest and this list disagree.",
+    "needs": [
+      "notifications",
+      "contacts_read",
+      "install_unknown"
+    ],
+    "helpers": [],
+    "first_run": "libs:perms"
   }
 }

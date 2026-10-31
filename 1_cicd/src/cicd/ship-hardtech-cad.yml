@@ -53,6 +53,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ad_Hardtech-CAD/**"
 permissions:
   contents: write

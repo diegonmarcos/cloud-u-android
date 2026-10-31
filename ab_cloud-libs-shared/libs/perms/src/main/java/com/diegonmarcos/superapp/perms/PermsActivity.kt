@@ -57,28 +57,14 @@ class PermsActivity : ComponentActivity() {
     override fun onResume() { super.onResume(); tick++ }
 
     @Composable
-    private fun Page(feature: String, ids: Set<String>, @Suppress("UNUSED_PARAMETER") tick: Int) {
-        val vars = Perms.vars(this)
-        val decl = Perms.declared(this)
-        val rows = rows(Perms.catalogue(this).entries, ids) { PermStatusReader.status(this, it, this, vars, decl) }
-        val askable = rows.filter { it.wanted && it.status.missing && it.entry.kind == PermKind.RUNTIME }.map { it.entry }
+    private fun Page(feature: String, ids: Set<String>, tick: Int) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(if (feature.isEmpty()) "Permissions" else "Permissions needed by $feature",
+            Text(
+                when (feature) { "" -> "Permissions"; FIRST_RUN -> "Before you start: grant what this app needs"; else -> "Permissions needed by $feature" },
                 style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag("perms:title"))
-            if (askable.isNotEmpty()) Button(onClick = { request(askable) }, modifier = Modifier.testTag("perms:grant-all")) { Text("Grant all needed") }
-            if (rows.isEmpty()) Text("This app needs no permission.")
-            for (r in rows) Row(Modifier.fillMaxWidth().testTag("perms:row:${r.entry.id}"), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(r.entry.label, fontWeight = if (r.wanted) FontWeight.Bold else FontWeight.Normal)
-                    Text(listOf(stateText(r.status.state), r.status.reason, r.entry.lookFor).filter { it.isNotBlank() }.joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall)
-                }
-                if (r.status.missing && r.entry.kind != PermKind.ADB_ONLY) {
-                    val dialog = r.entry.kind == PermKind.RUNTIME && r.status.state != PermState.PERMANENTLY_DENIED
-                    OutlinedButton(onClick = { if (dialog) request(listOf(r.entry)) else PermsSettings.open(this@PermsActivity, r.entry) },
-                        modifier = Modifier.testTag("perms:grant:${r.entry.id}")) { Text(if (dialog) "Grant" else "Open settings") }
-                }
-            }
+            // #1360 the one shared section: this app's declared grants and its helper apps', live, Grant / Open, Grant all.
+            AppPermsSection(tick, PermsStyle(ink = MaterialTheme.colorScheme.onSurface, dim = MaterialTheme.colorScheme.onSurfaceVariant), ids)
+            if (feature == FIRST_RUN) OutlinedButton(onClick = { finish() }, modifier = Modifier.testTag("perms:later")) { Text("Later") }
         }
     }
 
@@ -94,6 +80,8 @@ class PermsActivity : ComponentActivity() {
     companion object {
         const val EXTRA_FEATURE = "com.diegonmarcos.perms.FEATURE"
         const val EXTRA_IDS = "com.diegonmarcos.perms.IDS"
+        /** The feature name first run opens the page with (PermsFirstRun). */
+        const val FIRST_RUN = "first-run"
 
         fun intent(ctx: Context, feature: String, ids: Collection<String>): Intent =
             Intent(ctx, PermsActivity::class.java)

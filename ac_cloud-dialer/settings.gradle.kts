@@ -59,3 +59,6 @@ include(":libs:ui-nav-bars")
 project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
 include(":libs:theme-background")
 project(":libs:theme-background").projectDir = file("../ab_cloud-libs-shared/libs/theme-background")
+// #1360 libs:ui-nav-bars draws Configs > General > Perms with libs:perms (api dependency).
+include(":libs:perms")
+project(":libs:perms").projectDir = file("../ab_cloud-libs-shared/libs/perms")

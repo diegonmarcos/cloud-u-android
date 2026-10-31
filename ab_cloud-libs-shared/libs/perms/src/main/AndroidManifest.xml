@@ -10,5 +10,13 @@
             android:label="Permissions"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Material.NoActionBar" />
+        <!-- #1360 this app's own grants (build.json::perms.needs), read by the fleet apps it does work for (Cloud Drive and
+             Cloud Notes read cld.termux's All files access here). Read-only; only constellation apps (libs:core's
+             signature permission) can read it. Its onCreate also installs the first-run ask (PermsFirstRun). -->
+        <provider
+            android:name=".PermsStateProvider"
+            android:authorities="${applicationId}.perms"
+            android:exported="true"
+            android:readPermission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
     </application>
 </manifest>

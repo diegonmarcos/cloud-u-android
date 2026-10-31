@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- #1360 KeepAliveService's foreground notification is hidden on Android 13+ without it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- cloud-c3-webserver: build.json::runtime.serve_root is shared storage,
          readable at targetSdk 28 once this is granted. src-tauri/src/lib.rs
          asks for it at launch, from Rust, through the activity's JNI handle. -->

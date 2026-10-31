@@ -1,0 +1,149 @@
+{
+  "_doc": "#1360 policy of 1_cicd/src/scripts/cloud-android-perms-guard.py. signatures: a regex in an app's own src/main Kotlin/Java that only works with the catalogue id granted (P1). engines: code that makes ANOTHER fleet app do the work, so that app's grant is the one that matters (P4). not_android: apps whose build.json has an application_id but ship no Android manifest of their own. scan_skip: vendored subtrees whose code no build of this app compiles.",
+  "signatures": {
+    "all_files": [
+      "Environment\\.isExternalStorageManager\\(",
+      "Environment\\.getExternalStorageDirectory\\(",
+      "\"/storage/emulated/0",
+      "\"/sdcard/"
+    ],
+    "notifications": [
+      "NotificationCompat\\.Builder\\(",
+      "Notification\\.Builder\\("
+    ],
+    "usage_access": [
+      "\\bUsageStatsManager\\b",
+      "queryUsageStats\\("
+    ],
+    "notification_listener": [
+      ":\\s*NotificationListenerService\\(\\)",
+      "extends\\s+NotificationListenerService\\b"
+    ],
+    "accessibility": [
+      ":\\s*AccessibilityService\\(\\)",
+      "extends\\s+AccessibilityService\\b"
+    ],
+    "exact_alarm": [
+      "\\.setExactAndAllowWhileIdle\\(",
+      "\\.setExact\\(",
+      "\\.setAlarmClock\\("
+    ],
+    "install_unknown": [
+      "\\bPackageInstaller\\.Session\\b",
+      "canRequestPackageInstalls\\(",
+      "ACTION_INSTALL_PACKAGE\\b"
+    ],
+    "overlay": [
+      "TYPE_APPLICATION_OVERLAY"
+    ],
+    "camera": [
+      "ProcessCameraProvider",
+      "\\.openCamera\\(",
+      "\\bCamera\\.open\\("
+    ],
+    "microphone": [
+      "\\bAudioRecord\\(",
+      "\\bMediaRecorder\\(",
+      "SpeechRecognizer\\.createSpeechRecognizer"
+    ],
+    "fine_location": [
+      "\\.requestLocationUpdates\\(",
+      "\\.getLastKnownLocation\\(",
+      "FusedLocationProviderClient"
+    ],
+    "contacts_read": [
+      "\\.query\\(\\s*ContactsContract\\.(?:Contacts|CommonDataKinds\\.\\w+|Data|RawContacts|PhoneLookup)\\.\\w*(?:CONTENT_URI|CONTENT_FILTER_URI)"
+    ],
+    "calendar_read": [
+      "\\.query\\(\\s*CalendarContract\\.(?:Events|Calendars|Instances)\\.CONTENT_URI"
+    ],
+    "sms_read": [
+      "Telephony\\.Sms\\.\\w*CONTENT_URI",
+      "\"content://sms"
+    ],
+    "media_images": [
+      "\\.query\\(\\s*MediaStore\\.Images\\.Media\\.EXTERNAL_CONTENT_URI"
+    ],
+    "media_video": [
+      "\\.query\\(\\s*MediaStore\\.Video\\.Media\\.EXTERNAL_CONTENT_URI"
+    ],
+    "media_audio": [
+      "\\.query\\(\\s*MediaStore\\.Audio\\.Media\\.EXTERNAL_CONTENT_URI"
+    ],
+    "activity_recognition": [
+      "getDefaultSensor\\(\\s*Sensor\\.TYPE_STEP_(?:COUNTER|DETECTOR)\\s*\\)",
+      "ActivityRecognition\\.getClient\\("
+    ],
+    "body_sensors": [
+      "getDefaultSensor\\(\\s*Sensor\\.TYPE_HEART_RATE\\s*\\)"
+    ],
+    "write_settings": [
+      "Settings\\.System\\.put(?:Int|String|Long|Float)\\("
+    ],
+    "dnd_access": [
+      "\\.setInterruptionFilter\\("
+    ],
+    "vpn": [
+      ":\\s*VpnService\\(\\)",
+      "extends\\s+VpnService\\b"
+    ],
+    "health_connect": [
+      "HealthConnectClient\\.getOrCreate\\("
+    ]
+  },
+  "engines": {
+    "termux-exec": {
+      "package": "cld.termux",
+      "needs": [
+        "all_files"
+      ],
+      "why": "the git, rsync and shared-store engines run inside cld.termux; its own All files access decides whether they can touch shared storage",
+      "code": [
+        "\\bStoreExec\\b",
+        "\\bTermuxGitWire\\b",
+        "com\\.termux\\.RUN_COMMAND",
+        "\"cld\\.termux\\.sharedstore\"",
+        "\\bStoreAccess\\.\\w+\\(",
+        "\\bSharedStore\\.\\w+\\("
+      ]
+    }
+  },
+  "not_android": {
+    "_doc": "apps with an application_id whose Android tree is fetched from upstream at build time (no manifest in this repository): the guard cannot read them; their Perms page is the upstream app's own.",
+    "ac_cloud-code": "Acode, fetched upstream at build time: its manifest and permission asks are upstream's",
+    "ac_cloud-office": "Collabora Office, fetched upstream at build time (materialize): its manifest is upstream's"
+  },
+  "scan_skip": {},
+  "implied_by": {
+    "_doc": "a code need that another declared grant already covers",
+    "media_images": [
+      "all_files",
+      "storage_read"
+    ],
+    "media_video": [
+      "all_files",
+      "storage_read"
+    ],
+    "media_audio": [
+      "all_files",
+      "storage_read"
+    ],
+    "fine_location": [
+      "coarse_location"
+    ],
+    "storage_read": [
+      "all_files"
+    ]
+  },
+  "pending_page": {
+    "_doc": "#1360 Gradle apps whose own UI is a vendored fork or a non-Compose host that does not link libs:perms yet: their permissions are DECLARED (build.json::perms, checked P1-P4) but drawn by the fork's own screens. The list may only shrink (pending_page_max).",
+    "ac_cloud-camera": "fork (cld.camera / GrapheneOS Camera) asks camera, mic and location in its own flow; no fleet Configs page yet (#1352 pending)",
+    "ac_cloud-matrix": "Element X fork: every feature module asks its own permission through the fork's permission presenters",
+    "ac_cloud-vault": "Bitwarden fork: camera and autofill accessibility are asked by the fork's own onboarding screens",
+    "ac_cloud-wallet": "fork with its own camera ask for the card scanner; not on the shared Compose scaffold yet",
+    "ac_cloud-myterminal": "hub is a View-based SSH terminal; notifications and battery asked in its own settings screen",
+    "ac_cloud-c3-webserver": "Tauri host (src-tauri/gen/android): a WebView app with no Compose scaffold to host the section",
+    "ac_cloud-chat": "React Native (Mattermost) host: permissions are asked from JavaScript by the upstream screens"
+  },
+  "pending_page_max": 7
+}

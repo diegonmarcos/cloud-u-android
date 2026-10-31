@@ -58,6 +58,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-c3/**"
       - "!ac_cloud-c3/web/**"
