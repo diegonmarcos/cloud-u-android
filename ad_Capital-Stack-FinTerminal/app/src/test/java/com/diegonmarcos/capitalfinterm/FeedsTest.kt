@@ -103,12 +103,12 @@ class FeedsTest {
     }
 
     /** Real Cboe _DJX quote after the close (2026-10-31 capture): prev_day_close has rolled to the price, so the previous close
-     *  must come from price_change (-5.73, -1.1068 %), not from prev_day_close (which would read 0.00 / +0.00 %). */
+     *  must come from price_change (-5.73), not from prev_day_close (which would read 0.00 / +0.00 %). */
     @Test fun cboeAfterTheCloseTakesThePreviousCloseFromPriceChange() {
         val body = """{"timestamp": "2026-10-31 12:34:23", "data": {"symbol": "^DJX", "security_type": "index", "exchange_id": 5, "current_price": 517.7, "price_change": -5.73, "price_change_percent": -1.1068, "bid": 0.0, "ask": 0.0, "open": 523.84, "high": 523.84, "low": 515.64, "close": 517.7, "prev_day_close": 517.7, "volume": 0, "last_trade_time": "2026-10-30T16:47:53", "tick": "down"}, "symbol": "_DJX"}"""
         val q = Feeds.parse("cboe_quotes", body, opt(each = "_DJX")).points.single()
         assertEquals(523.43, q.prev!!, 1e-9)
-        assertEquals(-1.1068, (q.value / q.prev!! - 1.0) * 100.0, 5e-4)
+        assertEquals(-1.0947, (q.value / q.prev!! - 1.0) * 100.0, 5e-4) // % from the previous close; Cboe's price_change_percent (-1.1068) divides by the current price
         assertEquals(null, Feeds.cboePrev(517.7, null, 517.7))
         assertEquals(520.0, Feeds.cboePrev(517.7, null, 520.0)!!, 1e-9)
         val v1 = Feeds.parse("finterm_v1", """{"quotes":[{"symbol":"^DJX","price":517.7,"prev_close":517.7,"change":-5.73,"ts":"2026-10-30T16:47"},{"symbol":"^RUT","price":2400.0,"prev_close":2400.0}]}""", opt()).points
