@@ -193,6 +193,9 @@ jobs:
       # UNGATED on the publish gate (toolchain steps above included): the gate hashes build inputs and deliberately
       # leaves test sources out, so a push that only edits tests skips the gate; gating the suite on it meant a test-only
       # change never ran the tests it changed. The suite now runs on every Ship run; only build/publish stay gated.
+      # #1353 StoreGitFishShellTest runs the real cld.termux git scripts through fish, the guest's login shell.
+      - name: Install fish (the cld.termux guest login shell)
+        run: sudo apt-get install -y fish || { sudo apt-get update -y && sudo apt-get install -y fish; }
       - name: JVM unit tests (fatal on failure)
         working-directory: ${{ github.workspace }}
         env:

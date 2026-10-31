@@ -56,9 +56,7 @@ class StoreExec(private val ctx: Context) {
     fun job(script: String, stdin: String? = null, deadlineMs: Long = 30 * 60_000L): Result {
         val id = UUID.randomUUID().toString()
         val dir = "/root/${BuildConfig.STORE_DIR}/.jobs"
-        val start = "mkdir -p $dir && chmod 700 $dir && cat > $dir/$id.in && " +
-            "( nohup sh -c ${q("sh -c ${q(script)} < $dir/$id.in > $dir/$id.log 2>&1; echo \$? > $dir/$id.rc; rm -f $dir/$id.in")} >/dev/null 2>&1 & )"
-        val started = run(start, stdin ?: "")
+        val started = run(jobStart(script, dir, id), stdin ?: "")
         if (!started.ok) return started
         val until = System.currentTimeMillis() + deadlineMs
         while (System.currentTimeMillis() < until) {
@@ -78,9 +76,24 @@ class StoreExec(private val ctx: Context) {
 
         /**
          * cld.termux's login shell file (~/.termux/shell -> enter.sh) runs [script] inside the glibc
-         * root. Its -c goes to the user's login shell (fish by default), so the script is handed to
-         * sh explicitly: the commands here never depend on fish syntax.
+         * root. Its -c goes to root's LOGIN SHELL, which is fish (rootfs.json default_shell). fish does
+         * not parse sh quoting: inside '...' it reads \' as an escaped quote, so a script quoted twice
+         * (every [job]: clone, bare clone, sync, pull, push) was re-split by fish and refused
+         * ("fish: Unsupported use of '='") before sh ever ran, and every git job failed. The script
+         * therefore never reaches the login shell as text: it travels base64-encoded (alphabet
+         * A-Za-z0-9+/=, nothing any shell interprets) and the one line the login shell parses,
+         * `exec /bin/sh -c "$(echo B64 | base64 -d)"`, reads the same in fish (3.4+), bash, zsh and sh.
          */
-        fun guestWrap(script: String): String = "exec /system/bin/sh \"\$HOME/.termux/shell\" -c ${q("sh -c " + q(script))}"
+        fun guestWrap(script: String, termuxShell: String = "\$HOME/.termux/shell"): String =
+            "exec /system/bin/sh \"$termuxShell\" -c " + q(loginLine(script))
+
+        /** The line the guest's login shell runs: no quote character of [script] survives into it. */
+        fun loginLine(script: String): String =
+            "exec /bin/sh -c \"\$(echo " + java.util.Base64.getEncoder().encodeToString(script.toByteArray(Charsets.UTF_8)) + " | base64 -d)\""
+
+        /** The detached start of a [job]: stdin to <dir>/<id>.in, the script's output to .log, its exit code to .rc. */
+        fun jobStart(script: String, dir: String, id: String): String =
+            "mkdir -p $dir && chmod 700 $dir && cat > $dir/$id.in && " +
+                "( nohup sh -c ${q("sh -c ${q(script)} < $dir/$id.in > $dir/$id.log 2>&1; echo \$? > $dir/$id.rc; rm -f $dir/$id.in")} >/dev/null 2>&1 & )"
     }
 }

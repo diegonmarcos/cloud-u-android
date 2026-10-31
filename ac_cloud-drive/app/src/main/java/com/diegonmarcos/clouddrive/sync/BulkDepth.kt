@@ -81,7 +81,21 @@ object BulkDepth {
         val finished: Boolean get() = ended
         /** The outcome line of one repository, or null when this run did not touch it. */
         fun outcomeOf(name: String): String? = ok[name]?.let { "ok: $it" } ?: skipped[name]?.let { "skipped: $it" } ?: failed[name]?.let { "failed: $it" }
-        /** The report lines, skipped and failed first (what needs the owner), then ok. */
-        fun lines(): List<String> = skipped.map { "skipped ${it.key}: ${it.value}" } + failed.map { "failed ${it.key}: ${it.value}" } + ok.map { "ok ${it.key}: ${it.value}" }
+        /**
+         * The report, skipped and failed first (what needs the owner), then ok: ONE block per repository, never one wrapped
+         * sentence. Line 1 is the status and the repository name alone (literal text, never Markdown: `cloudy-___` stays
+         * `cloudy-___`), then the reason, then the git output tail, each indented on its own line.
+         */
+        fun lines(): List<String> = skipped.map { block("skipped", it.key, it.value) } + failed.map { block("failed", it.key, it.value) } + ok.map { block("ok", it.key, it.value) }
+    }
+
+    /** One report block: `<status> <name>`, then every non-blank line of [msg] (reason first, then the git output tail) indented. */
+    fun block(status: String, name: String, msg: String): String =
+        (listOf("$status  $name") + msg.lines().map { it.trimEnd() }.filter { it.isNotBlank() }.map { "    " + it.trim() }).joinToString("\n")
+
+    /** A failed git job's report message: the [summary] (with its exit code), then the last [n] lines of what git printed. */
+    fun withTail(summary: String, details: String, n: Int = 6): String {
+        val tail = details.lines().map { it.trimEnd() }.filter { it.isNotBlank() }.takeLast(n)
+        return if (tail.isEmpty()) "$summary\n(git printed nothing)" else summary + "\n" + tail.joinToString("\n")
     }
 }

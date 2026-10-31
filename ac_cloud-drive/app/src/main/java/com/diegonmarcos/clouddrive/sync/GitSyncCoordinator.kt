@@ -849,7 +849,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             cloning.update { it + t.name }
             val r = try { withContext(Dispatchers.IO) { cloneBlocking(t.name, t.url, t.authKind, t.username, t.token, "", action.depth) } } finally { cloning.update { it - t.name } }
             withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, RepoRegistry.idFor(SharedStore.repoDir(t.name).absolutePath), t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
-            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
+            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to (if (r.ok) r.summary else BulkDepth.withTail(r.summary, r.details))
         }
     }
 
@@ -924,7 +924,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 else StoreGit.bareClone(ctx, t.url, shell.route.guestOrThrow(item.path), t.token, action.depth)
             }
             withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, "bare:" + t.name, t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
-            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
+            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to (if (r.ok) r.summary else BulkDepth.withTail(r.summary, r.details))
         }
     }
 
