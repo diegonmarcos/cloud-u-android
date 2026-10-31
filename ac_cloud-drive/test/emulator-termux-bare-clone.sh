@@ -21,7 +21,8 @@ ipc() {
   local pkg="$1" op="$2" extras="" k v; shift 2
   for kv in "$@"; do
     k="${kv%%=*}"; v="${kv#*=}"
-    printf '%s' "$v" | adb shell "cat > /data/local/tmp/ipc_$k"
+    # content's KEY:TYPE:VALUE parser splits on every unescaped colon: \ and : are escaped (a URL has colons).
+    printf '%s' "$v" | sed 's/\\/\\\\/g; s/:/\\:/g' | adb shell "cat > /data/local/tmp/ipc_$k"
     extras="$extras --extra \"$k:s:\$(cat /data/local/tmp/ipc_$k)\""
   done
   adb shell "content call --uri content://$pkg.fleet --method fleet.ipc.v1 --arg $op$extras" 2>&1
