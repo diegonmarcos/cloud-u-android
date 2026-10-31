@@ -352,16 +352,19 @@ fun AvatarPage() {
                 }
             }
             Row(
-                Modifier.fillMaxWidth().background(BarBg).padding(horizontal = 10.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+                Modifier.fillMaxWidth().background(BarBg).padding(horizontal = 4.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                // one equal slot per category, so all nine fit a 360 dp phone (fixed 44 dp tiles pushed the last off-screen)
                 spec.categories.forEach { c ->
                     val on = c.id == catId
-                    Box(
-                        Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Color.Black else Color.Transparent)
-                            .clickable { catId = c.id; sheetOpen = true }.testTag(AvatarTags.category(c.id)),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(iconFor(c.icon), contentDescription = c.label, tint = Color.White, modifier = Modifier.size(28.dp)) }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Color.Black else Color.Transparent)
+                                .clickable { catId = c.id; sheetOpen = true }.testTag(AvatarTags.category(c.id)),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(iconFor(c.icon), contentDescription = c.label, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                    }
                 }
             }
         }

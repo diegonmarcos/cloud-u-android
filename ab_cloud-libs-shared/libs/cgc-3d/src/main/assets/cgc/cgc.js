@@ -265,8 +265,22 @@ export function createViewer(container, cfgIn = {}) {
 
   // #1373 at most cfg.fps frames a second (30 by default) and none while the page is hidden: the scene animates at 30 just as
   // well, and the other half of the GPU stays with the app's own UI.
-  const frameMs = 1000 / (cfg.fps || 30);
+  let frameMs = 1000 / (cfg.fps || 30);
   let lastDraw = 0;
+  // #1373 lite profile: a software rasteriser (SwiftShader / llvmpipe, the CI emulator, some old phones) or frames measured
+  // slow get DPR 1, no shadow pass and 15 fps, so the WebView's GPU fence never stalls the app's own frames (am_anr
+  // "Buffer processing hung up due to stuck fence" in the first avatar proof).
+  let lite = false, slow = 0;
+  function goLite(why) {
+    if (lite) return; lite = true;
+    renderer.setPixelRatio(1); renderer.shadowMap.enabled = false; key.castShadow = false; ground.visible = false;
+    frameMs = 1000 / 15; resize(); emit('quality', { lite: true, why });
+  }
+  try {
+    const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    if (/swiftshader|llvmpipe|softpipe|software/i.test(name)) goLite('software renderer: ' + name);
+  } catch (e) { /* no renderer string: the frame timer decides */ }
   function tick() {
     const now = performance.now();
     if (document.hidden || now - lastDraw < frameMs - 2) return;
@@ -275,7 +289,9 @@ export function createViewer(container, cfgIn = {}) {
     state.mixer && state.mixer.update(dt);
     state.vrm && state.vrm.update(dt);
     controls.update();
+    const t0 = performance.now();
     renderer.render(scene, camera);
+    if (!lite && state.model) { slow = performance.now() - t0 > 45 ? slow + 1 : 0; if (slow >= 4) goLite('slow frames'); }
   }
   renderer.setAnimationLoop(tick);
   resize();
@@ -294,6 +310,8 @@ export async function boot(config) {
   window.cgc = v;
   emit('ready', {});
   if (config && config.model && config.model.url) {
+    // the empty stage is presented first; the GLB is decoded and uploaded after that frame, never inside the page's first one
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     try { await v.load(config.model.url, config.model.kind); } catch (e) { emit('error', { where: 'load', message: String(e && e.message || e) }); }
   }
   return v;
