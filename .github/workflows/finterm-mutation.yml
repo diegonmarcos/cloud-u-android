@@ -26,7 +26,7 @@ jobs:
             ff-utc)          sed -i 's/OffsetDateTime.parse(raw).atZoneSameInstant(ZoneOffset.UTC)/OffsetDateTime.parse(raw).toZonedDateTime()/' $K/Feeds.kt ;;
             ff-importance)   sed -i 's/"high" -> 3; "medium" -> 2/"high" -> 2; "medium" -> 2/' $K/Feeds.kt ;;
             merge)           sed -i 's/                if (!merge) break/                break/' $K/Engine.kt ;;
-            container-first) sed -i 's/if (c.api != null \&\& p != null \&\& /if (false \&\& c.api != null \&\& p != null \&\& /' $K/Engine.kt ;;
+            container-first) sed -i 's/if (c.api != null \&\& p != null \&\& Catalog.str(p, "api").isNotEmpty()) {/if (c.api != null \&\& p != null \&\& Catalog.str(p, "api").isNotEmpty() \&\& false) {/' $K/Engine.kt ;;
             event-window)    sed -i 's/it.ts.take(10) in from..to \&\& it.importance >= min/it.importance >= min/' $K/Engine.kt ;;
             watchlist)       sed -i 's/if (Catalog.str(f, "each_user") == "watchlist" \&\& user.watchlist.isNotEmpty()) return user.watchlist/if (false) return user.watchlist/' $K/Engine.kt ;;
             alert-side)      sed -i 's/if (r.kind == ABOVE) it.value > r.level else it.value < r.level/if (r.kind == ABOVE) it.value < r.level else it.value > r.level/' $K/Alerts.kt ;;
