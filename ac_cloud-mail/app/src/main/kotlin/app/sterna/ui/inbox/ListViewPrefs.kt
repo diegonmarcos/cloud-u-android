@@ -26,11 +26,11 @@ internal enum class ListFilter {
 }
 
 /**
- * One folder's view choices. A null [group] or [rank] means "not chosen here": the global settings
- * (conversation view, sort order) apply, so a folder nobody touched looks exactly as it always did.
+ * One folder's view choices. A folder nobody touched groups By sender (the [group] default; a saved
+ * choice wins). A null [rank] means "not chosen here": the global sort order applies.
  */
 internal data class ListView(
-    val group: GroupMode? = null,
+    val group: GroupMode? = GroupMode.SENDER,
     val rank: RankMode? = null,
     val filters: Set<ListFilter> = emptySet(),
 ) {
@@ -54,7 +54,7 @@ internal data class ListView(
 
     /** Whether the three icon groups should read as active: any non-default choice is set. */
     fun viewModeActive(globalConversation: Boolean): Boolean =
-        effectiveGroup(globalConversation) != (if (globalConversation) GroupMode.SUBJECT else GroupMode.NONE)
+        effectiveGroup(globalConversation) != ListView().effectiveGroup(globalConversation)
 
     fun rankActive(globalSort: SortOrder): Boolean = effectiveSort(globalSort) != SortOrder.DATE_DESC
 
@@ -79,7 +79,7 @@ internal data class ListView(
             fun <T> pick(i: Int, parse: (String) -> T): T? =
                 parts.getOrNull(i)?.takeIf { it.isNotEmpty() }?.let { runCatching { parse(it) }.getOrNull() }
             return ListView(
-                group = pick(0) { GroupMode.valueOf(it) },
+                group = pick(0) { GroupMode.valueOf(it) } ?: ListView().group,
                 rank = pick(1) { RankMode.valueOf(it) },
                 filters = parts.getOrNull(2).orEmpty().split(',')
                     .mapNotNull { f -> runCatching { ListFilter.valueOf(f) }.getOrNull() }.toSet(),

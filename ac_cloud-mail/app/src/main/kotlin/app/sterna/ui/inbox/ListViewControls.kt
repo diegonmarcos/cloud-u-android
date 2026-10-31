@@ -34,7 +34,7 @@ internal enum class ListViewGroup(@StringRes val label: Int, val icon: ImageVect
 
 /** What the controls show: this view's effective choices, and whether each group is off its default. */
 internal data class ListViewUi(
-    val group: GroupMode = GroupMode.SUBJECT,
+    val group: GroupMode = GroupMode.SENDER,
     val rank: RankMode? = RankMode.NEWEST,
     val filters: Set<ListFilter> = emptySet(),
     val viewModeActive: Boolean = false,
