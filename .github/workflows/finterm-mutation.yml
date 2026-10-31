@@ -45,7 +45,7 @@ jobs:
             fin-spread)      sed -i 's/return if (bp) Math.round((x - y) \* 100.0).toDouble() else x - y/return if (bp) Math.round((y - x) * 100.0).toDouble() else x - y/' $K/FinLogic.kt ;;
             tbl-rebalance)   sed -i 's/maps\[k\]\[dates\[i - 1\]\]!!/maps[k][dates[0]]!!/' $K/Tables.kt ;;
             tbl-weights)     sed -i 's/have.sumOf { it.first \* it.second!! } \/ w/have.sumOf { it.second!! } \/ have.size/' $K/Tables.kt ;;
-            tbl-symbol-map)  sed -i 's/val m = route.optJSONObject("symbol_map") ?: return item/return item/' $K/Tables.kt ;;
+            tbl-symbol-map)  sed -i 's/return Catalog.str(m, item).ifEmpty { null }/return item/' $K/Tables.kt ;;
             tbl-forward)     sed -i 's/        if (forward) Forward.rate(curve, start, t)/        if (false) Forward.rate(curve, start, t)/' $K/Tables.kt ;;
             *) echo "unknown mutation"; exit 2 ;;
           esac
