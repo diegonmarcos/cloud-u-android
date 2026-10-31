@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
                 f.onWebPageFinished = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, chromeCollapse); com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
                 f.onOverlaysClosed = {
                     selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
-                    chromeCollapse?.onScrollDelta(-1f)
+                    chromeCollapse?.restore()
                 }
                 hostFragment = f
             }

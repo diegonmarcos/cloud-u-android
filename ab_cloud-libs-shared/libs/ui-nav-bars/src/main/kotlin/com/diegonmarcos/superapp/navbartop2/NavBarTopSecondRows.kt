@@ -47,7 +47,11 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
+import com.diegonmarcos.superapp.navbartop1.BelowAnchorFit
+import com.diegonmarcos.superapp.navbartop1.dropdownAnchor
+import com.diegonmarcos.superapp.navbartop1.dropdownBottomReservePx
+import com.diegonmarcos.superapp.navbartop1.dropdownMaxHeight
+import com.diegonmarcos.superapp.navbartop1.rememberDropdownAnchor
 import androidx.compose.ui.window.PopupProperties
 import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
@@ -72,8 +76,6 @@ public object SecondRowGroupTags {
     public const val DROPDOWN: String = "navtop2_group_dropdown"
 }
 
-/** The most the index dropdown grows before it scrolls (its list is plain rows, so the scroll is the only one in it). */
-public val SecondRowGroupDropdownMax: Dp = 320.dp
 
 /**
  * THE second top row of an app, in the mode its section declares (`ui.sections[].second_row`):
@@ -190,7 +192,9 @@ private fun GroupIndex(
     onGroupIndex: (NavGroup) -> Boolean = { false },
 ) {
     var open by remember { mutableStateOf(false) }
-    Box {
+    // The index grows to its list, capped at the room below it (NavDropdownSizing): no fixed height, scrolls only past the cap.
+    val anchor = rememberDropdownAnchor()
+    Box(Modifier.dropdownAnchor(anchor)) {
         Box(
             Modifier.width(width).height(height).clip(RoundedCornerShape(SecondRowSpec.TAB_RADIUS))
                 .clickable(role = Role.Button) { if (!onGroupIndex(group)) open = true }
@@ -199,13 +203,13 @@ private fun GroupIndex(
             contentAlignment = Alignment.Center,
         ) { Text(groupIndexText(group), color = ink, style = GroupLabelStyle, maxLines = 1, softWrap = false) }
         if (open) Popup(
-            popupPositionProvider = remember { BelowAnchor },
+            popupPositionProvider = dropdownBottomReservePx().let { r -> remember(r) { BelowAnchorFit(r) } },
             onDismissRequest = { open = false },
             properties = PopupProperties(focusable = true),
         ) {
             Surface(
                 color = surface, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
-                modifier = Modifier.width(240.dp).heightIn(max = SecondRowGroupDropdownMax).testTag(SecondRowGroupTags.DROPDOWN),
+                modifier = Modifier.width(240.dp).heightIn(max = dropdownMaxHeight(anchor)).testTag(SecondRowGroupTags.DROPDOWN),
             ) {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     group.pages.forEach { p ->
@@ -224,7 +228,3 @@ private fun GroupIndex(
     }
 }
 
-private object BelowAnchor : PopupPositionProvider {
-    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
-        IntOffset(anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)), anchorBounds.bottom)
-}

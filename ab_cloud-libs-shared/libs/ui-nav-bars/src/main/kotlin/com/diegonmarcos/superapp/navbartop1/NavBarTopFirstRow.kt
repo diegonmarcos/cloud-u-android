@@ -104,7 +104,6 @@ public object TopFirstRowSpec {
     /** The finite height bound the app's actions get inside the dropdown's own scroll: far more than a phone shows, so the dropdown scrolls them, and finite so their own scroll/LazyColumn cannot meet an infinite height. */
     public val ACTIONS_MAX_HEIGHT: Dp = 2000.dp
     public val DROPDOWN_WIDTH: Dp = 280.dp
-    public val DROPDOWN_MAX_HEIGHT: Dp = 520.dp
 
     /** The widest the title island may be on a row of [rowWidth]: what the right slot leaves. */
     public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT).coerceAtLeast(0.dp)
@@ -231,7 +230,8 @@ public fun NavBarTopFirstRow(
     ) {
         Box(Modifier.weight(1f).padding(start = TopFirstRowSpec.ISLAND_PAD_H / 2), contentAlignment = Alignment.CenterStart) {
             val shape = RoundedCornerShape(TopFirstRowSpec.ISLAND_RADIUS)
-            Box {
+            val anchor = rememberDropdownAnchor()
+            Box(Modifier.dropdownAnchor(anchor)) {
                 // The title box has NO fill and NO outline (NavTokens.topRowFill, transparent): the app's own background shows through.
                 Row(
                     Modifier.clip(shape).background(navTopRowFill(), shape)
@@ -254,7 +254,7 @@ public fun NavBarTopFirstRow(
                 // A Popup, not material's DropdownMenu: that sizes its content by INTRINSIC width, which a page's actions
                 // (a LazyColumn, BoxWithConstraints) cannot answer, and it crashed them.
                 if (open) Popup(
-                    popupPositionProvider = remember { BelowAnchor },
+                    popupPositionProvider = dropdownBottomReservePx().let { r -> remember(r) { BelowAnchorFit(r) } },
                     onDismissRequest = { open = false },
                     properties = PopupProperties(focusable = true),
                 ) {
@@ -262,7 +262,7 @@ public fun NavBarTopFirstRow(
                   Box(Modifier.semantics { testTagsAsResourceId = true }) {
                   Surface(
                     color = colors.island, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
-                    modifier = Modifier.width(TopFirstRowSpec.DROPDOWN_WIDTH).heightIn(max = TopFirstRowSpec.DROPDOWN_MAX_HEIGHT).testTag(TopFirstRowTags.DROPDOWN),
+                    modifier = Modifier.width(TopFirstRowSpec.DROPDOWN_WIDTH).heightIn(max = dropdownMaxHeight(anchor)).testTag(TopFirstRowTags.DROPDOWN),
                   ) {
                   Column(Modifier.verticalScroll(rememberScrollState())) {
                     // line 1: the path, each segment a tap to that ancestor
@@ -485,8 +485,3 @@ public fun BreadcrumbLeaf(text: String?) {
     }
 }
 
-/** The dropdown sits under the title, kept inside the window horizontally. */
-private object BelowAnchor : PopupPositionProvider {
-    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
-        IntOffset(anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)), anchorBounds.bottom)
-}

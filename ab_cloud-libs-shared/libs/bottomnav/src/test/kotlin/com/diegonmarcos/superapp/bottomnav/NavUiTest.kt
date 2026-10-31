@@ -177,4 +177,68 @@ class NavUiTest {
         assertEquals(declared, resolveNavUi(declared, store))
         assertEquals(declared, resolveNavUi(declared, null))
     }
+
+    // ── per-gesture scroll-hide: the touch that hid the bars cannot bring them back, only a new one can ──
+
+    private val hide = ChromeScrollPolicy.Hide
+
+    @Test fun `gesture step, a same-gesture reversal does not restore`() {
+        val hid = chromeGestureStep(hide, d, 30f, dragging = true, gesture = 4, latch = NO_GESTURE)
+        assertEquals(ChromeGestureStep(h, 4), hid)
+        assertEquals("finger still held, scrolling back up", ChromeGestureStep(h, 4), chromeGestureStep(hide, hid.state, -30f, true, 4, hid.latch))
+        assertEquals("that gesture's fling, upward", ChromeGestureStep(h, 4), chromeGestureStep(hide, h, -80f, false, 4, 4))
+    }
+
+    @Test fun `gesture step, release then a new upward gesture restores`() {
+        assertEquals(ChromeGestureStep(d, NO_GESTURE), chromeGestureStep(hide, h, -5f, true, gesture = 5, latch = 4))
+    }
+
+    @Test fun `gesture step, a new downward gesture keeps the bars hidden and takes the latch`() {
+        assertEquals(ChromeGestureStep(h, 5), chromeGestureStep(hide, h, 12f, true, gesture = 5, latch = 4))
+        assertEquals("and its own reversal cannot restore either", ChromeGestureStep(h, 5), chromeGestureStep(hide, h, -12f, true, 5, 5))
+    }
+
+    @Test fun `gesture step, other policies keep no latch`() {
+        assertEquals(ChromeGestureStep(d, NO_GESTURE), chromeGestureStep(ChromeScrollPolicy.Shrink, h, -5f, true, 4, 4))
+        assertEquals(ChromeGestureStep(h, NO_GESTURE), chromeGestureStep(ChromeScrollPolicy.Shrink, d, 5f, true, 4, NO_GESTURE))
+        assertEquals(ChromeGestureStep(d, NO_GESTURE), chromeGestureStep(ChromeScrollPolicy.Pinned, d, 5f, true, 4, NO_GESTURE))
+    }
+
+    @Test fun `connection with a watched finger, same touch reversal stays hidden, a new touch up restores`() {
+        val c = BottomNavCollapse().apply { policy = hide }
+        c.onFinger(true); c.onDragDelta(40f)
+        assertEquals(h, c.state)
+        c.onGestureUp(); c.onScrollDelta(-40f)
+        assertEquals("held finger scrolled back up", h, c.state)
+        c.onFinger(false); c.onRelease(); c.onScrollDelta(-60f)
+        assertEquals("the fling of the same gesture", h, c.state)
+        c.onFinger(true); c.onDragDelta(25f)
+        assertEquals("a new downward gesture keeps them hidden", h, c.state)
+        c.onFinger(false); c.onRelease()
+        c.onFinger(true); c.onGestureUp()
+        assertEquals("a new upward gesture restores", d, c.state)
+    }
+
+    @Test fun `connection through nested scroll, the same drag reversed stays hidden, the next drag up restores`() {
+        val c = BottomNavCollapse().apply { policy = hide }
+        val finger = androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput
+        val fling = androidx.compose.ui.input.nestedscroll.NestedScrollSource.Fling
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, -30f), finger)
+        assertEquals(h, c.state)
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, 30f), finger)
+        assertEquals("same drag, back up", h, c.state)
+        c.onRelease() // what onPreFling does when the finger lifts and throws
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, 30f), fling)
+        assertEquals("its fling, up", h, c.state)
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, 30f), finger)
+        assertEquals("a new drag up", d, c.state)
+    }
+
+    @Test fun `a programmatic restore clears the latch`() {
+        val c = BottomNavCollapse().apply { policy = hide }
+        c.onFinger(true); c.onDragDelta(40f); c.restore()
+        assertEquals(d, c.state)
+        c.onDragDelta(10f); c.onGestureUp()
+        assertEquals("the same held touch hid them again, so it still cannot restore", h, c.state)
+    }
 }

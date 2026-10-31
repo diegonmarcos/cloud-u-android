@@ -9,7 +9,7 @@ for each, checks what the owner keeps finding by hand:
   P2 the first row's title dropdown (the breadcrumb) opens, lists the page, and closes again.
   P3 drag up on the content and HOLD the finger down: if the page scrolled the chrome MUST be HIDDEN (first row, second
      row and bottom bar all gone). SCROLL-HIDE (Configs > UI, on by default): lifting the finger changes nothing, every
-     bar STAYS gone until an upward scroll. Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved,
+     bar STAYS gone until an upward scroll of a NEW gesture: reversing the SAME held touch must leave them away. Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved,
      nothing hidden) is reported `fixed` and only has to leave the chrome intact: a page that scrolls but leaves the chrome
      showing FAILS. The walk pins the nav mode to Classic (the global setting cloud_nav_ui_mode, read by the lib's NavUiPrefs):
      it drives the pages through the Classic title dropdown, which Clean mode (Cloud Notes' default) replaces by the drawer.
@@ -622,6 +622,14 @@ class Walk:
         else:
             if self.has_pages(section) and not findall(dd, ENTRY):
                 fails.append("P2 the dropdown opened with no page entries")
+            # the dropdown grows to its list, capped at the room below its anchor (NavDropdownSizing): never past the screen's bottom
+            box = find(dd, DROPDOWN)
+            if box is not None:
+                checks["dropdown_h"] = box.h
+                if box.b > self.h:
+                    fails.append("P2 the dropdown runs off the screen (bottom %d > %d)" % (box.b, self.h))
+            if section in self.shots:
+                self.evidence("dropdown_open_%s_%s" % (section, pid or label))
             if not self.close_dropdown():
                 fails.append("P2 the dropdown did not close on Back")
             elif not self.foreground() or not self.alive():
@@ -681,8 +689,24 @@ class Walk:
                 break
             motion("UP", x, y2)
             settle(2.0)
-        motion("UP", x, y2)
+        # PER GESTURE: the touch that hid the bars cannot bring them back. Still holding the same finger, drag back DOWN the screen
+        # (an upward scroll); every bar must stay away. Only a NEW gesture (finger lifted, then an upward swipe, below) restores them.
+        lift_y = y2
+        if gone:
+            for i in range(1, 5):
+                motion("MOVE", x, y2 + (y1 - y2) * i // 8)
+                time.sleep(0.05)
+            lift_y = y2 + (y1 - y2) // 2
+            settle(1.2)
+            rev = dump() or []
+            r0 = self.chrome(rev)
+            checks["same_gesture"] = "hidden"
+            if r0["row"] or find(rev, ISLAND) is not None or r0["items"] or find(rev, STRIP) is not None or r0["tabs"]:
+                checks["same_gesture"] = "FAIL"
+                fails.append("P3 per-gesture: scrolling back up within the SAME held touch brought the bars back (only a new gesture may)")
+        motion("UP", x, lift_y)
         settle(0.5)
+        # a NEW downward gesture (lifted first): the bars stay hidden
         swipe(x, y1, y2)
         settle(1.2)
         self.hide_ime()   # a long press in a text page may raise the keyboard, which hides the bar by design
@@ -720,6 +744,7 @@ class Walk:
                 fails.append("P3 scroll-hide: after the finger lifted the bottom bar came back (every bar stays away until an upward scroll)")
             if find(nodes2, STRIP) is not None or after["tabs"]:
                 fails.append("P3 scroll-hide: after the finger lifted the second row came back (every bar stays away until an upward scroll)")
+            # a NEW upward gesture restores: each swipe is its own touch (input swipe lifts the finger between them)
             for _ in range(3):
                 swipe(x, y2, y1)
                 settle(0.5)

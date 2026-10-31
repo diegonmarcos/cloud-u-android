@@ -72,17 +72,17 @@ public object ChromeWebScroll {
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { touched = true; readingUp = false; fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
+                MotionEvent.ACTION_DOWN -> { target?.onFinger(true); touched = true; readingUp = false; fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
                 // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
                 // (it sits at its top, or the scroller is an inner container the bridge cannot see).
                 MotionEvent.ACTION_MOVE -> {
-                    if (e.y - lastY > SLOP) { target?.onScrollDelta(-1f); dragged = false }
+                    if (e.y - lastY > SLOP) { target?.onGestureUp(); dragged = false }
                     // A finger travelling UP over a page that can scroll reads down it: hide the chrome now, from the gesture itself, so a
                     // scroll event that arrives late (a loaded emulator, a WebView page that scrolls an inner container) cannot leave it standing.
                     if (!dragged && downY - e.y > 2 * SLOP && (v.canScrollVertically(1) || innerScrollable)) { dragged = true; target?.onDragDelta(1f) }
                     lastY = e.y
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { readingUp = e.y - downY > SLOP; fingerDown = false; target?.onRelease() }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { readingUp = e.y - downY > SLOP; fingerDown = false; target?.onFinger(false); target?.onRelease() }
             }
             return false
         }

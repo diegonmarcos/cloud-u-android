@@ -187,6 +187,29 @@ public fun chromeScrollReleaseStep(policy: ChromeScrollPolicy, state: ChromeScro
     ChromeScrollPolicy.Hide -> state
 }
 
+/** No gesture holds the bars hidden ([ChromeGestureStep.latch]). */
+public const val NO_GESTURE: Int = -1
+
+/** [chromeGestureStep]'s result: the new [state], and the gesture that hid the bars ([latch], [NO_GESTURE] = none). */
+public data class ChromeGestureStep(val state: ChromeScrollState, val latch: Int)
+
+/**
+ * [chromeScrollStep] with PER-GESTURE memory, under [ChromeScrollPolicy.Hide]: the touch that scrolls down and hides the bars
+ * ([gesture]) is latched, and NO upward delta of that same gesture brings them back, neither while the finger is held nor in the
+ * fling it throws (a fling is part of the gesture that threw it). Only a NEW gesture (finger lifted, then down again: a new
+ * [gesture] id) restores them, on its first upward scroll; a new downward gesture keeps them hidden. Other policies are unchanged.
+ */
+public fun chromeGestureStep(policy: ChromeScrollPolicy, state: ChromeScrollState, delta: Float, dragging: Boolean, gesture: Int, latch: Int): ChromeGestureStep {
+    if (policy == ChromeScrollPolicy.Hide && delta < 0f && latch != NO_GESTURE && latch == gesture) return ChromeGestureStep(state, latch)
+    val next = chromeScrollStep(policy, state, delta, dragging)
+    val held = when {
+        policy != ChromeScrollPolicy.Hide || next == ChromeScrollState.Default -> NO_GESTURE
+        delta > 0f && next == ChromeScrollState.Hidden -> gesture
+        else -> latch
+    }
+    return ChromeGestureStep(next, held)
+}
+
 /** A host's override of the scroll policy (a test); null = the policy of the settings in force. */
 public val LocalChromeScrollPolicy = staticCompositionLocalOf<ChromeScrollPolicy?> { null }
 

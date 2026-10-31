@@ -106,7 +106,9 @@ class NavBarTopSecondRowsTest {
         compose.onNodeWithTag(SecondRowGroupTags.index("plan")).performClick()
         compose.onNodeWithTag(SecondRowGroupTags.DROPDOWN).assertIsDisplayed()
         val h = compose.onNodeWithTag(SecondRowGroupTags.DROPDOWN).fetchSemanticsNode().boundsInRoot.height
-        assertTrue("the 12-page index is height-bounded: $h", h <= SecondRowGroupDropdownMax.value + 1f)
+        // grows to its 12 rows past the old fixed 320dp cap, and stays inside the 640dp window (NavDropdownSizing)
+        assertTrue("the 12-page index grows to its list: $h", h > 320f)
+        assertTrue("the 12-page index stays inside the window: $h", h <= 640f - 16f)
         compose.onNodeWithTag(SecondRowGroupTags.item("a3")).performScrollTo().performClick()
         assertEquals("a3", picked?.id)
         compose.onNodeWithTag(SecondRowGroupTags.DROPDOWN).assertDoesNotExist()

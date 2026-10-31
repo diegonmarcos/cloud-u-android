@@ -495,12 +495,27 @@ public class BottomNavCollapse : NestedScrollConnection {
     public val firstRowVisible: Boolean get() = state == ChromeScrollState.Default
 
     /** A host that measures its own scroll (a WebView's scroll-change listener): [delta] > 0 is the content travelling UP the screen (reading down). With the touch watched ([onFinger]) a finger-down read is a drag (HIDDEN), else it settles to SHRUNK. */
-    public fun onScrollDelta(delta: Float) { state = chromeScrollStep(policy, state, delta, dragging = fingerTracked && fingerDown) }
+    public fun onScrollDelta(delta: Float) { step(delta, dragging = fingerTracked && fingerDown, starts = !fingerTracked && delta < 0f) }
 
     /** A host that knows its finger state (a View shell with a touch listener) feeds the drag and the release itself. */
-    public fun onDragDelta(delta: Float) { state = chromeScrollStep(policy, state, delta, dragging = true) }
+    public fun onDragDelta(delta: Float) { step(delta, dragging = true, starts = !fingerTracked) }
 
-    public fun onRelease() { state = chromeScrollReleaseStep(policy, state) }
+    /** The finger lifted: the gesture ends (its fling still belongs to it), the next scroll by a finger starts a new one. */
+    public fun onRelease() { state = chromeScrollReleaseStep(policy, state); awaitingGesture = true }
+
+    // Per-gesture memory ([chromeGestureStep]): the id of the touch in progress, and the one that hid the bars. With the touch
+    // watched ([onFinger]) a finger-down starts a gesture; without a watcher, the first scroll after a release does (a host that
+    // reports neither finger nor source ([onScrollDelta]) treats a downward scroll after the release as that gesture's fling and an upward
+    // one as a new touch; the nested-scroll path knows: a Fling source never starts one).
+    private var gesture = 0
+    private var latch = NO_GESTURE
+    private var awaitingGesture = true
+
+    private fun step(delta: Float, dragging: Boolean, starts: Boolean = false) {
+        if (starts && awaitingGesture && delta != 0f) { gesture++; awaitingGesture = false }
+        val r = chromeGestureStep(policy, state, delta, dragging, gesture, latch)
+        state = r.state; latch = r.latch
+    }
 
     // Once a host watches the raw touch ([onFinger]), a scroll counts as a DRAG only while the finger is down: a scroll a service
     // injects (an accessibility action, a test's semantics scroll) arrives as "user input" with no finger and must not hide the bars for good.
@@ -508,22 +523,30 @@ public class BottomNavCollapse : NestedScrollConnection {
     private var fingerDown = false
 
     /** The host's touch watcher: the finger went [down] on the page, or lifted. */
-    public fun onFinger(down: Boolean) { fingerTracked = true; fingerDown = down }
+    public fun onFinger(down: Boolean) {
+        fingerTracked = true
+        if (down && !fingerDown) { gesture++; awaitingGesture = false }
+        fingerDown = down
+    }
 
-    /** A scroll UP by any means: everything comes back. */
-    public fun restore() { state = ChromeScrollState.Default }
+    /** The finger travelled DOWN the screen (reads up): restores the bars, unless this same gesture hid them ([chromeGestureStep]). */
+    public fun onGestureUp() { step(-1f, dragging = true) }
+
+    /** A programmatic restore (a new page, an overlay closed): everything comes back, whatever gesture hid the bars. */
+    public fun restore() { state = ChromeScrollState.Default; latch = NO_GESTURE }
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         // Negated: a nested-scroll y goes negative as the content travels down, which is the same
         // gesture a View shell measures as a RISING scroll offset. One rule, [chromeScrollOnDelta], so the
         // Compose and View hosts cannot collapse on different definitions (#673). A finger-driven scroll is a drag; a fling/settle is not.
-        state = chromeScrollStep(policy, state, -available.y, dragging = source == NestedScrollSource.UserInput && (!fingerTracked || fingerDown))
+        val byFinger = source == NestedScrollSource.UserInput
+        step(-available.y, dragging = byFinger && (!fingerTracked || fingerDown), starts = byFinger && !fingerTracked)
         return Offset.Zero
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
         // The finger is up: HIDDEN settles to SHRUNK (the fling then keeps it there), DEFAULT stays DEFAULT.
-        state = chromeScrollReleaseStep(policy, state)
+        onRelease()
         return Velocity.Zero
     }
 }

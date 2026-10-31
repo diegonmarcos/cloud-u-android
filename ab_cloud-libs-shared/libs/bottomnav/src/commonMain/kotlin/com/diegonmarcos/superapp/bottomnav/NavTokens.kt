@@ -120,6 +120,11 @@ public data class NavTokens(
     /** The focus ring on a light strip. The dark strip rings in the pill's own ink; on a light page
      *  the selected pill's white ink would vanish against the page, so the light strip has its own. */
     val tabsLightFocusRing: Color = Color(0xFF1D1B20),
+    // ── the page-list dropdown (the first row's title menu, a group's index menu): sized by [NavDropdownSizing] ──
+    /** Kept clear between the dropdown's bottom and the window's bottom system bar, so it never reaches the screen edge. */
+    val dropdownScreenMargin: Dp = 16.dp,
+    /** The least height the dropdown gets when its anchor sits low (landscape, split screen): a few rows always show. */
+    val dropdownMinHeight: Dp = 96.dp,
 ) {
     /** The strip's colours on [surface]. Only ever these tokens: an app picks a surface, never a colour. */
     public fun tabColors(surface: TabSurface): TabColors = when (surface) {

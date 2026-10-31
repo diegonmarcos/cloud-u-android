@@ -78,7 +78,8 @@ public fun ChromeBarVisibility(
  * The chrome's scroll wiring for the box that holds the page: the nested-scroll connection, plus a watcher of the raw touch that
  * consumes nothing. The watcher is what makes the machine independent of how a page scrolls (a Fragment, a WebView, a View list):
  * the finger LIFTING is the release (HIDDEN becomes SHRUNK), and a finger dragging DOWN the screen is a scroll up, which restores
- * DEFAULT even when the page has nothing left to scroll and so reports no delta.
+ * DEFAULT even when the page has nothing left to scroll and so reports no delta, but only on a NEW gesture: the touch that hid the
+ * bars cannot bring them back (chromeGestureStep); the finger must lift first.
  */
 public fun Modifier.chromeScroll(collapse: BottomNavCollapse): Modifier =
     this.nestedScroll(collapse).pointerInput(collapse) {
@@ -96,7 +97,7 @@ public fun Modifier.chromeScroll(collapse: BottomNavCollapse): Modifier =
                     else -> {
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX
-                        if (dy > slop && dy > kotlin.math.abs(dx)) collapse.restore()
+                        if (dy > slop && dy > kotlin.math.abs(dx)) collapse.onGestureUp()
                     }
                 }
             }
