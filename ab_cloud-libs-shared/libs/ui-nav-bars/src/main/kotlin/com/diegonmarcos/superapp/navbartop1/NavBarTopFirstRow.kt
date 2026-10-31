@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -463,11 +465,17 @@ public fun NavBarTopFirstRowScaffold(
       // The first row is transparent (NavTokens.topRowFill), so without an underlay it showed the HOST WINDOW's background: a
       // WebView app (Cloud Contacts, Cloud Me) leaves the default light Material window there, and the row's white ink and the
       // status icons went white-on-white, worst with the page dropdown open. The scaffold paints [topChromeUnderlay] behind the
-      // status-bar band (above the host's statusBarsPadding, so drawn outside these bounds) and behind the first row; the page
+      // status-bar band (the window's top inset, inside or above these bounds) and behind the first row; the page
       // area keeps whatever the app paints.
       val underlay = topChromeUnderlay(dark)
       val statusTop = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
-      Box(Modifier.drawBehind { if (statusTop > 0f) drawRect(underlay, Offset(0f, -statusTop), Size(size.width, statusTop)) }, propagateMinConstraints = true) {
+      // The band is the WINDOW's top statusTop px, wherever this box sits: a host padding inside the modifier puts the box at 0, one padding outside puts it below the band.
+      var windowY by remember { mutableStateOf(0f) }
+      Box(
+          Modifier.onGloballyPositioned { windowY = it.positionInWindow().y }
+              .drawBehind { if (statusTop > 0f) drawRect(underlay, Offset(0f, -windowY), Size(size.width, statusTop)) },
+          propagateMinConstraints = true,
+      ) {
         AppTopBarScaffold(
             decl = TopBarDecl(drawer = plan.hamburger, settings = TopBarSettings.KNOWN, inlineActions = true),
             drawerOverride = if (plan.hamburger) cleanDrawerBody else null,
