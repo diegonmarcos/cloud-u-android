@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.capitalfinterm.FinFormat
 import com.diegonmarcos.capitalfinterm.FinLogic
 import com.diegonmarcos.capitalfinterm.FinLogic.Col
@@ -102,9 +103,9 @@ fun FinTable(
         val link = links.getOrNull(r).orEmpty()
         val mod = Modifier.width(w).padding(horizontal = 8.dp)
         when {
-            i == 0 && link.isNotEmpty() -> Text(FinLogic.cell(raw), mod, color = p.accent, style = FinType.body.copy(fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            i == 0 && link.isNotEmpty() -> Text(FinLogic.cell(raw), mod, color = p.accent, style = FinType.body.copy(fontSize = 12.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             t == Col.TEXT || t == Col.LINK -> Text(FinLogic.cell(raw), mod, color = if (FinLogic.missing(raw)) p.text3 else p.text,
-                style = FinType.body.copy(fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                style = FinType.body.copy(fontSize = 12.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             t == Col.DATE -> Text(FinLogic.cell(raw), mod, color = p.text2, style = FinType.caption, textAlign = TextAlign.End, maxLines = 1)
             t == Col.CHG || t == Col.PCT -> {
                 val s = FinLogic.change(raw)
@@ -185,7 +186,7 @@ fun FinNewsList(panelId: String, rows: List<List<String>>, links: List<String>, 
                 verticalAlignment = Alignment.Top) {
                 val mono = (rest.firstOrNull { it.any(Char::isLetter) } ?: r.firstOrNull().orEmpty()).take(2).uppercase(Locale.ROOT)
                 Box(Modifier.size(20.dp).background(p.surfaceRaised, androidx.compose.foundation.shape.RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
-                    Text(mono, color = p.text2, style = FinType.caption.copy(fontSize = androidx.compose.ui.unit.TextUnit(9f, androidx.compose.ui.unit.TextUnitType.Sp)))
+                    Text(mono, color = p.text2, style = FinType.caption.copy(fontSize = 9.sp))
                 }
                 Column(Modifier.weight(1f).padding(start = 10.dp)) {
                     Text(FinLogic.cell(r.firstOrNull()), color = p.text, style = FinType.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
