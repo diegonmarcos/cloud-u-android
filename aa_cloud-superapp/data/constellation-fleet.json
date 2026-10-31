@@ -16,7 +16,7 @@
 {"id":"inboxes","label":"Inboxes","members":["mail","chat","matrix","dialer","news"]},
 {"id":"tools-primary","label":"Tools Primary","members":["browser","nav","camera","calc","keyboard","writer","wallet","vault"]},
 {"id":"data-apps","label":"Data Apps","members":["drive","tasks","contacts","notes","office","gallery","media-center"]},
-{"id":"me","label":"Me","members":["account","me"]},
+{"id":"me","label":"Me","members":["me","account"]},
 {"id":"agi","label":"AGI","members":["superintel","search","code","kg-store","tools-small-llms","myterminal","nix-on-droid"]},
 {"id":"lnktree","label":"Lnktree","members":["aa_cloud-superapp","cg-omniverse","capital-stack-finterminal","hardtech-cad","hardtech-sim2real"]},
 {"id":"configs","label":"Configs","members":["store","c3"]},
