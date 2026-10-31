@@ -198,7 +198,14 @@
    "CC=F": "no key-free daily source for cocoa futures and no listed US ETF proxy",
    "LE=F": "no key-free daily source for live cattle futures and no listed US ETF proxy",
    "EMFN": "no such listed ETF on Cboe (no US-listed EM financials sector ETF)",
-   "EMIT": "no such listed ETF on Cboe (no US-listed EM information technology sector ETF)"
+   "EMIT": "no such listed ETF on Cboe (no US-listed EM information technology sector ETF)",
+   "EMCD": "no such listed ETF on Cboe (no US-listed EM consumer discretionary sector ETF)",
+   "EMEN": "no such listed ETF on Cboe (no US-listed EM energy sector ETF)",
+   "EMIN": "no such listed ETF on Cboe (no US-listed EM industrials sector ETF)",
+   "EMMT": "no such listed ETF on Cboe (no US-listed EM materials sector ETF)",
+   "EMUT": "no such listed ETF on Cboe (no US-listed EM utilities sector ETF)",
+   "EMRE": "no such listed ETF on Cboe (no US-listed EM real estate sector ETF)",
+   "EMCM": "no such listed ETF on Cboe (no US-listed EM communication services sector ETF)"
   },
   "extra": [
    {
