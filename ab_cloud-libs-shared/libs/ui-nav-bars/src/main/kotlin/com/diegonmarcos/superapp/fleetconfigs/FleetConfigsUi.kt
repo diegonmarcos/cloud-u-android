@@ -155,14 +155,14 @@ internal fun ActionButton(label: String, c: ThemeColors, tag: String, onClick: (
 
 // ── device state ────────────────────────────────────────────────────────────────────────────────────────────────
 
-private data class PermRow(val label: String, val granted: Boolean, val dangerous: Boolean)
+internal data class PermRow(val label: String, val granted: Boolean, val dangerous: Boolean)
 
 private fun packageInfo(ctx: Context): PackageInfo? =
     runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS) }.getOrNull()
 
-private fun requested(ctx: Context): List<String> = packageInfo(ctx)?.requestedPermissions?.toList().orEmpty()
+internal fun requested(ctx: Context): List<String> = packageInfo(ctx)?.requestedPermissions?.toList().orEmpty()
 
-private fun permissionRows(ctx: Context): List<PermRow> {
+internal fun permissionRows(ctx: Context): List<PermRow> {
     val info = packageInfo(ctx) ?: return emptyList()
     val names = info.requestedPermissions ?: return emptyList()
     val flags = info.requestedPermissionsFlags
@@ -209,7 +209,7 @@ internal fun launchApp(ctx: Context, pkg: String) {
     if (launch != null) open(ctx, launch) else open(ctx, "https://github.com/diegonmarcos/cloudy-u-android/releases/latest")
 }
 
-private fun dirSize(f: File?): Long {
+internal fun dirSize(f: File?): Long {
     if (f == null || !f.exists()) return 0L
     var total = 0L
     var seen = 0
@@ -220,7 +220,7 @@ private fun dirSize(f: File?): Long {
     return total
 }
 
-private fun human(bytes: Long): String {
+internal fun human(bytes: Long): String {
     val units = listOf("B", "KB", "MB", "GB")
     var v = bytes.toDouble()
     var u = 0

@@ -332,7 +332,7 @@ private fun LanguageSection(c: ThemeColors, tick: Int) {
     ActionButton("Change language", c, "fleetcfg_open_language") {
         com.diegonmarcos.superapp.perms.PermsPages.open(ctx, com.diegonmarcos.superapp.perms.PermsPages.languageIntent(ctx.packageName))
     }
-}}
+}
 
 
 /** Update: what is installed, Check for updates against the app's Cloud Store release, the latest build, Update, release notes. */
