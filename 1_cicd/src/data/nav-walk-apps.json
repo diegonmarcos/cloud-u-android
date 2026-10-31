@@ -127,6 +127,12 @@
       "ship": "ship-cloud-gallery.yml",
       "artifact": "Cloud-Gallery-",
       "asset": "Cloud-Gallery"
+    },
+    {
+      "app": "ad_Capital-Stack-FinTerminal",
+      "ship": "ship-capital-stack-finterminal.yml",
+      "artifact": "Capital-Stack-FinTerminal-",
+      "asset": "Capital-Stack-FinTerminal"
     }
   ]
 }
