@@ -1,5 +1,8 @@
 package com.diegonmarcos.ide
 
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage
+import com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -161,11 +164,19 @@ class ConfigsActivity : AppCompatActivity() {
                 getString(R.string.cfg_terminal_ssh_key_sub),
             ) { copySshKey() }
 
-            // ── About — the FULL SuperApp-architecture page ───────────────
+            // ── #1352 Configs ▸ General and ▸ About: the fleet's shared pages (libs:ui-nav-bars) ──
+            Ui.AppCard("⚙", fleetConfigsEntryLabel(FleetConfigsPage.General), "Perms, update, battery, storage, notifications, language") {
+                FleetConfigsEntries.open(this@ConfigsActivity, FleetConfigsPage.General)
+            }
+            Ui.AppCard("ℹ", fleetConfigsEntryLabel(FleetConfigsPage.About), "v${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}") {
+                FleetConfigsEntries.open(this@ConfigsActivity, FleetConfigsPage.About)
+            }
+
+            // ── Diagnostics: the hub's runtime facts, copyable, and the log push (DiagnosticsPush) ──
             Ui.AppCard(
-                "ℹ",
-                getString(R.string.cfg_about),
-                "v${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}",
+                "⚕",
+                "Diagnostics",
+                "Runtime facts, logs and the diagnostics push",
             ) { startActivity(android.content.Intent(this@ConfigsActivity, AboutActivity::class.java)) }
         }
         editingConn?.let { ConnDialog(it) { editingConn = null } }

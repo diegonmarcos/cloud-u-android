@@ -253,6 +253,8 @@ dependencies {
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
     implementation project(':libs:core')
     implementation project(':libs:ui-kit')   // CloudKitTheme + KitPalette: Ui.kt's theme
+    // #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars; brings libs:perms for every settings screen)
+    implementation project(':libs:ui-nav-bars')
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'

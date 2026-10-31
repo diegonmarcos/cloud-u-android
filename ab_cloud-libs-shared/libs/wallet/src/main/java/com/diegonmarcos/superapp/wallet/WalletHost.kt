@@ -28,4 +28,8 @@ interface WalletHost {
      *  reads for the app; the wallet only says which pages and what a tap does. */
     @Composable
     fun PageStrip(pages: List<NavPage>, selectedId: String?, onSelect: (NavPage) -> Unit)
+    /** #1352 drawn at the top of the Config tab: the standalone Cloud Wallet puts its Configs ▸ General / ▸ About entries
+     *  there (libs:ui-nav-bars); a host without them (the SuperApp) draws nothing. */
+    @Composable
+    fun ConfigExtra() {}
 }

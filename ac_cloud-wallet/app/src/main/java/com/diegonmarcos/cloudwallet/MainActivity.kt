@@ -21,6 +21,7 @@ import com.diegonmarcos.superapp.uikit.KitFragmentHost
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsButtons
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
@@ -98,6 +99,10 @@ class MainActivity : AppCompatActivity(), WalletHost {
     }
 
     override fun onOpenVcard() { cardOpen = true }
+
+    /** #1352 Configs ▸ General and ▸ About (libs:ui-nav-bars), at the top of the wallet's Config tab. */
+    @Composable
+    override fun ConfigExtra() { FleetConfigsButtons() }
 
     /** #868 The Events section's pages as the fleet's page-tab strip, under the content's own top edge. */
     @Composable

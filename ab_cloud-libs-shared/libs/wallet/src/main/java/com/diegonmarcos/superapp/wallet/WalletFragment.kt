@@ -383,6 +383,7 @@ private fun WalletSystemConfigTab(onImported: () -> Unit) {
             Spacer(modifier = Modifier.height(4.dp))
             Text("Manage your wallet data and import cards.", color = Color(0x99FFFFFF), fontSize = 13.sp)
         }
+        item { (ctx as? WalletHost)?.ConfigExtra() }
         item { Spacer(modifier = Modifier.height(8.dp)) }
         item {
             ConfigSection(title = "Import") {

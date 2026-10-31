@@ -140,10 +140,8 @@
     "ac_cloud-camera": "fork (cld.camera / GrapheneOS Camera) asks camera, mic and location in its own flow; no fleet Configs page yet (#1352 pending)",
     "ac_cloud-matrix": "Element X fork: every feature module asks its own permission through the fork's permission presenters",
     "ac_cloud-vault": "Bitwarden fork: camera and autofill accessibility are asked by the fork's own onboarding screens",
-    "ac_cloud-wallet": "fork with its own camera ask for the card scanner; not on the shared Compose scaffold yet",
-    "ac_cloud-myterminal": "hub is a View-based SSH terminal; notifications and battery asked in its own settings screen",
     "ac_cloud-c3-webserver": "Tauri host (src-tauri/gen/android): a WebView app with no Compose scaffold to host the section",
     "ac_cloud-chat": "React Native (Mattermost) host: permissions are asked from JavaScript by the upstream screens"
   },
-  "pending_page_max": 7
+  "pending_page_max": 5
 }

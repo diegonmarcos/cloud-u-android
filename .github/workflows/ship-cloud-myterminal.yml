@@ -70,11 +70,16 @@ on:
       # test/test-store-tab-drives-cloud-store.sh runs the tab against that engine —
       # an engine edit must re-run it here.
       - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
+      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ac_cloud-myterminal/**"
       - "!ac_cloud-myterminal/web/**"
 permissions:

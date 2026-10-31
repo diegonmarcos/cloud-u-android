@@ -435,27 +435,16 @@ class AboutActivity : AppCompatActivity() {
         return if (granted) "✓ Granted" else "✗ Denied"
     }
 
+    // #1352 every settings screen opens through libs:perms (the one place that builds a settings intent).
     private fun openAppSettings() {
-        runCatching {
-            startActivity(android.content.Intent(
-                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                android.net.Uri.fromParts("package", packageName, null),
-            ))
-        }
+        com.diegonmarcos.superapp.perms.PermsPages.openAppInfo(this, packageName)
     }
 
-    /** Open Settings → "Install unknown apps" scoped to this app so the user
-     *  grants REQUEST_INSTALL_PACKAGES — what makes silent auto-update actually
-     *  skip the install prompt. Falls back to the global list, then app details. */
+    /** Settings → "Install unknown apps" for this app (REQUEST_INSTALL_PACKAGES, what lets auto-update skip the prompt),
+     *  with libs:perms' fallbacks for the catalogue entry install_unknown. */
     private fun openUnknownAppSourcesSettings() {
-        val scoped = android.content.Intent(
-            android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-            android.net.Uri.fromParts("package", packageName, null),
-        )
-        if (scoped.resolveActivity(packageManager) != null) { runCatching { startActivity(scoped) }; return }
-        val list = android.content.Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-        if (list.resolveActivity(packageManager) != null) { runCatching { startActivity(list) }; return }
-        openAppSettings()
+        val e = com.diegonmarcos.superapp.perms.Perms.catalogue(this).byId("install_unknown")
+        if (e == null || !com.diegonmarcos.superapp.perms.PermsSettings.open(this, e)) openAppSettings()
     }
 
     private fun fmtMillis(ms: Long): String =

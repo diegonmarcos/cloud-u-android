@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -101,3 +102,23 @@ public fun FleetConfigsMenu(
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 private fun androidx.compose.ui.Modifier.testTagAsId(tag: String): androidx.compose.ui.Modifier =
     this.then(androidx.compose.ui.Modifier.semantics { testTagsAsResourceId = true }).testTag(tag)
+
+/**
+ * The two entries as buttons, for an app whose own settings page is Compose (Cloud Wallet's Config tab, a fork's
+ * settings screen): "Configs ▸ General" and "Configs ▸ About", same test tags as the scaffold's dropdown.
+ */
+@androidx.compose.runtime.Composable
+public fun FleetConfigsButtons(modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.foundation.layout.Row(
+        modifier.then(androidx.compose.ui.Modifier.fillMaxWidth()),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(androidx.compose.ui.unit.Dp(8f)),
+    ) {
+        for ((page, tag) in listOf(FleetConfigsPage.General to "navtop1_configs_general", FleetConfigsPage.About to "navtop1_configs_about")) {
+            androidx.compose.material3.FilledTonalButton(
+                onClick = { FleetConfigsEntries.open(ctx, page) },
+                modifier = androidx.compose.ui.Modifier.weight(1f).testTagAsId(tag),
+            ) { androidx.compose.material3.Text(fleetConfigsEntryLabel(page)) }
+        }
+    }
+}

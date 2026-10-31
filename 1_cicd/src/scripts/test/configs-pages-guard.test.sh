@@ -39,7 +39,7 @@ mkdir -p "$BASE"
     cd "$ROOT" || exit 1
     {
         git ls-files -- 'a[acd]_*/build.json' 'a[acd]_*/debug-api.json'
-        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(|FleetConfigsMenu\(|FleetConfigsEntries\.(addTo|open)\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
+        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(|FleetConfigsMenu\(|FleetConfigsButtons\(|FleetConfigsEntries\.(addTo|open)\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
         printf '%s\n' "$DATA" ac_cloud-account/build.json ac_cloud-c3-webserver/build.json licenses/curated.json
         find "$UIBARS" ab_cloud-libs-shared/libs/perms -type f -not -path "*/build/*"
     } | sort -u | while IFS= read -r f; do [ -f "$f" ] && cp --parents "$f" "$BASE"; done
