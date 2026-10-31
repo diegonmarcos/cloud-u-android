@@ -100,7 +100,6 @@
             "1d bp",
             "Date"
           ],
-          "segment_of": "ust_official",
           "segment_label": "FRED"
         },
         {
@@ -168,7 +167,8 @@
           "x_title": "maturity (years)",
           "unit": "%",
           "change_unit": "bp",
-          "segment_label": "Treasury"
+          "segment_label": "Treasury",
+          "segment_of": "ust"
         },
         {
           "id": "euro",

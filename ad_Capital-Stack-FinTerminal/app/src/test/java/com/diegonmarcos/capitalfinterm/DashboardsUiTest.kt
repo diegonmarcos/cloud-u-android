@@ -19,8 +19,8 @@ class DashboardsUiTest {
 
     @Test fun keyRowsComeLastAndASegmentIsDrawnInsideItsCard() {
         val yc = d("yield_curves")
-        assertEquals(listOf("ust_official", "euro", "sovereigns"), Dashboards.drawOrder(yc).map { it.id })
-        assertEquals(listOf("ust_official", "ust"), Dashboards.segments(yc, yc.panels.first { it.id == "ust_official" }).map { it.id })
+        assertEquals(listOf("ust", "euro", "sovereigns"), Dashboards.drawOrder(yc).map { it.id })
+        assertEquals(listOf("ust", "ust_official"), Dashboards.segments(yc, yc.panels.first { it.id == "ust" }).map { it.id })
         val fx = d("fx")
         val order = Dashboards.drawOrder(fx)
         assertTrue(order.takeLastWhile { it.isPlaceholder }.isNotEmpty())
