@@ -26,7 +26,6 @@ on:
       - "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**"
       - "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**"
       - "ab_cloud-libs-shared/web/**"
-      - "ac_cloud-me/build.json"
       - "ac_cloud-me/test/test-me-web.sh"
 permissions:
   contents: write   # gh release upload
@@ -68,7 +67,6 @@ jobs:
           ab_cloud-libs-shared/libs/bottomnav/src/commonMain
           ab_cloud-libs-shared/libs/ui-kit/src/commonMain
           ab_cloud-libs-shared/web
-          ac_cloud-me/build.json
           ac_cloud-me/test/test-me-web.sh
           ac_cloud-me/web
           EOF
@@ -189,7 +187,6 @@ jobs:
           ab_cloud-libs-shared/libs/bottomnav/src/commonMain
           ab_cloud-libs-shared/libs/ui-kit/src/commonMain
           ab_cloud-libs-shared/web
-          ac_cloud-me/build.json
           ac_cloud-me/test/test-me-web.sh
           ac_cloud-me/web
           EOF

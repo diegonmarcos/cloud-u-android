@@ -32,8 +32,7 @@ one group), the same contract as Health.
 
 Buro and LLC pages are stacks that carry `ledger` blocks: the owner's typed
 records (collections of flat records, fields typed text/money/date/choice) in
-the `buro_user` / `llc_user` stores, plus derived reports. Nothing is seeded there (Inventory, `inventory_user`, is the
-one exception: its declared mock `seed` is applied once per collection, #1367);
+the `buro_user` / `llc_user` stores, plus derived reports. Nothing is seeded;
 an empty collection says what it is for.
 
 A section with a `target` and no `pages` — Wallet, in the bottom bar — has no

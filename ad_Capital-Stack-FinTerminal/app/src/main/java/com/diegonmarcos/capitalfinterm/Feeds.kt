@@ -244,15 +244,7 @@ object Feeds {
         val d = data as? JSONObject ?: return Got()
         val price = num(d, "current_price") ?: return Got()
         val key = each.ifEmpty { Catalog.str(d, "symbol") }
-        return Got(points = listOf(Pt(key, key, 0.0, price, cboePrev(price, num(d, "price_change"), num(d, "prev_day_close")), Catalog.str(d, "last_trade_time").take(16).replace('T', ' '))))
-    }
-
-    /** Previous close of a Cboe quote: price minus Cboe's absolute price_change. After the close Cboe rolls prev_day_close to the
-     *  current price, so prev_day_close is only a fallback, and one equal to the price is dropped (unknown, not a fake 0 change). */
-    fun cboePrev(price: Double, change: Double?, prevClose: Double?): Double? = when {
-        change != null -> price - change
-        prevClose != null && prevClose != price -> prevClose
-        else -> null
+        return Got(points = listOf(Pt(key, key, 0.0, price, num(d, "prev_day_close"), Catalog.str(d, "last_trade_time").take(16).replace('T', ' '))))
     }
 
     // ------------------------------------------------------------------ calendars
@@ -420,7 +412,7 @@ object Feeds {
         objects(o.optJSONArray("quotes")).forEach { q ->
             val p = num(q, "price") ?: return@forEach
             val sym = Catalog.str(q, "symbol")
-            pts += Pt(sym, Catalog.str(q, "name").ifEmpty { sym }, pts.size.toDouble(), p, cboePrev(p, num(q, "change"), num(q, "prev_close")), Catalog.str(q, "ts").take(16).replace('T', ' '))
+            pts += Pt(sym, Catalog.str(q, "name").ifEmpty { sym }, pts.size.toDouble(), p, num(q, "prev_close"), Catalog.str(q, "ts").take(16).replace('T', ' '))
         }
         val asof = Catalog.str(o, "asof")
         val prev = HashMap<String, Double>()

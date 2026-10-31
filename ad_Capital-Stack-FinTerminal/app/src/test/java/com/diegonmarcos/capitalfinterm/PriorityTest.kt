@@ -173,7 +173,7 @@ class PriorityTest {
         val d = Engine.load(panel, fred, net, today, null, sources.first { it.id == "dbnomics" })
         assertEquals(3, d.rows.size)
         assertEquals("2 series unavailable", d.note)
-        assertEquals(listOf("EFFR", "IORB", "Prime"), d.rows.map { it[0] })
+        assertEquals(listOf("Effective Fed funds", "Interest on reserve balances", "Bank prime loan"), d.rows.map { it[0] })
         assertEquals("6.50", d.rows.last()[1].replace(",", ""))
     }
 }

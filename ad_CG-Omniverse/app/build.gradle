@@ -175,7 +175,7 @@ android {
     kotlinOptions { jvmTarget = '17' }
 }
 
-// The Avatar scene's three.js and OrbitControls are Cloud Nav's copies, shared BY REFERENCE: this task copies just those two files
+// The Avatar scene's three.js and OrbitControls are Cloud Nav's copies, shared BY REFERENCE: this task copies just those three files (three.module, the three.core it imports, OrbitControls)
 // into a generated assets folder (assets/space/, the path avatar/index.html imports), so the scene adds about 400 KB, Cloud Nav's
 // star catalogue stays out, and no second copy is committed. The ship workflow watches the source folder.
 abstract class CopyThreeAssets extends DefaultTask {
@@ -184,7 +184,7 @@ abstract class CopyThreeAssets extends DefaultTask {
     @TaskAction void copy() {
         def out = new File(outputDir.get().asFile, 'space')
         out.mkdirs()
-        ['three.module.min.js', 'OrbitControls.js'].each { n ->
+        ['three.module.min.js', 'three.core.min.js', 'OrbitControls.js'].each { n ->
             def from = new File(source.get().asFile, n)
             if (!from.isFile()) throw new GradleException("three.js asset ${from} is missing (ac_cloud-nav/app/src/main/assets/space)")
             java.nio.file.Files.copy(from.toPath(), new File(out, n).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)

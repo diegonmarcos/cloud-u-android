@@ -1103,14 +1103,6 @@
         "ac_cloud-me"
       ]
     },
-    "inventory_user": {
-      "kind": "prefs",
-      "class": "config",
-      "doc": "#1367 Cloud Me > Inventory user data, one JSON string under 'data' (collections of typed item records per sub-page: housing, household, transport, parking, utilities, taxes, insurance, contracts, banking, subscriptions, leisure, food, care, clothing, electronics, education) plus the `_seeded` marker of the collections whose declared mock seed was already applied once. Your own entries, so they move with the phone and the backup; the summary (count, value, monthly recurring) is derived and never stored.",
-      "used_by": [
-        "ac_cloud-me"
-      ]
-    },
     "llc_user": {
       "kind": "prefs",
       "class": "config",
@@ -2646,16 +2638,11 @@
       "module": "ac_c3-morpheus",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-kit"
       ],
       "items": [
         {
@@ -2671,16 +2658,11 @@
       "module": "ac_c3-watchdog",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars",
         "lib-watchdog"
       ],
       "items": [
@@ -2697,16 +2679,11 @@
       "module": "ac_c3-watchtower",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-kit"
       ],
       "items": []
     },
@@ -2819,15 +2796,10 @@
       "module": "ac_cloud-c3-webserver",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
-        "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-fleetconfig-model"
       ],
       "items": [
         {
@@ -2843,15 +2815,10 @@
       "module": "ac_cloud-media-center",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
-        "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-fleetconfig-model"
       ],
       "items": [
         {
@@ -2967,10 +2934,7 @@
         "lib-fleetconfig-model",
         "lib-ml-l-image",
         "lib-ml-l-sound",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-ui-icons"
       ],
       "items": [
         {
@@ -3035,18 +2999,13 @@
       "schema_version": 1,
       "libs": [
         "lib-ai",
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-perms",
         "lib-sysdns",
-        "lib-text-tools",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-text-tools"
       ],
       "items": [
         {
@@ -3259,7 +3218,6 @@
       "libs": [
         "lib-analytics",
         "lib-autofill",
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-decisions-link",
@@ -3269,11 +3227,8 @@
         "lib-media",
         "lib-perms",
         "lib-text-tools",
-        "lib-theme-background",
         "lib-translate",
-        "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars",
         "lib-voice"
       ],
       "items": [
@@ -3347,15 +3302,10 @@
       "module": "ac_cloud-matrix",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
-        "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-fleetconfig-model"
       ],
       "items": [
         {
@@ -3452,16 +3402,11 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-kit"
       ],
       "items": [
         {
@@ -3561,17 +3506,13 @@
       "module": "ac_cloud-nix-on-droid",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-perms",
         "lib-shizuku-adb-debug-tools",
-        "lib-sysdns",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-sysdns"
       ],
       "items": [
         {
@@ -3790,17 +3731,13 @@
       "module": "ac_cloud-termux",
       "schema_version": 1,
       "libs": [
-        "lib-bottomnav",
         "lib-core",
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-perms",
         "lib-shizuku-adb-debug-tools",
-        "lib-sysdns",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-sysdns"
       ],
       "items": [
         {
@@ -3900,10 +3837,7 @@
         "lib-fleet-endpoints",
         "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
-        "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-ui-icons"
       ],
       "items": [
         {
@@ -3926,11 +3860,8 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-perms",
-        "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars",
         "lib-updater",
         "lib-wallet"
       ],

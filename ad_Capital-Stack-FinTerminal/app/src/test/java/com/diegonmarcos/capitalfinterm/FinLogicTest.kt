@@ -38,6 +38,8 @@ class FinLogicTest {
         assertEquals(0.5f, FinLogic.heat(1.5, 3.0))
         assertEquals(-1f, FinLogic.heat(-9.0, 3.0))
         assertEquals(0f, FinLogic.heat(null))
+        assertEquals(true, FinLogic.heatInkDark(-1.5))
+        assertEquals(false, FinLogic.heatInkDark(1.49))
     }
 
     @Test fun theDerivedSpreadIsTenMinusTwoInBasisPoints() {

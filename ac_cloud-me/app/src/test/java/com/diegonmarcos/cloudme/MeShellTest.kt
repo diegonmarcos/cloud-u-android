@@ -137,9 +137,9 @@ class MeShellTest {
         compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertIsDisplayed()
         for (s in Sections.all()) compose.onNodeWithTag(MeTopBar.drawerItem(s.id)).assertExists()
         // The dropdown is capped at 520dp and scrolls: with the Profile pages open, the section list starts below the fold.
-        compose.onNodeWithTag(MeTopBar.drawerItem("inventory")).performScrollTo().performClick()
+        compose.onNodeWithTag(MeTopBar.drawerItem("duties")).performScrollTo().performClick()
         compose.waitForIdle()
-        assertEquals(listOf("inventory"), opened)
+        assertEquals(listOf("duties"), opened)
         compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
     }
 

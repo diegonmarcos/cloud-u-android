@@ -230,12 +230,6 @@ for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
     tests = ((config.get("tests") or {}).get("shell") or {}).get("dir")
     if tests and web.get("tester") and os.path.isfile(os.path.join(root, app, tests, web["tester"])):
         paths.append("%s/%s/%s" % (app, tests, web["tester"]))
-    # web.inputs (#1367): files of the app that the page BAKES IN, watched and hashed like the page's own dir.
-    # Cloud Me's page draws build.json::ui as its nav, so a nav edit there must rebuild and republish the page.
-    for extra in web.get("inputs") or []:
-        if not os.path.exists(os.path.join(root, app, extra)):
-            bad.append("%s/build.json: web.inputs names %r, which does not exist" % (app, extra))
-        paths.append("%s/%s" % (app, extra))
     wf = "1_cicd/src/cicd/ship-%s-wasm.yml" % config["name"]
     paths += [wf, "1_cicd/src/templates/ship-wasm.yml.in"]
     # What the publish gate HASHES: everything watched, as plain tree paths, plus the fleet manifest

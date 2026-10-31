@@ -48,8 +48,6 @@ object LedgerTags {
     fun accept(collection: String, n: Int) = "me:ledger:accept:$collection:$n"
     fun builtin(collection: String, n: Int) = "me:ledger:builtin:$collection:$n"
     fun empty(collection: String) = "me:ledger:empty:$collection"
-    const val SUMMARY = "me:ledger:summary"
-    fun mock(collection: String, id: String) = "me:ledger:mock:$collection:$id"
 }
 
 /**
@@ -66,18 +64,11 @@ fun LedgerBlock(o: JSONObject) {
     val currency = o.optString("currency", "EUR")
     val defs = remember(o) { (o.optJSONArray("ledgers") ?: JSONArray()).let { a -> (0 until a.length()).map { LedgerDef.parse(a.getJSONObject(it)) } } }
     val reports = remember(o) { (o.optJSONArray("reports") ?: JSONArray()).let { a -> (0 until a.length()).map { a.getString(it) } } }
-    // #1367 a declared `seed` lands in the store once, on the first load that meets its collection (LedgerSeed).
-    var data by remember(store, defs) {
-        mutableStateOf(LedgerStore.load(ctx, store).let { d -> LedgerSeed.applied(d, defs).also { if (it !== d) LedgerStore.save(ctx, store, it) } })
-    }
+    var data by remember(store) { mutableStateOf(LedgerStore.load(ctx, store)) }
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
     fun commit(d: LedgerData) { data = d; LedgerStore.save(ctx, store, d) }
 
     o.optString("title").takeIf { it.isNotBlank() }?.let { HCard { HHead(it) } }
-    o.optJSONObject("summary")?.let { s ->
-        SummaryCard(LedgerReports.summary(defs.flatMap { data.rows(it.collection) }, s.optString("value"), s.optString("monthly")),
-            currency, s.optString("note"))
-    }
     o.optJSONObject("geo")?.let { g -> GeoCard(GeoStats.compute(g, defs, data)) }
     for (r in reports) LedgerReports.build(r, data, today, currency)?.let { ReportCard(it) }
     for (def in defs) CollectionCard(def, data.rows(def.collection), currency,
@@ -104,19 +95,6 @@ private fun GeoCard(g: GeoSummary) {
             Text("$continent · ${countries.size} countries", color = ink(), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp))
             countries.forEach { (country, cities) -> HRow(country, cities.joinToString(", ")) }
         }
-    }
-}
-
-/** #1367 Inventory header: items, total value, monthly recurring (and the year it makes). */
-@Composable
-private fun SummaryCard(s: LedgerSummary, currency: String, note: String) {
-    HCard(Modifier.testTag(LedgerTags.SUMMARY)) {
-        HHead("Summary")
-        HRow("Items", s.count.toString())
-        HRow("Value", LedgerModel.fmt(s.value, currency))
-        HRow("Monthly recurring", LedgerModel.fmt(s.monthly, currency))
-        HRow("Per year", LedgerModel.fmt(s.monthly.multiply(java.math.BigDecimal(12)), currency))
-        if (note.isNotBlank()) HText(note)
     }
 }
 
@@ -157,10 +135,7 @@ private fun CollectionCard(def: LedgerDef, rows: List<Rec>, currency: String, on
                 return@forEach
             }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp).testTag(LedgerTags.row(def.collection, id))) {
-                Column(Modifier.weight(1f)) {
-                    RecLines(def, r, currency)
-                    if (r[LedgerSeed.MOCK] == "1") Text("mock data", color = accent(), fontSize = 11.sp, modifier = Modifier.testTag(LedgerTags.mock(def.collection, id)))
-                }
+                Column(Modifier.weight(1f)) { RecLines(def, r, currency) }
                 onMove?.let { mv -> Text(def.moveLabel, color = accent(), fontSize = 12.sp, modifier = Modifier.clickable { mv(id) }.padding(8.dp).testTag(LedgerTags.move(def.collection, id))) }
                 Text("Edit", color = dim(), fontSize = 12.sp, modifier = Modifier.clickable { editing = id }.padding(8.dp).testTag(LedgerTags.edit(def.collection, id)))
                 Text("Remove", color = dim(), fontSize = 12.sp, modifier = Modifier.clickable { onRemove(id) }.padding(8.dp).testTag(LedgerTags.remove(def.collection, id)))

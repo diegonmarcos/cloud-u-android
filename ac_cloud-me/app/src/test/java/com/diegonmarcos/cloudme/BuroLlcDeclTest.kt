@@ -24,15 +24,14 @@ class BuroLlcDeclTest {
     }
     private fun page(s: String, p: String) = JSONArray(BuroLlcTestData.text("data/ui/$s/$p.json"))
 
-    @Test fun `the bar is Health Experiences Tasks Lnktree Inventory Buro LLC and House, Work, RoadMap and Duties are gone`() {
+    @Test fun `the bar is Health Experiences RoadMap Lnktree Duties Buro LLC and House and Work are gone`() {
         val ui = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui")
         val bar = ui.getJSONArray("bottom_nav").let { a -> (0 until a.length()).map { a.getString(it) } }
-        assertEquals(listOf("health", "experiences", "tasks", "lnktree", "inventory", "buro", "llc"), bar)
-        assertEquals(listOf("Health", "Experiences", "Tasks", "Lnktree", "Inventory", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
-        assertFalse("house" in sections); assertFalse("work" in sections); assertFalse("roadmap" in sections); assertFalse("duties" in sections)
+        assertEquals(listOf("health", "experiences", "roadmap", "lnktree", "duties", "buro", "llc"), bar)
+        assertEquals(listOf("Health", "Experiences", "RoadMap", "Lnktree", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
+        assertFalse("house" in sections); assertFalse("work" in sections)
         assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree-site", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"), ids(sections.getValue("lnktree").getJSONArray("pages")))
-        assertEquals(listOf("roadmaps", "backlogs"), ids(sections.getValue("tasks").getJSONArray("pages")))
-        assertEquals("tasks", page("tasks", "backlogs").getJSONObject(0).getString("id"))
+        assertEquals(listOf("tasks"), ids(sections.getValue("duties").getJSONArray("pages")))
     }
 
     @Test fun `Buro follows the hierarchy IDs and DD, Docs, Financial Reports, Calendar`() {

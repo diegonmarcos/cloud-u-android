@@ -30,11 +30,11 @@ the 549 stars carrying a real proper name in the source catalog.
 
 ## three.js
 
-`three.module.min.js` and `OrbitControls.js` are three.js v0.185.1
+`three.module.min.js`, `three.core.min.js` (the core module three.module.min.js imports since r16x; it was missing, so the module failed to load) and `OrbitControls.js` are three.js v0.185.1 (npm three@0.185.1, build/, tarball integrity verified)
 (https://threejs.org), MIT License, bundled locally so the render engine
 loads with no network (constellation/planet data is also fully local;
 this screen needs no network at all, unlike terrain_map.html which
-depends on live map/imagery tiles).
+depends on live map/imagery tiles). CG-Omniverse's Avatar scene copies these three files at build time (ad_CG-Omniverse/app/build.gradle copyThreeAssets).
 
 Constellation lines and planetary Keplerian elements reuse the already-
 bundled, already-credited `../celestial/` dataset (see

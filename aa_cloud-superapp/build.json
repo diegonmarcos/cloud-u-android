@@ -2963,11 +2963,11 @@
                 "target": "extapp:cloud-me#page:experiences/work"
               },
               {
-                "_doc": "RoadMap \u2014 Cloud-Me's Tasks > RoadMaps subpage (the folder tree of the private notes vault; #1367 RoadMap and Duties merged into the top-level Tasks page). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "_doc": "RoadMap \u2014 Cloud-Me's top-level RoadMap page (the folder tree of the private notes vault), entered at its Folders page. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
                 "id": "myroadmap",
                 "label": "RoadMap",
                 "icon": "ic_tree",
-                "target": "extapp:cloud-me#page:tasks/roadmaps"
+                "target": "extapp:cloud-me#page:roadmap/folders"
               },
               {
                 "_doc": "Second rule of the Me row, between Me-Health Experiences RoadMap and Me-Duties Me-Buro Me-LLC, like the AGI row. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|'. test-me-account-tile.sh pins the row.",
@@ -2976,11 +2976,11 @@
                 "separator": true
               },
               {
-                "_doc": "Me-Duties \u2014 Cloud-Me's Tasks > Backlogs subpage (Day, Subject and Calendar views over the calendar engine; #1367 the former Duties section). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "_doc": "Me-Duties \u2014 Cloud-Me's Duties section, the Tasks page (Day, Subject and Calendar views over the calendar engine). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
                 "id": "myduties",
                 "label": "Me-Duties",
                 "icon": "ic_check_all",
-                "target": "extapp:cloud-me#page:tasks/backlogs"
+                "target": "extapp:cloud-me#page:duties/tasks"
               },
               {
                 "_doc": "Me-Buro \u2014 Cloud-Me's Buro section, entered at IDs & DD (the MyBuro tile, renamed; Buro has four row groups: IDs & DD, Docs, Financial Reports, Calendar). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",

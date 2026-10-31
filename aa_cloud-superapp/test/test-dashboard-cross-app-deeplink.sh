@@ -176,8 +176,8 @@ TARGETS = {
     "sim2real": "extapp:hardtech-sim2real",
     "myhealth":    "extapp:cloud-me#page:health/home",
     "myexperiences": "extapp:cloud-me#page:experiences/work",
-    "myroadmap":   "extapp:cloud-me#page:tasks/roadmaps",
-    "myduties":    "extapp:cloud-me#page:tasks/backlogs",
+    "myroadmap":   "extapp:cloud-me#page:roadmap/folders",
+    "myduties":    "extapp:cloud-me#page:duties/tasks",
     "myburo":      "extapp:cloud-me#page:buro/ids",
     "myllc":       "extapp:cloud-me#page:llc/employed",
 }

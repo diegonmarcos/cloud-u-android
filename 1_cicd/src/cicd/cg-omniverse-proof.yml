@@ -138,6 +138,7 @@ jobs:
           cat > walk.py <<'PY'
           import re, subprocess, sys, time
           OUT = "screens"
+          pkg = sys.argv[1]
           def sh(*a, check=False): return subprocess.run(["adb", *a], capture_output=True, text=True, timeout=90)
           def dump():
               for _ in range(6):
@@ -152,7 +153,14 @@ jobs:
                   t = re.search(r' text="([^"]*)"', n); d = re.search(r' content-desc="([^"]*)"', n)
                   b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
                   if b: yield (t.group(1) if t else ""), (d.group(1) if d else ""), tuple(map(int, b.groups()))
+          def front():
+              # the emulator's memory pressure can kill the app (run 41201038236: GMS and the app died together); relaunch it
+              top = sh("shell", "dumpsys", "activity", "activities").stdout
+              if not any(pkg in l for l in top.splitlines() if "ResumedActivity" in l):
+                  print("::warning::the app was not in front; relaunching")
+                  sh("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(15)
           def tap(label, nth=0, scroll=0):
+              front()
               for attempt in range(scroll + 1):
                   hits = [b for t, d, b in nodes(dump()) if label in (t, d)]
                   if len(hits) > nth:
@@ -161,9 +169,9 @@ jobs:
               print("::warning::no '%s' on screen" % label); return False
           def shot(name, wait=0):
               time.sleep(wait)
+              if not name.startswith(("06", "07", "08")): front()
               with open("%s/%s.png" % (OUT, name), "wb") as f: f.write(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout)
               print("shot", name)
-          pkg = sys.argv[1]
           sh("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
           shot("01-avatar-default", 20)
           sh("shell", "input", "swipe", "700", "900", "350", "900", "600"); shot("02-avatar-rotated", 3)

@@ -42,11 +42,11 @@ import json, sys
 t = (json.load(open(sys.argv[1]))['ui'].get('top_bar') or {})
 sys.exit(0 if 'title' not in t and t.get('drawer') is True and t.get('ai') is True and t.get('settings') == ['account', 'configs'] else 1)
 PY
-  python3 - "$BJ" <<'PY' && ok "T2 settings left the island (five items: cloud, phone, search, feed, access; opens on cloud) and stays a declared section" || bad "T2 ui.bottom_nav still lists settings, or the settings section is gone"
+  python3 - "$BJ" <<'PY' && ok "T2 settings left the island (five items: cloud, phone, search, feed, access; opens on search) and stays a declared section" || bad "T2 ui.bottom_nav still lists settings, or the settings section is gone"
 import json, sys
 ui = json.load(open(sys.argv[1]))['ui']
 secs = [s['id'] for s in ui['sections']]
-sys.exit(0 if ui['bottom_nav'] == ['cloud', 'phone', 'search', 'feed', 'access'] and ui['default_section'] == 'cloud' and 'settings' in secs else 1)
+sys.exit(0 if ui['bottom_nav'] == ['cloud', 'phone', 'search', 'feed', 'access'] and ui['default_section'] == 'search' and 'settings' in secs else 1)
 PY
   local ma; ma="$(strip "$MA")"
   printf '%s' "$ma" | grep -q 'if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }' \

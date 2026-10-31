@@ -184,9 +184,9 @@ for s in secs:
 bar = [by_id[i] for i in bar_ids if i in by_id]
 
 # Mirror NavDecl.bottomSections() — the order is the declared order. Diego's
-# Owner order (#1367): Health, Experiences, Tasks, Lnktree, Inventory, Buro, LLC, left to right.
+# Owner order (#1350): Health, Experiences, RoadMap, Lnktree, Duties, Buro, LLC, left to right.
 bar_order = [s.get("label") for s in bar]
-EXPECTED_BAR_ORDER = ["Health", "Experiences", "Tasks", "Lnktree", "Inventory", "Buro", "LLC"]
+EXPECTED_BAR_ORDER = ["Health", "Experiences", "RoadMap", "Lnktree", "Duties", "Buro", "LLC"]
 if bar_order != EXPECTED_BAR_ORDER:
     bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")
 
@@ -264,18 +264,15 @@ def strings(o):
     elif isinstance(o, list):
         for v in o:          yield from strings(v)
 
-# Every route the SuperApp actually ships, plus the Tasks subpages and the Inventory rows. The literal is here on purpose: it is the contract this app
+# Every route the SuperApp actually ships, plus the Duties page. The literal is here on purpose: it is the contract this app
 # publishes, and it has to hold on the day the SuperApp side is written as much
 # as on the day after.
 routes = {s.split("#", 1)[1] for s in strings(json.load(open(SUPERAPP)))
           if s.startswith("extapp:cloud-me#") and "#" in s}
-routes.add("page:tasks/backlogs")
+routes.add("page:duties/tasks")
 routes.add("page:experiences/geo")
 routes.add("page:experiences/work")
-routes.add("page:tasks/roadmaps")
-routes.add("page:inventory/housing")
-routes.add("page:inventory/utilities")
-routes.add("page:inventory/leisure")
+routes.add("page:roadmap/folders")
 
 bad = [why for _, why in map(resolve, sorted(routes)) if why]
 for b in bad:

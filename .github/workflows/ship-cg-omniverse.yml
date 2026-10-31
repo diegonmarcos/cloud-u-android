@@ -47,6 +47,7 @@ on:
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cg-omniverse.yml"
       #   input: "ac_cloud-nav/app/src/main/assets/space/OrbitControls.js"
+      #   input: "ac_cloud-nav/app/src/main/assets/space/three.core.min.js"
       #   input: "ac_cloud-nav/app/src/main/assets/space/three.module.min.js"
       # ── end MANAGED-PATHS-HEADER ──
       # the Avatar scene's three.js + OrbitControls, copied into the APK from Cloud Nav's assets by app/build.gradle (copyThreeAssets)
