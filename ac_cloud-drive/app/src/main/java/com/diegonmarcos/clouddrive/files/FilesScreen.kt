@@ -11,6 +11,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -148,11 +152,19 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
     val listings by controller.listings.collectAsState()
     val jobs by controller.jobs.collectAsState()
     val prefs by controller.prefs.snapshot.collectAsState()
-    val search by controller.search.collectAsState()
     val props by controller.properties.collectAsState()
     val dups by controller.duplicates.collectAsState()
     var dialog by remember { mutableStateOf<FilesDialog?>(null) }
+    // The inline search: the bar sits over the listing; a non-recursive scope filters it in place, a recursive one streams hits.
+    val searchDecl = Declarations.files.search
     var searching by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var scopeId by remember { mutableStateOf(searchDecl.initialScope?.id ?: "") }
+    val searchScope = searchDecl.scope(scopeId)
+    val scopedHits by controller.scoped.collectAsState()
+    val storageRoots = remember { ExplorerSearchRoots.list() }
+    fun openSearch() { query = ""; scopeId = searchDecl.initialScope?.id ?: ""; searching = true }
+    fun closeSearch() { searching = false; query = ""; controller.liveFilter = null; controller.clearScoped() }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // #875 Copy path: the clipboard gets PathFormatter's text; the snack is the declared confirmation and never echoes it.
@@ -170,7 +182,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
     BackHandler(enabled = canBack) {
         when {
             dialog != null -> dialog = null
-            searching -> { searching = false; controller.clearSearch() }
+            searching -> closeSearch()
             else -> controller.back(ui.active)
         }
     }
@@ -195,7 +207,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
             subtitle = (activeLoc as? Location.Local)?.path ?: activeLoc.key.removePrefix("A:"),
             actions = {
                 IslandAction(Icons.Filled.SwapVert, stringResource(if (ui.dualPane) R.string.files_single_pane else R.string.files_dual_pane), enabled = hasAccess) { controller.setDual(!ui.dualPane) }
-                IslandAction(Icons.Filled.Search, stringResource(R.string.files_search), enabled = hasAccess) { searching = !searching; if (!searching) controller.clearSearch() }
+                IslandAction(Icons.Filled.Search, stringResource(R.string.files_search), enabled = hasAccess) { if (searching) closeSearch() else openSearch() }
                 IslandAction(Icons.Filled.FolderOpen, stringResource(R.string.files_places), enabled = hasAccess) { dialog = FilesDialog.Places(ui.active, pickDestination = false, move = false) }
                 var more by remember { mutableStateOf(false) }
                 IslandAction(Icons.Filled.MoreVert, stringResource(R.string.chrome_more), enabled = hasAccess) { more = true }
@@ -215,11 +227,21 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
             return@Column
         }
 
+        if (searching) {
+            ExplorerSearchBar(query, { query = it }, searchDecl, scopeId, { scopeId = it }, scopedHits, onClose = { closeSearch() })
+            LaunchedEffect(query, scopeId, activeLoc.key) {
+                val sc = searchScope ?: return@LaunchedEffect
+                controller.liveFilter = FilesController.LiveFilter(activeLoc.key, query, sc)
+                val here = (activeLoc as? Location.Local)?.path
+                if (here != null) controller.runScoped(ExplorerSearch.startOf(sc, here, storageRoots), query, sc, searchDecl) else controller.clearScoped()
+            }
+        }
+
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (searching) {
-                SearchPanel(controller, search, ui, listings, prefs, onOpen = { hit ->
-                    searching = false; controller.clearSearch()
-                    if (hit.entry.isDirectory) controller.open(ui.active, hit.entry.location) else { controller.reveal((hit.entry.location as Location.Local).path) }
+            if (searching && searchScope?.recursive == true && ExplorerSearch.needle(query).isNotEmpty()) {
+                ScopedResults(scopedHits, searchDecl, onOpen = { e ->
+                    closeSearch()
+                    if (e.isDirectory) controller.open(ui.active, e.location) else { controller.reveal((e.location as Location.Local).path) }
                 })
             } else {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -702,40 +724,50 @@ internal fun PlaceRow(p: Places.Place, onRemove: (() -> Unit)? = null, onClick: 
     }
 }
 
-// ── search ───────────────────────────────────────────────────────────────
+// ── inline search ────────────────────────────────────────────────────────
 
+/** The storage roots a "from root" scope may start at: shared storage and each mounted volume under /storage. */
+internal object ExplorerSearchRoots {
+    fun list(): List<String> = buildList {
+        add(android.os.Environment.getExternalStorageDirectory().path)
+        File("/storage").listFiles()?.filter { it.isDirectory && it.name != "emulated" && it.name != "self" }?.forEach { add(it.path) }
+    }
+}
+
+/** The compact bar (the Git page's GitSearchField, 40dp) with a close x, and ONE row of declared scope chips under it. */
 @Composable
-private fun SearchPanel(controller: FilesController, search: FilesController.SearchState, ui: FilesUiState, listings: Map<String, FilesController.Listing>, prefs: com.diegonmarcos.clouddrive.DrivePrefs.Snapshot, onOpen: (FileOps.Hit) -> Unit) {
-    var query by remember { mutableStateOf(search.query) }
-    var contentToo by remember { mutableStateOf(false) }
-    val root = ui.activePane.location as? Location.Local
-    Column(Modifier.fillMaxSize().testTag(DriveTags.FILES_SEARCH_BAR)) {
+private fun ExplorerSearchBar(query: String, onQuery: (String) -> Unit, decl: Declarations.FilesSearchDecl, scopeId: String, onScope: (String) -> Unit, scoped: FilesController.ScopedSearch, onClose: () -> Unit) {
+    Column(Modifier.fillMaxWidth().testTag(DriveTags.FILES_SEARCH_BAR)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(query, { query = it }, Modifier.weight(1f), label = { Text(stringResource(R.string.files_search_hint)) }, singleLine = true,
-                trailingIcon = { IconButton(onClick = { if (root != null && query.isNotBlank()) controller.startSearch(root, query, contentToo) }) { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.files_search)) } })
+            com.diegonmarcos.clouddrive.sync.GitSearchField(query, onQuery, decl.placeholder, Modifier.weight(1f).height(decl.heightDp.dp), tag = DriveTags.FILES_SEARCH_FIELD)
+            IconButton(onClick = onClose, Modifier.size(decl.heightDp.dp).testTag(DriveTags.FILES_SEARCH_CLOSE)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.chrome_cancel)) }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter), verticalAlignment = Alignment.CenterVertically) {
-            Switch(checked = contentToo, onCheckedChange = { contentToo = it })
-            Spacer(Modifier.width(DriveMetrics.pad))
-            Text(stringResource(R.string.files_search_text_too), style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.weight(1f))
-            if (search.running) Pill(stringResource(R.string.chrome_cancel), { controller.cancelSearch() })
-            if (search.truncated) CapsuleBadge(stringResource(R.string.files_search_truncated, FileOps.SEARCH_RESULT_CEILING))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.FILES_SEARCH_SCOPES), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+            decl.scopes.forEach { sc ->
+                FilterChip(selected = sc.id == scopeId, onClick = { onScope(sc.id) }, label = { Text(sc.label, style = MaterialTheme.typography.labelMedium) }, modifier = Modifier.testTag(DriveTags.filesSearchScope(sc.id)))
+            }
         }
-        if (search.running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter))
+        if (scoped.running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter))
+    }
+}
+
+/** A recursive scope's streamed hits: name, then the folder holding it. */
+@Composable
+private fun ScopedResults(search: FilesController.ScopedSearch, decl: Declarations.FilesSearchDecl, onOpen: (FileOps.Entry) -> Unit) {
+    Column(Modifier.fillMaxSize().testTag(DriveTags.FILES_SEARCH_RESULTS)) {
+        if (search.stop == ExplorerSearch.Stop.RESULTS || search.stop == ExplorerSearch.Stop.SCANNED)
+            Row(Modifier.padding(horizontal = DriveMetrics.gutter)) { CapsuleBadge(stringResource(R.string.files_search_truncated, if (search.stop == ExplorerSearch.Stop.RESULTS) decl.resultCeiling else search.hits.size)) }
         when {
-            search.hits.isEmpty() && !search.running && search.query.isNotBlank() -> EmptyState(Icons.Filled.Search, stringResource(R.string.files_search_none, search.query), stringResource(R.string.files_search_none_hint))
+            search.hits.isEmpty() && !search.running -> EmptyState(Icons.Filled.Search, stringResource(R.string.files_search_none, search.query), stringResource(R.string.files_search_none_hint))
             else -> LazyColumn(Modifier.fillMaxSize()) {
-                items(search.hits, key = { it.entry.key }) { hit ->
-                    val e = hit.entry
-                    Row(Modifier.fillMaxWidth().clickable { onOpen(hit) }.padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
+                items(search.hits, key = { it.key }) { e ->
+                    Row(Modifier.fillMaxWidth().clickable { onOpen(e) }.padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                         Icon(IconCatalog.forEntry(e.isDirectory, e.mime, e.extension, false), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(DriveMetrics.padWide))
                         Column(Modifier.weight(1f)) {
                             Text(e.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text((e.location as Location.Local).parent()?.path ?: "", style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text((e.location as? Location.Local)?.parent()?.path ?: "", style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        if (hit.matchedByContent) CapsuleBadge(stringResource(R.string.files_search_match_text))
                     }
                     Hairline(Modifier.padding(start = DriveMetrics.glyph + DriveMetrics.padWide))
                 }

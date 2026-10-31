@@ -12,6 +12,8 @@ import com.diegonmarcos.clouddrive.R
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -123,7 +125,15 @@ class FilesController(
     private fun usageOf(dir: File): Pair<Long, Long>? = runCatching { val st = StatFs(dir.absolutePath); st.availableBytes to st.totalBytes }.getOrNull()
 
     /** The rows a pane shows: hidden filter, the declared filter, then the pane's sort. Pure, so the JVM suite can hold it. */
-    fun visible(pane: PaneState, listing: Listing): List<FileOps.Entry> = visibleEntries(pane, listing.entries, Declarations.files.filters)
+    /** The inline search's in-place filter (a non-recursive scope): applied to the pane showing [LiveFilter.locationKey] only. Snapshot state, so the pane recomposes as the query changes. */
+    data class LiveFilter(val locationKey: String, val query: String, val scope: Declarations.SearchScopeDecl)
+    var liveFilter by androidx.compose.runtime.mutableStateOf<LiveFilter?>(null)
+
+    fun visible(pane: PaneState, listing: Listing): List<FileOps.Entry> {
+        val shown = visibleEntries(pane, listing.entries, Declarations.files.filters)
+        val f = liveFilter ?: return shown
+        return if (f.locationKey == pane.location.key && !f.scope.recursive) ExplorerSearch.filterHere(shown, f.query, f.scope) else shown
+    }
 
     /** The entries a pane's selection refers to, in list order. */
     fun selectedEntries(id: PaneId): List<FileOps.Entry> {
@@ -350,6 +360,34 @@ class FilesController(
 
     fun cancelSearch() { searchCancel.set(true); searchJob?.cancel(); search.update { it.copy(running = false) } }
     fun clearSearch() { cancelSearch(); search.value = SearchState() }
+
+    // ── inline explorer search (ui.files.search) ────────────────────────────
+
+    /** A recursive scope's streamed hits. [stop] says why the walk ended early (ExplorerSearch.Stop). */
+    data class ScopedSearch(val query: String = "", val scopeId: String = "", val running: Boolean = false, val hits: List<FileOps.Entry> = emptyList(), val scanned: Int = 0, val stop: ExplorerSearch.Stop = ExplorerSearch.Stop.NONE)
+
+    val scoped = MutableStateFlow(ScopedSearch())
+    private var scopedJob: Job? = null
+    private var scopedToken = AtomicBoolean(false)
+
+    /** Restart the recursive walk: the previous one is cancelled, the new one waits the declared debounce, then streams off the main thread. */
+    fun runScoped(start: String, query: String, kind: Declarations.SearchScopeDecl, decl: Declarations.FilesSearchDecl = Declarations.files.search) {
+        cancelScoped()
+        if (!kind.recursive || ExplorerSearch.needle(query).isEmpty()) { scoped.value = ScopedSearch(query, kind.id); return }
+        val token = AtomicBoolean(false).also { scopedToken = it }
+        scoped.value = ScopedSearch(query, kind.id, running = true)
+        scopedJob = scope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(decl.debounceMs)
+            if (token.get()) return@launch
+            val stop = ExplorerSearch.walk(File(start), query, kind, ExplorerSearch.Bounds(decl.resultCeiling, decl.scanCeiling, decl.depthCeiling), mimes, { token.get() },
+                onScanned = { n -> if (!token.get()) scoped.update { it.copy(scanned = n) } },
+                onHit = { e -> if (!token.get()) scoped.update { it.copy(hits = it.hits + e) } })
+            if (!token.get()) scoped.update { it.copy(running = false, stop = stop) }
+        }
+    }
+
+    fun cancelScoped() { scopedToken.set(true); scopedJob?.cancel(); scopedJob = null }
+    fun clearScoped() { cancelScoped(); scoped.value = ScopedSearch() }
 
     // ── duplicates ──────────────────────────────────────────────────────────
 

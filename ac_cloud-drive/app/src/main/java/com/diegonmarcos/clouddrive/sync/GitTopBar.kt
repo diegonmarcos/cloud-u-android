@@ -167,7 +167,7 @@ internal fun GitSearchRow(decl: Declarations.GitTopBarDecl, query: String, onQue
  * text. No Material outlined field (56dp plus its label space) and no extra margins.
  */
 @Composable
-internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, tag: String = DriveTags.SYNC_GIT_SEARCH) {
     val shape = RoundedCornerShape(GitSearchMetrics.corner)
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
@@ -182,7 +182,7 @@ internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholde
         BasicTextField(
             value = query, onValueChange = onQuery, singleLine = true, textStyle = style,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.weight(1f).testTag(DriveTags.SYNC_GIT_SEARCH + ":field"),
+            modifier = Modifier.weight(1f).testTag(tag + ":field"),
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.CenterStart) {
                     if (query.isEmpty()) Text(placeholder, style = style.copy(color = ink), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -191,7 +191,7 @@ internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholde
             },
         )
         if (query.isNotEmpty()) Box(
-            Modifier.size(GitSearchMetrics.height).clickable(onClickLabel = "Clear search") { onQuery("") }.testTag(DriveTags.SYNC_GIT_SEARCH + ":clear"),
+            Modifier.size(GitSearchMetrics.height).clickable(onClickLabel = "Clear search") { onQuery("") }.testTag(tag + ":clear"),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Filled.Close, "Clear search", Modifier.size(GitSearchMetrics.icon), tint = ink) }
         else Spacer(Modifier.width(GitSearchMetrics.inset))

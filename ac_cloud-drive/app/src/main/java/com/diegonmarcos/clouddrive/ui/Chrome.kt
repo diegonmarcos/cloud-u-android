@@ -144,6 +144,11 @@ object DriveTags {
     const val FILES_SELECTION_BAR = "files_selection_bar"
     const val FILES_PLACES_SHEET = "files_places_sheet"
     const val FILES_SEARCH_BAR = "files_search_bar"
+    const val FILES_SEARCH_FIELD = "files_search_field"
+    const val FILES_SEARCH_SCOPES = "files_search_scopes"
+    const val FILES_SEARCH_CLOSE = "files_search_close"
+    const val FILES_SEARCH_RESULTS = "files_search_results"
+    fun filesSearchScope(id: String) = "files_search_scope:$id"
 
     const val SYNC_STRIP = "sync_strip"
     const val SYNC_HERO = "sync_hero"

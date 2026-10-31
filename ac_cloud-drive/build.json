@@ -721,7 +721,9 @@
         }
       ],
       "default_dual_pane": true,
-      "tabs_per_pane_max": 6
+      "tabs_per_pane_max": 6,
+      "_doc_search": "#1357 THE INLINE SEARCH of the explorer: the search icon expands a compact bar (search_height_dp, the Git page's GitSearchField) over the listing, which stays visible and filters live; under it ONE row of scope chips in this order. A scope is {id, label, recursive, from (here|root), folders_only}; default_scope is the chip selected each time the bar opens. A recursive scope runs off the main thread, streams hits, is cancelled when the query or scope changes (debounce_ms), and stops at result_ceiling hits, scan_ceiling entries and depth_ceiling levels so a huge storage never freezes the UI. Back or the x collapses the bar and keeps the current folder. test-drive-explorer-search.sh pins it.",
+      "search": {"search_height_dp": 40, "default_scope": "folders_here", "debounce_ms": 250, "result_ceiling": 300, "scan_ceiling": 50000, "depth_ceiling": 24, "placeholder": "Search", "scopes": [{"id": "folders_here", "label": "Only Folders Here", "recursive": false, "from": "here", "folders_only": true}, {"id": "folders_root", "label": "Only Folders Root", "recursive": true, "from": "root", "folders_only": true}, {"id": "all_here", "label": "All From Here", "recursive": true, "from": "here", "folders_only": false}, {"id": "all_root", "label": "All From Root", "recursive": true, "from": "root", "folders_only": false}]}
     },
     "icons": {
       "_doc": "The glyph an unknown icon name renders. IconCatalog knows this name too.",

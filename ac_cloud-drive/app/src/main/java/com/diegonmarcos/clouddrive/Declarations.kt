@@ -380,8 +380,28 @@ object Declarations {
         val tabsPerPaneMax: Int,
         /** #875 the row/selection actions the screen offers, declared (label, icon, snack) instead of typed into Kotlin. */
         val rowActions: List<RowActionDecl> = emptyList(),
+        /** The explorer's inline search: scopes, default chip, bounds (ui.files.search). */
+        val search: FilesSearchDecl = FilesSearchDecl(),
     ) {
         fun rowAction(id: String): RowActionDecl? = rowActions.firstOrNull { it.id == id }
+    }
+
+    /** One scope chip. [fromRoot] = walk from the storage root, else from the current folder; [recursive] false = filter the listing in place. */
+    data class SearchScopeDecl(val id: String, val label: String, val recursive: Boolean, val fromRoot: Boolean, val foldersOnly: Boolean)
+
+    data class FilesSearchDecl(
+        val scopes: List<SearchScopeDecl> = emptyList(),
+        val defaultScope: String = "",
+        val heightDp: Int = 40,
+        val debounceMs: Long = 250,
+        val resultCeiling: Int = 300,
+        val scanCeiling: Int = 50_000,
+        val depthCeiling: Int = 24,
+        val placeholder: String = "Search",
+    ) {
+        fun scope(id: String): SearchScopeDecl? = scopes.firstOrNull { it.id == id }
+        /** The declared default when it names a scope, else the first scope. */
+        val initialScope: SearchScopeDecl? get() = scope(defaultScope) ?: scopes.firstOrNull()
     }
 
     /** #875 [snack] is the confirmation shown after the action; it never carries the value acted on. */
@@ -752,6 +772,25 @@ object Declarations {
             rowActions = objects(o["row_actions"]).mapNotNull { a ->
                 val id = a.str("id"); if (id.isBlank()) null else RowActionDecl(id, a.str("label", id), a.str("icon"), a.str("snack"))
             },
+            search = parseFilesSearch(o["search"] as? JsonObject),
+        )
+    }
+
+    fun parseFilesSearch(o: JsonObject?): FilesSearchDecl {
+        if (o == null) return FilesSearchDecl()
+        val scopes = objects(o["scopes"]).mapNotNull { sc ->
+            val id = sc.str("id"); if (id.isBlank()) null
+            else SearchScopeDecl(id, sc.str("label", id), sc.bool("recursive"), sc.str("from") == "root", sc.bool("folders_only"))
+        }
+        return FilesSearchDecl(
+            scopes = scopes,
+            defaultScope = o.str("default_scope"),
+            heightDp = (o.int("search_height_dp") ?: 40).coerceAtLeast(24),
+            debounceMs = (o.int("debounce_ms") ?: 250).coerceAtLeast(0).toLong(),
+            resultCeiling = (o.int("result_ceiling") ?: 300).coerceAtLeast(1),
+            scanCeiling = (o.int("scan_ceiling") ?: 50_000).coerceAtLeast(1),
+            depthCeiling = (o.int("depth_ceiling") ?: 24).coerceAtLeast(1),
+            placeholder = o.str("placeholder", "Search"),
         )
     }
 
