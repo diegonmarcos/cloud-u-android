@@ -1,6 +1,6 @@
 package com.diegonmarcos.superapp.apps
 
-import com.diegonmarcos.superapp.appstore.BuiltFrom
+import com.diegonmarcos.superapp.fleetconfig.BuiltFrom
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

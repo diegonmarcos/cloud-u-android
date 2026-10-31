@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.fleetconfigs
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import com.diegonmarcos.superapp.fleetconfig.BuiltFrom
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
@@ -20,7 +21,7 @@ public data class ReleaseState(val latestSha: String, val latestDate: String, va
 
 /**
  * Configs ▸ General ▸ Update and About ▸ Changelog read the same two public facts, the way Cloud Store does: the `.source`
- * sidecar CI publishes next to every APK on the rolling release (`<apk sha256> <commit sha>`, so the latest build's commit),
+ * sidecar (read by BuiltFrom, the one reader) CI publishes next to every APK on the rolling release (`<apk sha256> <commit sha>`, so the latest build's commit),
  * and the commits that touched the app's folder (the release notes). Plain HTTPS over Android's resolver; one fetch per
  * process unless the user asks again.
  */
@@ -35,9 +36,9 @@ public object FleetReleases {
         val u = decl.update
         val asset = u.asset(Build.SUPPORTED_ABIS.toList())
         var err = ""
-        val latest = if (asset.isBlank()) { err = "This app declares no release asset."; "" } else runCatching {
-            get("https://github.com/${u.repo}/releases/download/${u.tag}/$asset.source").trim().split(Regex("\\s+")).getOrNull(1).orEmpty()
-        }.getOrElse { err = "Could not reach the release: ${it.message ?: it.javaClass.simpleName}"; "" }
+        val latest = if (asset.isBlank()) { err = "This app declares no release asset."; "" } else
+            BuiltFrom.fetchReleaseCommit("https://github.com/${u.repo}/releases/download/${u.tag}/$asset")
+                ?: run { err = "Could not read the release's source commit."; "" }
         val notes = if (u.appDir.isBlank()) emptyList() else runCatching {
             parseNotes(get("https://api.github.com/repos/${u.repo}/commits?path=${u.appDir}&per_page=10"))
         }.getOrElse { if (err.isEmpty()) err = "Could not load the release notes: ${it.message ?: it.javaClass.simpleName}"; emptyList() }

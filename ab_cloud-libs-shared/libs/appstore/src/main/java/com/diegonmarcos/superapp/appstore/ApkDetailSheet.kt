@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
+import com.diegonmarcos.superapp.fleetconfig.BuiltFrom
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,7 +97,7 @@ object ApkDetailSheet {
         LaunchedEffect(app.id) {
             if (app.releaseUrl.isNotBlank()) release = withContext(Dispatchers.IO) {
                 Release(runCatching { Fleet.releaseAsset(app) }.getOrNull(), runCatching { Fleet.releaseSha256(app) }.getOrNull(),
-                    runCatching { BuiltFrom.fetchReleaseCommit(app) }.getOrNull())
+                    runCatching { BuiltFrom.fetchReleaseCommit(app.abiReleaseUrl) }.getOrNull())
             }
         }
         var verify by remember(app.id) { mutableStateOf<Verify?>(null) }

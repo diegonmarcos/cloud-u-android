@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tester (#820): the Store shows the commit each build came from, read by ONE
-# reader (libs/appstore BuiltFrom) from the two places CI writes it:
+# reader (libs/fleetconfig-model BuiltFrom) from the two places CI writes it:
 #   T1  the writer (publish gate `stamp`) puts the 40-hex commit on line 2
 #   T2  BuiltFrom reads line 2 (index 1), demands 40 hex, else "unknown"
 #   T3  BuiltFrom reads the installed sha from the "(sha-<hex>)" versionName
@@ -10,7 +10,7 @@
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 L="$ROOT/ab_cloud-libs-shared/libs"
-BF="$L/appstore/src/main/java/com/diegonmarcos/superapp/appstore/BuiltFrom.kt"
+BF="$L/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/BuiltFrom.kt"
 DS="$L/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ApkDetailSheet.kt"
 GATE="$ROOT/1_cicd/src/scripts/cloud-android-publish-gate.sh"
 SG="$ROOT/aa_cloud-superapp/app/build.gradle"
@@ -24,7 +24,7 @@ grep -q 'sha-(\[0-9a-f\]' "$BF" && ok "T3 versionName sha" || bad "T3 versionNam
 grep -q 'versionName "${buildJson.android.version_name} (sha-${shortSha})"' "$SG" && grep -q 'GITHUB_SHA' "$SG" \
   && grep -q 'GIT_SHORT_SHA' "$SG" && ok "T4 superapp bakes its sha" || bad "T4 superapp sha bake changed"
 grep -q 'BuiltFrom.shaFromVersionName(d.versionName)' "$DS" && ok "T5 installed built-from" || bad "T5 installed built-from missing"
-grep -q 'BuiltFrom.fetchReleaseCommit(app)' "$DS" && grep -q '"Available built from"' "$DS" && ok "T5 available built-from" || bad "T5 available built-from missing"
+grep -q 'BuiltFrom.fetchReleaseCommit(app.abiReleaseUrl)' "$DS" && grep -q '"Available built from"' "$DS" && ok "T5 available built-from" || bad "T5 available built-from missing"
 others="$(grep -rl '\.source"' "$L" --include=*.kt | grep -v '/BuiltFrom.kt$' || true)"
 [ -z "$others" ] && ok "T6 one reader" || bad "T6 second .source reader: $others"
 exit $fail

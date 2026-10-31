@@ -1,6 +1,4 @@
-package com.diegonmarcos.superapp.appstore
-
-import com.diegonmarcos.superapp.updater.Fleet
+package com.diegonmarcos.superapp.fleetconfig
 
 /**
  * #820 THE one reader of "which commit was this APK built from".
@@ -51,10 +49,10 @@ object BuiltFrom {
         return "https://github.com/$repo/commit/$sha"
     }
 
-    /** Network: GET `<abiReleaseUrl>.source` and read line 2. Null on any failure. */
-    fun fetchReleaseCommit(app: Fleet.App): String? = runCatching {
-        if (app.releaseUrl.isBlank()) return null
-        val c = java.net.URL(app.abiReleaseUrl + ".source").openConnection() as java.net.HttpURLConnection
+    /** Network: GET `<assetUrl>.source` (the release asset's URL) and read line 2. Null on any failure. */
+    fun fetchReleaseCommit(assetUrl: String): String? = runCatching {
+        if (assetUrl.isBlank()) return null
+        val c = java.net.URL("$assetUrl.source").openConnection() as java.net.HttpURLConnection
         c.instanceFollowRedirects = true
         c.connectTimeout = 10_000
         c.readTimeout = 10_000
