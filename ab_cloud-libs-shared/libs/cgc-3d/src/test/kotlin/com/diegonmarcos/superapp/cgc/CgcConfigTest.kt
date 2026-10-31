@@ -100,8 +100,8 @@ class CgcConfigTest {
         val shout = CgcConfig.ops(spec, CgcConfig.set(spec, spec.defaults, "face", "shout")).getJSONObject("morphs")
         assertEquals(1.0, shout.getDouble("jawOpen"), 1e-9)
         val neutral = CgcConfig.ops(spec, spec.defaults).getJSONObject("morphs")
-        assertEquals(setOf("mouthSmileLeft", "mouthSmileRight", "jawOpen"), neutral.keySet())
-        neutral.keySet().forEach { assertEquals(it, 0.0, neutral.getDouble(it), 1e-9) }
+        assertEquals(setOf("mouthSmileLeft", "mouthSmileRight", "jawOpen"), neutral.keys().asSequence().toSet())
+        neutral.keys().forEach { k -> assertEquals(k, 0.0, neutral.getDouble(k), 1e-9) }
     }
 
     @Test fun engines() {
