@@ -35,7 +35,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 7 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 12 | 2 | 85% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 4 | 9 | 30% |
-| cloud-me | `com.diegonmarcos.cloudme` | 14 | 0 | 100% |
+| cloud-me | `com.diegonmarcos.cloudme` | 15 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 7 | 1 | 87% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 9 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 14 | 0 | 100% |
@@ -52,11 +52,11 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 5 | 2 | 71% |
 | cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 5 | 2 | 71% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 11 | 2 | 84% |
-| cg-omniverse | `com.diegonmarcos.cgomniverse` | 4 | 0 | 100% |
+| cg-omniverse | `com.diegonmarcos.cgomniverse` | 6 | 0 | 100% |
 | capital-stack-finterminal | `com.diegonmarcos.capitalfinterm` | 5 | 0 | 100% |
 | hardtech-cad | `com.diegonmarcos.hardtechcad` | 4 | 0 | 100% |
 | hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 4 | 0 | 100% |
-| **fleet** | | **374** | **54** | **87%** |
+| **fleet** | | **377** | **54** | **87%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -769,6 +769,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `health_user` | prefs | config | yes | #1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live). |
+| `inventory_user` | prefs | config | yes | #1367 Cloud Me > Inventory user data, one JSON string under 'data' (collections of typed item records per sub-page: housing, household, transport, parking, utilities, taxes, insurance, contracts, banking, subscriptions, leisure, food, care, clothing, electronics, education) plus the `_seeded` marker of the collections whose declared mock seed was already applied once. Your own entries, so they move with the phone and the backup; the summary (count, value, monthly recurring) is derived and never stored. |
 | `llc_user` | prefs | config | yes | Cloud Me > LLC user data (the former Work section), one JSON string under 'data' (collections of typed records): employment contracts, side-hustle income, company assets and portfolio holdings. Your own entries, so they move with the phone; gain, allocation and income totals are derived and never stored. |
 | `me_perm_walk` | prefs | device | no | Cloud Me Configs > Perms walk: how many times Health Connect was asked (it stops showing its request after two declines) and which special-access settings pages the start-up walk already opened once. Runtime asks live in libs:perms' perm_ask_tracker. The new phone asks afresh, so it never migrates. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
@@ -788,7 +789,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 |---|---|---|
 | `assets/health_*.json (from ac_cloud-me/data/health)` | config | #1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store. |
 
-Coverage: 14 covered, 0 gaps.
+Coverage: 15 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
@@ -1257,10 +1258,12 @@ Coverage: 11 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cg-omniverse — `com.diegonmarcos.cgomniverse`
 
-Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
+Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-cgc-3d, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `avatar` | prefs | config | yes | CG-Omniverse's Avatar editor (#1373): the chosen option of each category of data/avatar.json (outfit colour, skin tone, face features, glasses, animation, ...), one JSON object under `config`; an id the declaration no longer has falls back to the default. The user's own avatar configuration, so it migrates; also the one file the app's backup rules take. |
+| `cg_omniverse_ai_keys` | encrypted | secret | yes | CG-Omniverse's AI key for the Avatar editor's "describe your avatar" (#1373): the user's own OpenRouter API key under the slot data/avatar.json::ai.key_slot, pasted in the editor's AI panel (FinTerm's Config > Sources pattern). EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git; sent only in the Authorization header of the request to the declared endpoint. A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
@@ -1271,7 +1274,7 @@ Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## capital-stack-finterminal — `com.diegonmarcos.capitalfinterm`
 

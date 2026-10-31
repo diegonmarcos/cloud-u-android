@@ -1,0 +1,77 @@
+{
+  "_doc": "cgc-3d's bundled humanoid clips, authored for this library (CC0-1.0, no third-party motion data). Read by cgc-anim.js buildClip. Frame: the character's (+X left, +Y up, +Z forward), Euler degrees XYZ (Z applied first), relative to a T-pose rest; per bone base + amp * shape(2*pi*(freq*t/duration + phase)), shape sine | half | abs. hips: a translation in metres, same form. A list of terms is summed. Bones use Mixamo names; a VRM rig is mapped by cgc-anim.js VRM_TO_MIXAMO.",
+  "licence": "CC0-1.0",
+  "clips": [
+    {
+      "id": "idle", "label": "Idle", "duration": 4,
+      "bones": {
+        "LeftArm": {"base": [2, 0, -82], "amp": [1.5, 0, 1.5], "freq": 1},
+        "RightArm": {"base": [2, 0, 82], "amp": [1.5, 0, -1.5], "freq": 1},
+        "LeftForeArm": {"base": [0, -14, 0], "amp": [0, -2, 0], "freq": 1, "phase": 0.2},
+        "RightForeArm": {"base": [0, 14, 0], "amp": [0, 2, 0], "freq": 1, "phase": 0.2},
+        "LeftHand": {"base": [0, -6, -6]},
+        "RightHand": {"base": [0, 6, 6]},
+        "Spine1": {"base": [1, 0, 0], "amp": [1.2, 0, 0], "freq": 1},
+        "Spine2": {"base": [0, 0, 0], "amp": [0.8, 0, 0], "freq": 1, "phase": 0.1},
+        "Neck": {"base": [0, 0, 0], "amp": [0, 4, 0], "freq": 0.5, "phase": 0.25},
+        "Head": {"base": [-2, 0, 0], "amp": [1.5, 3, 0], "freq": 0.5},
+        "LeftUpLeg": {"base": [0, 0, -1.5]},
+        "RightUpLeg": {"base": [0, 0, 1.5]}
+      },
+      "hips": {"base": [0, 0, 0], "amp": [0, 0.004, 0], "freq": 1}
+    },
+    {
+      "id": "walk", "label": "Walk", "duration": 1.1,
+      "bones": {
+        "LeftUpLeg": {"base": [-4, 0, 0], "amp": [26, 0, 0], "freq": 1, "phase": 0.25},
+        "RightUpLeg": {"base": [-4, 0, 0], "amp": [26, 0, 0], "freq": 1, "phase": 0.75},
+        "LeftLeg": {"base": [6, 0, 0], "amp": [48, 0, 0], "freq": 1, "phase": 0.5, "shape": "half"},
+        "RightLeg": {"base": [6, 0, 0], "amp": [48, 0, 0], "freq": 1, "shape": "half"},
+        "LeftFoot": {"base": [0, 0, 0], "amp": [-14, 0, 0], "freq": 1, "phase": 0.3},
+        "RightFoot": {"base": [0, 0, 0], "amp": [-14, 0, 0], "freq": 1, "phase": 0.8},
+        "LeftArm": {"base": [0, 0, -78], "amp": [15, 0, 0], "freq": 1, "phase": 0.25},
+        "RightArm": {"base": [0, 0, 78], "amp": [15, 0, 0], "freq": 1, "phase": 0.75},
+        "LeftForeArm": {"base": [0, -22, 0], "amp": [0, -10, 0], "freq": 1, "phase": 0.75},
+        "RightForeArm": {"base": [0, 22, 0], "amp": [0, 10, 0], "freq": 1, "phase": 0.25},
+        "Spine": {"base": [3, 0, 0], "amp": [0, 5, 0], "freq": 1, "phase": 0.25},
+        "Spine2": {"base": [0, 0, 0], "amp": [0, -7, 0], "freq": 1, "phase": 0.25},
+        "Head": {"base": [-3, 0, 0], "amp": [0, 3, 0], "freq": 1, "phase": 0.75}
+      },
+      "hips": {"base": [0, -0.012, 0], "amp": [0, 0.018, 0], "freq": 2, "shape": "abs"}
+    },
+    {
+      "id": "wave", "label": "Wave", "duration": 2,
+      "bones": {
+        "RightArm": {"base": [0, 25, -20]},
+        "RightForeArm": {"base": [0, 0, -85], "amp": [0, 0, 22], "freq": 3},
+        "RightHand": {"base": [0, 0, -5], "amp": [0, 0, 10], "freq": 3, "phase": 0.15},
+        "LeftArm": {"base": [2, 0, -76]},
+        "LeftForeArm": {"base": [0, -14, 0]},
+        "Spine1": {"base": [0, 0, 2]},
+        "Neck": {"base": [0, -6, 0]},
+        "Head": {"base": [-4, -4, 4], "amp": [1.5, 0, 0], "freq": 3},
+        "LeftUpLeg": {"base": [0, 0, -2]},
+        "RightUpLeg": {"base": [0, 0, 2]}
+      }
+    },
+    {
+      "id": "dance", "label": "Dance", "duration": 1.6,
+      "bones": {
+        "LeftArm": {"base": [-10, 0, -50], "amp": [28, 0, 0], "freq": 2},
+        "RightArm": {"base": [-10, 0, 50], "amp": [-28, 0, 0], "freq": 2},
+        "LeftForeArm": {"base": [0, -20, 95], "amp": [0, 0, 15], "freq": 2},
+        "RightForeArm": {"base": [0, 20, -95], "amp": [0, 0, -15], "freq": 2},
+        "Spine": {"base": [4, 0, 0], "amp": [0, 0, 6], "freq": 1},
+        "Spine2": {"base": [0, 0, 0], "amp": [0, 10, -4], "freq": 1, "phase": 0.1},
+        "Head": {"base": [0, 0, 0], "amp": [10, 0, 0], "freq": 2, "shape": "abs"},
+        "LeftUpLeg": {"base": [-6, 0, -4], "amp": [-16, 0, 0], "freq": 2, "shape": "abs"},
+        "RightUpLeg": {"base": [-6, 0, 4], "amp": [-16, 0, 0], "freq": 2, "shape": "abs"},
+        "LeftLeg": {"base": [10, 0, 0], "amp": [30, 0, 0], "freq": 2, "shape": "abs"},
+        "RightLeg": {"base": [10, 0, 0], "amp": [30, 0, 0], "freq": 2, "shape": "abs"},
+        "LeftFoot": {"base": [-6, 0, 0], "amp": [-12, 0, 0], "freq": 2, "shape": "abs"},
+        "RightFoot": {"base": [-6, 0, 0], "amp": [-12, 0, 0], "freq": 2, "shape": "abs"}
+      },
+      "hips": [{"amp": [0.045, 0, 0], "freq": 1}, {"base": [0, -0.008, 0], "amp": [0, -0.03, 0], "freq": 2, "shape": "abs"}]
+    }
+  ]
+}

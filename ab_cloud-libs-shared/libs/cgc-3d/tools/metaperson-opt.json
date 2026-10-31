@@ -1,0 +1,96 @@
+{
+  "_doc": "cgc-3d tools/opt-glb rules for the owner's MetaPerson export: texture budget and the normal map each material takes (FBX2glTF drops them).",
+  "images_default": {
+    "max": 1024,
+    "quality": 80
+  },
+  "images": [
+    {
+      "match": "_Normal",
+      "max": 512,
+      "quality": 88
+    },
+    {
+      "match": "AvatarHeadMale_Color",
+      "max": 1024,
+      "quality": 84
+    },
+    {
+      "match": "AvatarEyes_Color",
+      "max": 256,
+      "quality": 85
+    },
+    {
+      "match": "Teeth_Color",
+      "max": 256,
+      "quality": 82
+    },
+    {
+      "match": "glasses",
+      "max": 256,
+      "format": "png"
+    },
+    {
+      "match": "_Color",
+      "max": 1024,
+      "quality": 80
+    }
+  ],
+  "materials": {
+    "AvatarBody": {
+      "normal": "AvatarBodyMale_Normal",
+      "roughness": 0.62
+    },
+    "AvatarHead": {
+      "normal": "AvatarHeadMale_Normal",
+      "roughness": 0.58
+    },
+    "AvatarLeftEyeball": {
+      "normal": "AvatarEyes_Normal",
+      "roughness": 0.15
+    },
+    "AvatarRightEyeball": {
+      "normal": "AvatarEyes_Normal",
+      "roughness": 0.15
+    },
+    "AvatarTeethLower": {
+      "normal": "AvatarTeeth_Normal",
+      "roughness": 0.35
+    },
+    "AvatarTeethUpper": {
+      "normal": "AvatarTeeth_Normal",
+      "roughness": 0.35
+    },
+    "AvatarEyelashes": {
+      "baseColor": [
+        0.05,
+        0.04,
+        0.035,
+        1
+      ],
+      "roughness": 0.9
+    },
+    "outfit_bottom": {
+      "normal": "jeans_AZAT_Normal",
+      "roughness": 0.9
+    },
+    "outfit_shoes": {
+      "normal": "SEVAN_Normal",
+      "roughness": 0.7
+    },
+    "outfit_top": {
+      "normal": "hoodie_AZAT_Normal",
+      "roughness": 0.95
+    },
+    "glasses": {
+      "roughness": 0.3,
+      "metallic": 0.2,
+      "doubleSided": true
+    }
+  },
+  "bits": {
+    "position": 16,
+    "uv": 14,
+    "morph": 12
+  }
+}

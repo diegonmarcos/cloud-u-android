@@ -52,6 +52,7 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       # the Avatar scene's three.js + OrbitControls, copied into the APK from Cloud Nav's assets by app/build.gradle (copyThreeAssets)
       - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ab_cloud-libs-shared/libs/cgc-3d/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"

@@ -1,0 +1,246 @@
+name: "Proof → CG-Omniverse Avatar (libs:cgc-3d mutants + emulator screens)"
+
+# Two proofs the Ship run cannot give, on demand (#1373):
+#   mutants  every rule of libs:cgc-3d's configuration -> scene ops (CgcConfig, CgcSpec) and of the OpenRouter answer -> configuration
+#            mapping and key handling (OpenRouterAvatar) is held by a JVM test: each job plants ONE mutant in the lib and passes only
+#            when CG-Omniverse's unit task (which compiles the lib's src/test) goes RED from CgcConfigTest / OpenRouterAvatarTest /
+#            AvatarTest. A baseline job requires the real tree GREEN. The HTTP is a fake HttpPort: no network, no key.
+#   screens  installs the x86_64 APK of a Ship run (or the rolling release) on an emulator and walks the Avatar tab: the owner's
+#            model loaded, the bottom sheet on Animations, a walk, a hoodie colour change, the Export menu and a PNG export,
+#            glasses off with a smile, a coming-soon category, dance, the collapsed sheet; uploaded as `cg-omniverse-avatar-screens`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ship_run_id:
+        description: "Ship → CG-Omniverse run whose x86_64 APK to walk (empty = the rolling release)"
+        required: false
+        default: ""
+      only:
+        description: "mutants | screens | both"
+        required: false
+        default: "both"
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  WORK_DIR: ad_CG-Omniverse
+
+jobs:
+  mutants:
+    if: ${{ inputs.only != 'screens' }}
+    name: "Mutant ${{ matrix.mutant }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mutant: [baseline, load-undeclared, set-soon, set-undeclared, soon-engine, ops-soon, ops-clip-id, ops-null, ops-tint, ops-morph-zero, ops-clamp, spec-unwired, spec-default, ai-label, ai-cat-label, ai-nearest, ai-soon, ai-wrap, ai-prose, ai-distance, ai-nokey, ai-http, ai-bearer, ai-prompt-soon, ai-leak]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Plant the mutant
+        env:
+          M: ${{ matrix.mutant }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          base = "ab_cloud-libs-shared/libs/cgc-3d/src/main/java/com/diegonmarcos/superapp/cgc/"
+          M = {
+            "baseline":         None,
+            "load-undeclared":  ('CgcConfig.kt', 'if (id != null && c.options.any { it.id == id }) id else', 'if (id != null) id else'),
+            "set-soon":         ('CgcConfig.kt', 'if (soon(c, engine)) return cfg', 'if (false) return cfg'),
+            "set-undeclared":   ('CgcConfig.kt', 'return if (c.options.any { it.id == id }) cfg + (category to id) else cfg', 'return cfg + (category to id)'),
+            "soon-engine":      ('CgcConfig.kt', 'c.soon || (engine != null && c.kind !in engine.kinds)', 'c.soon'),
+            "ops-soon":         ('CgcConfig.kt', 'if (soon(c, engine)) continue', 'if (false) continue'),
+            "ops-clip-id":      ('CgcConfig.kt', 'out.put("clip", opt.clip)', 'out.put("clip", opt.id)'),
+            "ops-null":         ('CgcConfig.kt', 'opt.color ?: JSONObject.NULL', 'opt.color ?: ""'),
+            "ops-tint":         ('CgcConfig.kt', 'if (c.kind == CgcSpec.KIND_COLOR) colors else tints', 'colors'),
+            "ops-morph-zero":   ('CgcConfig.kt', 'if (!morphs.has(name)) morphs.put(name, 0.0)', 'if (false) morphs.put(name, 0.0)'),
+            "ops-clamp":        ('CgcConfig.kt', 'v.coerceIn(0.0, 1.0)', 'v'),
+            "spec-unwired":     ('CgcSpec.kt', 'c.optBoolean("soon", false) || kind !in WIRED_KINDS', 'c.optBoolean("soon", false)'),
+            "spec-default":     ('CgcSpec.kt', 'd?.optString(c.id)?.takeIf { id -> c.options.any { it.id == id } } ?: c.options.firstOrNull()?.id.orEmpty()', 'c.options.firstOrNull()?.id.orEmpty()'),
+            "ai-label":         ('OpenRouterAvatar.kt', 'c.options.firstOrNull { norm(it.label) == norm(raw) }', 'c.options.firstOrNull { it.label == raw }'),
+            "ai-cat-label":     ('OpenRouterAvatar.kt', '|| norm(it.label) == norm(key) }', '}'),
+            "ai-nearest":       ('OpenRouterAvatar.kt', 'nearest(c, raw) else null', 'null else null'),
+            "ai-soon":          ('OpenRouterAvatar.kt', 'if (c == null || CgcConfig.soon(c, engine)) { ignored += key; continue }', 'if (c == null) { ignored += key; continue }'),
+            "ai-wrap":          ('OpenRouterAvatar.kt', 'listOf("config", "options")', 'listOf<String>()'),
+            "ai-prose":         ('OpenRouterAvatar.kt', "val start = content.indexOf('{')", 'val start = 0'),
+            "ai-distance":      ('OpenRouterAvatar.kt', '(p[it] - target[it]) * (p[it] - target[it])', '(p[it] - target[it])'),
+            "ai-nokey":         ('OpenRouterAvatar.kt', 'if (key.isNullOrEmpty()) return AiResult.NoKey', 'if (key == null) return AiResult.NoKey'),
+            "ai-http":          ('OpenRouterAvatar.kt', 'if (reply.code !in 200..299) return', 'if (false) return'),
+            "ai-bearer":        ('OpenRouterAvatar.kt', '"Authorization" to "Bearer $key"', '"Authorization" to "$key"'),
+            "ai-prompt-soon":   ('OpenRouterAvatar.kt', 'if (CgcConfig.soon(c, engine)) continue\n                sb.append', 'if (false) continue\n                sb.append'),
+            "ai-leak":          ('OpenRouterAvatar.kt', 'AiResult.Network(e.javaClass.simpleName)', 'AiResult.Network(e.message.orEmpty())'),
+          }[os.environ["M"]]
+          if M is None: sys.exit(0)
+          p = base + M[0]
+          s = open(p).read()
+          if s.count(M[1]) != 1: sys.exit("mutation target not found exactly once: %r" % M[1])
+          open(p, "w").write(s.replace(M[1], M[2]))
+          PY
+          git diff --stat
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.10.2"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
+      - name: Checkout vault (shared signing key, read by app/build.gradle at configuration)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me-pvt-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Install ORAS + sops (pinned)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
+      - name: JVM suite (baseline GREEN, every mutant RED)
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          M: ${{ matrix.mutant }}
+        run: |
+          set +e
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR" > unit.log 2>&1
+          rc=$?
+          tail -60 unit.log
+          grep -E "(CgcConfigTest|OpenRouterAvatarTest|AvatarTest) > .* FAILED|tests completed" unit.log || true
+          if [ "$M" = baseline ]; then
+            [ $rc -eq 0 ] || { echo "::error::the real tree is RED"; exit 1; }
+            echo "baseline GREEN"
+          else
+            [ $rc -ne 0 ] || { echo "::error::mutant $M stayed GREEN: no test holds this rule"; exit 1; }
+            grep -qE "CgcConfigTest|OpenRouterAvatarTest|AvatarTest" unit.log || { echo "::error::mutant $M is red but not from the cgc suites"; exit 1; }
+            echo "mutant $M is RED (killed)"
+          fi
+
+  screens:
+    if: ${{ inputs.only != 'mutants' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the x86_64 APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ inputs.ship_run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          if [ -n "$RUN" ]; then gh run download "$RUN" -R "$GITHUB_REPOSITORY" -p 'CG-Omniverse-x86_64-*' -D apk
+          else gh release download latest -R "$GITHUB_REPOSITORY" -p 'CG-Omniverse-x86_64.apk' -D apk; fi
+          pick=$(find apk -name '*.apk' | head -1); [ -n "$pick" ] || { echo "::error::no APK"; exit 1; }
+          cp "$pick" app.apk; ls -la app.apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Write the walk
+        run: |
+          cat > walk.py <<'PY'
+          import re, subprocess, sys, time
+          OUT = "screens"
+          pkg = sys.argv[1]
+          def sh(*a): return subprocess.run(["adb", *a], capture_output=True, text=True, timeout=90)
+          def dump():
+              for _ in range(6):
+                  sh("shell", "uiautomator", "dump", "/sdcard/u.xml")
+                  x = sh("shell", "cat", "/sdcard/u.xml").stdout
+                  if "<hierarchy" in x: return x
+                  time.sleep(2)
+              return ""
+          def nodes(x):
+              for m in re.finditer(r'<node [^>]*>', x):
+                  n = m.group(0)
+                  t = re.search(r' text="([^"]*)"', n); d = re.search(r' content-desc="([^"]*)"', n)
+                  b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+                  if b: yield (t.group(1) if t else ""), (d.group(1) if d else ""), tuple(map(int, b.groups()))
+          def front():
+              top = sh("shell", "dumpsys", "activity", "activities").stdout
+              if not any(pkg in l for l in top.splitlines() if "ResumedActivity" in l):
+                  print("::warning::the app was not in front; relaunching")
+                  sh("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(25)
+          def find(label):
+              return [b for t, d, b in nodes(dump()) if label in (t, d)]
+          def tap(label, nth=0):
+              front()
+              hits = find(label)
+              if len(hits) > nth:
+                  x1, y1, x2, y2 = hits[nth]; sh("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2)); time.sleep(2); return True
+              print("::warning::no '%s' on screen" % label); return False
+          def shot(name, wait=0):
+              time.sleep(wait)
+              with open("%s/%s.png" % (OUT, name), "wb") as f: f.write(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout)
+              print("shot", name)
+          sh("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
+          time.sleep(10)
+          for _ in range(30):
+              if not find("Loading avatar..."): break
+              time.sleep(3)
+          shot("01-avatar-default-animations", 6)
+          tap("Walk"); shot("02-animations-walk", 4)
+          tap("Outfit"); tap("Navy"); shot("03-outfit-colour-navy", 4)
+          tap("Export"); shot("04-export-menu", 1)
+          tap("PNG"); shot("05-export-png-saved", 2)
+          tap("Glasses"); tap("Off"); tap("Face"); tap("Smile"); shot("06-glasses-off-smile", 3)
+          tap("Hair"); shot("07-hair-coming-soon", 2)
+          tap("Animations"); tap("Dance"); shot("08-dance", 3)
+          hs = find("Animations")
+          s = [b for t, d, b in nodes(dump()) if t == "Animations"]
+          if s:
+              x1, y1, x2, y2 = s[0]; sh("shell", "input", "swipe", "540", str(y1 - 60), "540", str(y1 + 300), "300")
+          shot("09-sheet-collapsed", 3)
+          tap("Rotate"); shot("10-rotating", 4)
+          tap("Home view"); shot("11-home-view", 3)
+          PY
+          cat > walk.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          mkdir -p screens
+          adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard || true
+          adb install -r -g app.apk || exit 2
+          PKG=com.diegonmarcos.cgomniverse
+          adb logcat -v threadtime "*:W" chromium:I > screens/logcat.txt 2>&1 &
+          python3 walk.py "$PKG"; rc=$?
+          adb shell dumpsys package "$PKG" | grep -E "versionName|codePath" > screens/package.txt || true
+          adb shell ls -l /sdcard/Download/CG-Omniverse >> screens/package.txt 2>&1 || true
+          ls -la app.apk >> screens/package.txt
+          exit $rc
+          EOF
+          chmod +x walk.sh
+      - name: Boot emulator + walk
+        timeout-minutes: 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_5
+          ram-size: 4096M
+          cores: 4
+          emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./walk.sh
+      - name: Upload the screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cg-omniverse-avatar-screens
+          path: screens
+          retention-days: 30

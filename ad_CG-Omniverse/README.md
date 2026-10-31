@@ -5,9 +5,13 @@ Lnktree family, declared in `1_cicd/src/data/app-families.json`; the Cloud famil
 
 Bottom nav: **Avatar | Galaxy | Store** (`build.json::ui`; each is a page kind drawn by `ui/SectionPage.kt`).
 
-* **Avatar**: a 3D avatar configurator. The scene is `app/src/main/assets/avatar` (three.js in a WebView, served by `WebViewAssetLoader`, offline);
-  three.js and OrbitControls are Cloud Nav's copies, copied into the APK at build time (`copyThreeAssets` in `app/build.gradle`). The groups and
-  the default avatar are `data/avatar.json`; the configuration is saved in the `avatar` prefs file, which the backup rules (`res/xml`) include.
+* **Avatar** (#1373): the owner's avatar (`app/src/main/assets/avatar/models/owner.glb`, a MetaPerson Creator export converted offline to a
+  rigged, meshopt-compressed GLB) in an editor laid out like MetaPerson Creator's mobile UI (dark stage, Home/AI, Rotate, Export GLB/PNG, a
+  bottom sheet of option cards over a bar of nine categories), drawn by `libs:cgc-3d` (three.js + three-vrm in a WEB_WORLD view; three.js and
+  OrbitControls are Cloud Nav's copies, `copyThreeAssets` in `app/build.gradle`). Categories, cards, the default avatar and the OpenRouter
+  "describe your avatar" connector are `data/avatar.json`; the configuration is saved in the `avatar` prefs file (backed up), the user's
+  OpenRouter key in the encrypted `cg_omniverse_ai_keys` store. `cg-omniverse-avatar-proof.yml` (dispatch) mutates the lib's rules and walks
+  the tab on an emulator.
 * **Store**: the worlds of `data/store.json`, GENERATED from `data/fwa.md` by `python3 data/gen-store.py` (never edit the JSON; `--check` is the
   drift check, run by `test/test-store-data.sh`). The same generator writes `res/xml/network_security_config.xml`: cleartext is forbidden except for the hosts of the http-only Store entries, which the tester holds equal. Filters Type / Dimension / Device are multi-select chip rows, all selected by default
   (`Store.kt`; 2D/3D and 3D/Video count as both 2D and 3D, VR Yes as VR Glass and Flat Screen, VR No as Flat Screen only).

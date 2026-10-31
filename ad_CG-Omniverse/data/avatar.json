@@ -1,49 +1,101 @@
 {
-  "_doc": "The Avatar configurator's declaration: the groups the user personalises, their options (a `choice` names a shape the scene in app/src/main/assets/avatar/avatar.js draws; a `color` carries its colour) and the default avatar. Avatar.kt reads it (baked by app/build.gradle as AVATAR_B64); the saved configuration is one option id per group, and an id this file no longer declares falls back to the default.",
-  "default": {
-    "body": "regular",
-    "height": "medium",
-    "skin": "warm",
-    "hair": "quiff",
-    "hair_color": "espresso",
-    "outfit": "jacket",
-    "top_color": "indigo",
-    "bottom_color": "charcoal",
-    "accessory": "headphones",
-    "pose": "idle"
+  "_doc": "The Avatar editor's declaration (libs:cgc-3d CgcSpec): the scene cgc.js boots from, the AvatarEngine, the categories of the bottom icon bar in order (MetaPerson Creator's mobile layout: outfit, body, skin, face features, head shape, hair, glasses, body-type presets, animations), their cards, the default avatar, the OpenRouter connector and the editor's UI strings. Baked by app/build.gradle as AVATAR_B64 and read by Avatar.kt. A category's kind is what the engine does with a card: clip (play a clip of cgc/clips.json or of the model), color (recolour the targets' materials, keeping their shading), tint (multiply the targets' own textures), visible (show/hide named meshes), morph (set ARKit blendshapes); any other kind, or soon: true, is declared but not wired yet and shows its cards as coming soon. The saved configuration is one option id per category; an id this file no longer declares falls back to the default.",
+  "scene": {
+    "model": {"url": "models/owner.glb", "kind": "glb"},
+    "background": "#121212",
+    "exposure": 1.0,
+    "camera": {"fov": 28, "minDistance": 0.6, "maxDistance": 9},
+    "ground": {"shadow": true},
+    "clips": {"url": "./clips.json", "default": "idle"}
   },
-  "groups": [
-    {"id": "body", "label": "Body", "kind": "choice", "options": [
-      {"id": "slim", "label": "Slim"}, {"id": "regular", "label": "Regular"}, {"id": "athletic", "label": "Athletic"}, {"id": "curvy", "label": "Curvy"}]},
-    {"id": "height", "label": "Height", "kind": "choice", "options": [
-      {"id": "short", "label": "Short"}, {"id": "medium", "label": "Medium"}, {"id": "tall", "label": "Tall"}]},
-    {"id": "skin", "label": "Skin", "kind": "color", "options": [
-      {"id": "porcelain", "label": "Porcelain", "color": "#f6d9c7"}, {"id": "light", "label": "Light", "color": "#ecc19f"},
-      {"id": "warm", "label": "Warm", "color": "#d9a27a"}, {"id": "tan", "label": "Tan", "color": "#b97c52"},
-      {"id": "brown", "label": "Brown", "color": "#8a5634"}, {"id": "deep", "label": "Deep", "color": "#5a3521"}]},
-    {"id": "hair", "label": "Hair", "kind": "choice", "options": [
-      {"id": "quiff", "label": "Quiff"}, {"id": "short", "label": "Short"}, {"id": "long", "label": "Long"},
-      {"id": "bun", "label": "Bun"}, {"id": "curly", "label": "Curly"}, {"id": "buzz", "label": "Buzz"}]},
-    {"id": "hair_color", "label": "Hair colour", "kind": "color", "options": [
-      {"id": "black", "label": "Black", "color": "#1c1716"}, {"id": "espresso", "label": "Espresso", "color": "#3b2418"},
-      {"id": "auburn", "label": "Auburn", "color": "#8c3a1c"}, {"id": "blonde", "label": "Blonde", "color": "#d8b36e"},
-      {"id": "silver", "label": "Silver", "color": "#c7ccd6"}, {"id": "rose", "label": "Rose", "color": "#e070a8"},
-      {"id": "teal", "label": "Teal", "color": "#2fb0a6"}]},
-    {"id": "outfit", "label": "Outfit", "kind": "choice", "options": [
-      {"id": "jacket", "label": "Jacket"}, {"id": "hoodie", "label": "Hoodie"}, {"id": "tee", "label": "Tee"}, {"id": "suit", "label": "Suit"}]},
-    {"id": "top_color", "label": "Top colour", "kind": "color", "options": [
-      {"id": "indigo", "label": "Indigo", "color": "#4b4fd8"}, {"id": "crimson", "label": "Crimson", "color": "#c8324a"},
-      {"id": "forest", "label": "Forest", "color": "#2f7a52"}, {"id": "sand", "label": "Sand", "color": "#d6c09a"},
-      {"id": "ink", "label": "Ink", "color": "#23252e"}, {"id": "snow", "label": "Snow", "color": "#eef0f4"},
-      {"id": "sunset", "label": "Sunset", "color": "#f08a3c"}]},
-    {"id": "bottom_color", "label": "Bottom colour", "kind": "color", "options": [
-      {"id": "charcoal", "label": "Charcoal", "color": "#30323a"}, {"id": "denim", "label": "Denim", "color": "#3c5a8a"},
-      {"id": "khaki", "label": "Khaki", "color": "#a8946a"}, {"id": "olive", "label": "Olive", "color": "#5d6b3c"},
-      {"id": "cream", "label": "Cream", "color": "#e8e0cc"}]},
-    {"id": "accessory", "label": "Accessory", "kind": "choice", "options": [
-      {"id": "none", "label": "None"}, {"id": "headphones", "label": "Headphones"}, {"id": "glasses", "label": "Glasses"},
-      {"id": "cap", "label": "Cap"}, {"id": "visor", "label": "VR visor"}]},
-    {"id": "pose", "label": "Pose", "kind": "choice", "options": [
-      {"id": "idle", "label": "Idle"}, {"id": "wave", "label": "Wave"}, {"id": "dance", "label": "Dance"}, {"id": "hero", "label": "Hero"}]}
-  ]
+  "engine": "model-file",
+  "default": {
+    "outfit": "original",
+    "body": "regular",
+    "skin": "original",
+    "features": "neutral",
+    "head": "oval",
+    "hair": "long",
+    "glasses": "on",
+    "presets": "default",
+    "animations": "idle"
+  },
+  "categories": [
+    {"id": "outfit", "label": "Outfit", "title": "Hoodie colour", "icon": "outfit", "kind": "color", "targets": ["outfit_top"], "options": [
+      {"id": "original", "label": "Original", "color": null},
+      {"id": "charcoal", "label": "Charcoal", "color": "#2c2c30"},
+      {"id": "navy", "label": "Navy", "color": "#22345e"},
+      {"id": "forest", "label": "Forest", "color": "#2f5e3c"},
+      {"id": "sand", "label": "Sand", "color": "#cdb88f"},
+      {"id": "snow", "label": "Snow", "color": "#ececec"},
+      {"id": "violet", "label": "Violet", "color": "#7a3ff0"}]},
+    {"id": "body", "label": "Body", "title": "Body", "icon": "body", "kind": "shape", "options": [
+      {"id": "slim", "label": "Slim", "thumb": "thumbs/body-rest.png"},
+      {"id": "regular", "label": "Regular", "thumb": "thumbs/body-rest.png"},
+      {"id": "athletic", "label": "Athletic", "thumb": "thumbs/body-rest.png"}]},
+    {"id": "skin", "label": "Skin", "title": "Skin tone", "icon": "skin", "kind": "tint", "targets": ["AvatarBody", "AvatarHead"], "options": [
+      {"id": "original", "label": "Original", "color": null},
+      {"id": "warm", "label": "Warm", "color": "#ffdcc4"},
+      {"id": "rosy", "label": "Rosy", "color": "#ffc9c2"},
+      {"id": "tan", "label": "Tan", "color": "#e3ab86"},
+      {"id": "deep", "label": "Deep", "color": "#a87152"}]},
+    {"id": "features", "label": "Face", "title": "Face features", "icon": "features", "kind": "morph", "options": [
+      {"id": "neutral", "label": "Neutral", "thumb": "thumbs/face-neutral.png"},
+      {"id": "smile", "label": "Smile", "thumb": "thumbs/face-smile.png", "morphs": {"mouthSmileLeft": 0.8, "mouthSmileRight": 0.8, "cheekSquintLeft": 0.35, "cheekSquintRight": 0.35, "eyeSquintLeft": 0.2, "eyeSquintRight": 0.2}},
+      {"id": "surprised", "label": "Surprised", "thumb": "thumbs/face-surprised.png", "morphs": {"browInnerUp": 0.85, "browOuterUpLeft": 0.7, "browOuterUpRight": 0.7, "eyeWideLeft": 0.7, "eyeWideRight": 0.7, "jawOpen": 0.3}},
+      {"id": "wink", "label": "Wink", "thumb": "thumbs/face-wink.png", "morphs": {"eyeBlinkLeft": 1.0, "mouthSmileLeft": 0.55, "cheekSquintLeft": 0.4}},
+      {"id": "frown", "label": "Frown", "thumb": "thumbs/face-frown.png", "morphs": {"browDownLeft": 0.7, "browDownRight": 0.7, "mouthFrownLeft": 0.7, "mouthFrownRight": 0.7, "noseSneerLeft": 0.25, "noseSneerRight": 0.25}}]},
+    {"id": "head", "label": "Head", "title": "Head shape", "icon": "head", "kind": "shape", "options": [
+      {"id": "oval", "label": "Oval", "thumb": "thumbs/face-neutral.png"},
+      {"id": "round", "label": "Round", "thumb": "thumbs/face-neutral.png"},
+      {"id": "square", "label": "Square", "thumb": "thumbs/face-neutral.png"}]},
+    {"id": "hair", "label": "Hair", "title": "Hair", "icon": "hair", "kind": "parts", "options": [
+      {"id": "long", "label": "Long"},
+      {"id": "short", "label": "Short"},
+      {"id": "bun", "label": "Bun"},
+      {"id": "buzz", "label": "Buzz"}]},
+    {"id": "glasses", "label": "Glasses", "title": "Glasses", "icon": "glasses", "kind": "visible", "options": [
+      {"id": "on", "label": "On", "thumb": "thumbs/face-neutral.png", "visible": {"glasses": true}},
+      {"id": "off", "label": "Off", "thumb": "thumbs/face-noglasses.png", "visible": {"glasses": false}}]},
+    {"id": "presets", "label": "Body type", "title": "Body-type presets", "icon": "presets", "kind": "shape", "options": [
+      {"id": "default", "label": "Default", "thumb": "thumbs/body-rest.png"},
+      {"id": "lean", "label": "Lean", "thumb": "thumbs/body-rest.png"},
+      {"id": "strong", "label": "Strong", "thumb": "thumbs/body-rest.png"}]},
+    {"id": "animations", "label": "Animations", "title": "Animations", "icon": "animations", "kind": "clip", "options": [
+      {"id": "idle", "label": "Idle", "clip": "idle", "thumb": "thumbs/clip-idle.png"},
+      {"id": "walk", "label": "Walk", "clip": "walk", "thumb": "thumbs/clip-walk.png"},
+      {"id": "wave", "label": "Wave", "clip": "wave", "thumb": "thumbs/clip-wave.png"},
+      {"id": "dance", "label": "Dance", "clip": "dance", "thumb": "thumbs/clip-dance.png"}]}
+  ],
+  "ai": {
+    "_doc": "The OpenRouter connector (libs:cgc-3d OpenRouterAvatar). The key is the user's own, typed in the editor's AI sheet and kept only in EncryptedSharedPreferences (libs:crash SafeEncryptedPrefs, slot key_slot); never logged, never in git.",
+    "id": "openrouter",
+    "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "model": "openai/gpt-4o-mini",
+    "key_slot": "openrouter",
+    "signup": "https://openrouter.ai/keys",
+    "referer": "https://github.com/diegonmarcos/cloud-u-android",
+    "title": "CG-Omniverse Avatar"
+  },
+  "ui": {
+    "export": "Export",
+    "export_glb": "GLB",
+    "export_png": "PNG",
+    "soon": "Coming soon",
+    "home": "Home view",
+    "rotate": "Rotate",
+    "ai": "Describe your avatar",
+    "ai_hint": "e.g. navy hoodie, no glasses, smiling, dancing",
+    "ai_go": "Apply",
+    "ai_key": "OpenRouter API key",
+    "ai_key_save": "Save key",
+    "ai_key_clear": "Remove key",
+    "ai_key_saved": "Key stored on this phone (encrypted)",
+    "ai_no_key": "Add your OpenRouter key first",
+    "ai_working": "Asking the model...",
+    "ai_applied": "Applied",
+    "ai_failed": "Could not apply",
+    "saved": "Saved to Downloads",
+    "loading": "Loading avatar..."
+  }
 }

@@ -117,7 +117,8 @@
         "libs:ui-icons",
         "libs:ui-nav-bars",
         "libs:theme-background",
-        "libs:ui-kit"
+        "libs:ui-kit",
+        "libs:cgc-3d"
       ]
     },
     "libs:web-core": {
@@ -168,6 +169,11 @@
       "dir": "../ab_cloud-libs-shared/libs/theme-background",
       "type": "library",
       "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:cgc-3d": {
+      "_doc": "#1373 the CG apps' shared 3D viewer/editor (cgc.js + vendored three.js loaders and three-vrm as assets/cgc, the editor's declaration, scene ops, AvatarEngine, OpenRouter connector), shared BY REFERENCE; the Avatar page draws with it.",
+      "dir": "../ab_cloud-libs-shared/libs/cgc-3d",
+      "type": "library"
     },
     "libs:ui-kit": {
       "_doc": "2026-10-16 owner decision: all apps are Compose. The fleet's Compose kit (CloudKitTheme, KitPalette, KitCard, KitSettingsRow, KitButton), shared BY REFERENCE.",

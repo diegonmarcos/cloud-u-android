@@ -1,0 +1,57 @@
+// libs:cgc-3d: the CG apps' shared 3D model viewer and editor (#1373), open source only. A plain Android library that ships
+//   assets/cgc/   cgc.js (viewer/editor runtime), cgc-anim.js (declarative clips, Mixamo-style retargeting), clips.json (CC0 clips)
+//                 and vendor/ (three.js r185 examples: GLTFLoader, FBXLoader + fflate + NURBS, GLTFExporter, meshopt decoder,
+//                 SkeletonUtils, BufferGeometryUtils, RoomEnvironment; @pixiv/three-vrm 3.5.5), merged into the consumer's assets;
+//   kotlin        CgcSpec (the editor's declaration), CgcConfig (configuration -> scene ops), AvatarEngine, OpenRouterAvatar.
+// three.js itself is NOT here: consumers map "three" to Cloud Nav's copy (ac_cloud-nav assets/space, copied in by their gradle).
+// Compile-in only (no component, nothing to install): lib-apks build.json::lib_apks.exclude. TESTED through the consumer: the
+// unit task of CG-Omniverse runs src/test/ here (its app/build.gradle adds the directory), mutation-proven by
+// .github/workflows/cg-omniverse-avatar-proof.yml. Deliberately sparse: no compose, so it builds under any consumer's AGP.
+plugins {
+    id 'com.android.library'
+}
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.cgc'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    sourceSets {
+        main { java.srcDirs += ['src/main/java'] }
+        test { java.srcDirs += ['src/test/kotlin'] }
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed', 'standardOut'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite.
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}

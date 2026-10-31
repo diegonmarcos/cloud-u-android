@@ -65,7 +65,7 @@
   },
   "vendored": {
    "LicenseRef-NoLicenseGranted": 2,
-   "MIT": 1
+   "MIT": 2
   }
  },
  "upstream_modules": {
@@ -5059,7 +5059,8 @@
     "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-tools-small-llms/app/build.gradle",
-    "ac_cloud-vault/gradle/libs.versions.toml"
+    "ac_cloud-vault/gradle/libs.versions.toml",
+    "ad_CG-Omniverse/app/build.gradle"
    ],
    "version": "1.1.0-alpha06",
    "scope": "shipped",
@@ -7488,6 +7489,7 @@
   "maven:junit:junit": {
    "kind": "maven",
    "declared_in": [
+    "ab_cloud-libs-shared/libs/cgc-3d/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
@@ -8000,6 +8002,7 @@
     "ab_cloud-libs-shared/libs/analytics-sink/build.gradle",
     "ab_cloud-libs-shared/libs/bluetooth/build.gradle",
     "ab_cloud-libs-shared/libs/calc/build.gradle",
+    "ab_cloud-libs-shared/libs/cgc-3d/build.gradle",
     "ab_cloud-libs-shared/libs/contacts/build.gradle",
     "ab_cloud-libs-shared/libs/decisions-core/build.gradle",
     "ab_cloud-libs-shared/libs/decisions-engine/build.gradle",
@@ -16198,6 +16201,14 @@
    "licence_source": "registry.npmjs.org latest (4.6.7)",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "notes"
+  },
+  "vendored:ab_cloud-libs-shared/libs/cgc-3d/src/main/assets/cgc/vendor": {
+   "kind": "vendored",
+   "declared_in": [
+    "ab_cloud-libs-shared/libs/cgc-3d/src/main/assets/cgc/vendor/LICENSE"
+   ],
+   "licence": "MIT",
+   "licence_source": "licenses/curated.json"
   },
   "vendored:ac_cloud-calc": {
    "kind": "vendored",

@@ -95,7 +95,7 @@ def uiStacksB64  = b64(uiStacks)
 def storeJson  = new groovy.json.JsonSlurper().parse(file('../data/store.json'))
 def avatarJson = new groovy.json.JsonSlurper().parse(file('../data/avatar.json'))
 if (!storeJson.entries) throw new GradleException("data/store.json has no entries: run python3 data/gen-store.py")
-if (!avatarJson.groups || !avatarJson.default) throw new GradleException("data/avatar.json declares no groups or no default avatar")
+if (!avatarJson.categories || !avatarJson.default || !avatarJson.scene) throw new GradleException("data/avatar.json declares no categories, no default avatar or no scene")
 def storeB64  = b64(storeJson)
 def avatarB64 = b64(avatarJson)
 def uiTargetsB64 = b64([sites: targetSites, registry_sites: targetRegistry, repo_base: (appUrls.repo_base ?: '')])
@@ -173,6 +173,12 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = '17' }
+
+    // libs:cgc-3d's JVM suite (scene ops, OpenRouter mapping) runs in THIS app's unit task, the one the ship workflow runs and
+    // .github/workflows/cg-omniverse-avatar-proof.yml mutates: the consumer runs a shared lib's tests (theme-background's precedent).
+    sourceSets {
+        test { java.srcDirs += ['../../ab_cloud-libs-shared/libs/cgc-3d/src/test/kotlin'] }
+    }
 }
 
 // The Avatar scene's three.js and OrbitControls are Cloud Nav's copies, shared BY REFERENCE: this task copies just those three files (three.module, the three.core it imports, OrbitControls)
@@ -212,6 +218,11 @@ dependencies {
     implementation project(':libs:theme-background')
     // The fleet's tokens and kit: CloudKitTheme, KitPalette, KitCard, KitSettingsRow, KitButton (libs:ui-kit).
     implementation project(':libs:ui-kit')
+    // The CG apps' shared 3D viewer/editor (#1373): cgc.js + vendored loaders as assets/cgc, the editor's declaration, scene ops,
+    // AvatarEngine and the OpenRouter "describe your avatar" connector.
+    implementation project(':libs:cgc-3d')
+    // The AI key's EncryptedSharedPreferences, opened through libs:crash SafeEncryptedPrefs (which links it compileOnly).
+    implementation 'androidx.security:security-crypto:1.1.0'
 
     implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'

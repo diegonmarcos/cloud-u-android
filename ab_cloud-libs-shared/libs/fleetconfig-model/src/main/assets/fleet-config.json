@@ -2275,6 +2275,22 @@
         "ad_Hardtech-Sim2Real"
       ]
     },
+    "avatar": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "CG-Omniverse's Avatar editor (#1373): the chosen option of each category of data/avatar.json (outfit colour, skin tone, face features, glasses, animation, ...), one JSON object under `config`; an id the declaration no longer has falls back to the default. The user's own avatar configuration, so it migrates; also the one file the app's backup rules take.",
+      "used_by": [
+        "ad_CG-Omniverse"
+      ]
+    },
+    "cg_omniverse_ai_keys": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "CG-Omniverse's AI key for the Avatar editor's \"describe your avatar\" (#1373): the user's own OpenRouter API key under the slot data/avatar.json::ai.key_slot, pasted in the editor's AI panel (FinTerm's Config > Sources pattern). EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git; sent only in the Authorization header of the request to the declared endpoint. A credential: migrates through the vault.",
+      "used_by": [
+        "ad_CG-Omniverse"
+      ]
+    },
     "capital_finterm_source_keys": {
       "kind": "encrypted",
       "class": "secret",
@@ -4101,6 +4117,7 @@
       "schema_version": 1,
       "libs": [
         "lib-bottomnav",
+        "lib-cgc-3d",
         "lib-core",
         "lib-crash",
         "lib-devtools",
