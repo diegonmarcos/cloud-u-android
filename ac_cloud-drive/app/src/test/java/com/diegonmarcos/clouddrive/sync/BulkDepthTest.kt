@@ -65,7 +65,8 @@ class BulkDepthTest {
 
     @Test fun `the run reports skipped and failed first and names each repository's outcome`() {
         val r = BulkDepth.Run("keep_depth1_all", Declarations.DEPTH_KEEP, 3, 3, ok = mapOf("a" to "kept depth 1"), skipped = mapOf("b" to "dirty: 2 uncommitted"), failed = mapOf("c" to "x"), ended = true)
-        assertEquals(listOf("skipped b: dirty: 2 uncommitted", "failed c: x", "ok a: kept depth 1"), r.lines())
+        // #1353 one block per repository: status and the literal name, then the reason indented on its own line.
+        assertEquals(listOf("skipped  b\n    dirty: 2 uncommitted", "failed  c\n    x", "ok  a\n    kept depth 1"), r.lines())
         assertEquals("skipped: dirty: 2 uncommitted", r.outcomeOf("b"))
         assertNull(r.outcomeOf("zzz"))
     }
