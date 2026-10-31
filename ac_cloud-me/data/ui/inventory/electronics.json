@@ -1,0 +1,174 @@
+[
+  {
+    "kind": "note",
+    "title": "Electronics",
+    "body": "Computers, screens, storage, camera kit. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_electronics",
+        "title": "Electronics",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Computer",
+              "Phone",
+              "Display",
+              "Storage",
+              "Camera",
+              "Drone",
+              "Audio",
+              "Accessory"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Laptop",
+            "category": "Computer",
+            "brand": "MacBook Pro 14 M4 Pro, 48 GB",
+            "purchased": "2025-01-10",
+            "price": "2799.00",
+            "location": "Schreibtisch",
+            "status": "Good",
+            "note": "AppleCare+ to 2028-01"
+          },
+          {
+            "name": "Phone",
+            "category": "Phone",
+            "brand": "Samsung Galaxy A37 5G (SM-A376B)",
+            "purchased": "2026-04-03",
+            "price": "399.00",
+            "status": "Good",
+            "note": "Runs the Cloud constellation"
+          },
+          {
+            "name": "Monitor (left)",
+            "category": "Display",
+            "brand": "Dell UltraSharp U2723QE 27\" 4K",
+            "purchased": "2023-02-20",
+            "price": "579.00",
+            "location": "Schreibtisch",
+            "status": "Good"
+          },
+          {
+            "name": "Monitor (right)",
+            "category": "Display",
+            "brand": "Dell UltraSharp U2723QE 27\" 4K",
+            "purchased": "2023-02-20",
+            "price": "579.00",
+            "location": "Schreibtisch",
+            "status": "Good"
+          },
+          {
+            "name": "NAS",
+            "category": "Storage",
+            "brand": "Synology DS923+, 4 x 8 TB IronWolf (SHR)",
+            "purchased": "2023-02-15",
+            "price": "1420.00",
+            "location": "Abstellkammer",
+            "status": "Good",
+            "note": "Offsite copy to Hetzner Storage Box"
+          },
+          {
+            "name": "Camera",
+            "category": "Camera",
+            "brand": "Sony A7 IV + FE 24-70 mm f/2.8 GM II",
+            "purchased": "2024-06-01",
+            "price": "4190.00",
+            "location": "Schrank",
+            "status": "Good"
+          },
+          {
+            "name": "Drone",
+            "category": "Drone",
+            "brand": "DJI Mini 4 Pro Fly More",
+            "purchased": "2024-04-18",
+            "price": "1099.00",
+            "location": "Campervan",
+            "status": "Good",
+            "note": "EU C0; LBA operator ID registered"
+          },
+          {
+            "name": "Headphones",
+            "category": "Audio",
+            "brand": "Sony WH-1000XM5",
+            "purchased": "2023-11-24",
+            "price": "299.00",
+            "status": "Good"
+          },
+          {
+            "name": "Docking station",
+            "category": "Accessory",
+            "brand": "CalDigit TS4",
+            "purchased": "2023-02-20",
+            "price": "389.00",
+            "location": "Schreibtisch",
+            "status": "Good"
+          }
+        ]
+      }
+    ]
+  }
+]

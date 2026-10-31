@@ -1,0 +1,125 @@
+[
+  {
+    "kind": "note",
+    "title": "Food",
+    "body": "Groceries and the market. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_food",
+        "title": "Food",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Groceries",
+              "Market",
+              "Drinks",
+              "Delivery"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Groceries",
+            "category": "Groceries",
+            "brand": "REWE / Bio Company",
+            "monthly": "340.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Weekly shop, Saturday"
+          },
+          {
+            "name": "Wochenmarkt",
+            "category": "Market",
+            "brand": "Ökomarkt Boxhagener Platz",
+            "monthly": "90.00",
+            "location": "Boxhagener Platz",
+            "status": "Active",
+            "note": "Saturdays: vegetables, eggs, bread"
+          },
+          {
+            "name": "Coffee beans",
+            "category": "Drinks",
+            "brand": "The Barn, subscription",
+            "purchased": "2024-05-01",
+            "monthly": "34.00",
+            "status": "Active",
+            "note": "2 x 250 g per month"
+          },
+          {
+            "name": "Water filter",
+            "category": "Drinks",
+            "brand": "BRITA Marella + Maxtra Pro",
+            "purchased": "2023-01-08",
+            "price": "29.00",
+            "monthly": "4.50",
+            "location": "Küche",
+            "status": "Active",
+            "note": "Cartridge every month"
+          }
+        ]
+      }
+    ]
+  }
+]

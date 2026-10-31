@@ -16,36 +16,36 @@ DataStore / Room stores and declared files it cannot move yet.
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
 | cloud-superapp | `com.diegonmarcos.superapp` | 52 | 0 | 100% |
-| c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
-| c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
-| c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
+| c3-morpheus | `com.diegonmarcos.morpheus` | 4 | 0 | 100% |
+| c3-watchdog | `com.diegonmarcos.watchdog` | 4 | 0 | 100% |
+| c3-watchtower | `com.diegonmarcos.watchtower` | 4 | 0 | 100% |
 | cloud-account | `com.diegonmarcos.cloudaccount` | 17 | 0 | 100% |
 | cloud-tasks | `com.diegonmarcos.cloudagenda` | 9 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 14 | 0 | 100% |
-| cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 2 | 0 | 100% |
-| cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 2 | 0 | 100% |
+| cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 4 | 0 | 100% |
+| cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 4 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 11 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 16 | 0 | 100% |
 | cloud-camera | `cld.camera` | 11 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 6 | 0 | 100% |
-| cloud-code | `com.diegonmarcos.code` | 9 | 5 | 64% |
+| cloud-code | `com.diegonmarcos.code` | 11 | 5 | 68% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 7 | 2 | 77% |
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 8 | 2 | 80% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 13 | 6 | 68% |
-| cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
+| cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 7 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 12 | 2 | 85% |
-| cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
+| cloud-matrix | `com.diegonmarcos.comms.matrix` | 4 | 9 | 30% |
 | cloud-me | `com.diegonmarcos.cloudme` | 14 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 7 | 1 | 87% |
-| cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
+| cloud-myterminal | `com.diegonmarcos.ide` | 9 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 14 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 6 | 1 | 85% |
-| cloud-terminal-nix | `cld.termux.nix` | 10 | 7 | 58% |
+| cloud-terminal-nix | `cld.termux.nix` | 12 | 7 | 63% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 5 | 1 | 83% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 3 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 6 | 4 | 60% |
 | cloud-store | `com.diegonmarcos.cloudstore` | 12 | 0 | 100% |
-| cloud-terminal-termux | `cld.termux` | 10 | 7 | 58% |
+| cloud-terminal-termux | `cld.termux` | 12 | 7 | 63% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 5 | 1 | 83% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 8 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 5 | 0 | 100% |
@@ -56,7 +56,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | capital-stack-finterminal | `com.diegonmarcos.capitalfinterm` | 5 | 0 | 100% |
 | hardtech-cad | `com.diegonmarcos.hardtechcad` | 4 | 0 | 100% |
 | hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 4 | 0 | 100% |
-| **fleet** | | **352** | **54** | **86%** |
+| **fleet** | | **374** | **54** | **87%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -170,13 +170,16 @@ Coverage: 52 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
-Module `ac_c3-morpheus`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
+Module `ac_c3-morpheus`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -184,17 +187,20 @@ Module `ac_c3-morpheus`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfi
 |---|---|---|
 | `-` | device | keeps no configuration of its own; uses libs:core (fleet devtools provider). |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## c3-watchdog — `com.diegonmarcos.watchdog`
 
-Module `ac_c3-watchdog`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ui-kit, lib-watchdog.
+Module `ac_c3-watchdog`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-watchdog.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -202,22 +208,25 @@ Module `ac_c3-watchdog`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfi
 |---|---|---|
 | `-` | device | keeps no configuration of its own; uses libs:watchdog and libs:core (fleet devtools provider). |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## c3-watchtower — `com.diegonmarcos.watchtower`
 
-Module `ac_c3-watchtower`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
+Module `ac_c3-watchtower`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `watchtower_cache` | prefs | device | no | TTL cache of GitHub workflow-runs responses per repo (<owner>/<repo>/runs.ts/.body). |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
@@ -340,13 +349,16 @@ Coverage: 14 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 
-Module `ac_cloud-c3-webserver`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-c3-webserver`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -354,17 +366,20 @@ Module `ac_cloud-c3-webserver`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 |---|---|---|
 | `-` | device | keeps no configuration of its own on device; Tauri/server tree configured by build.json. |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## cloud-media-center — `com.diegonmarcos.cloudmediacenter`
 
-Module `ac_cloud-media-center`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-media-center`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -372,7 +387,7 @@ Module `ac_cloud-media-center`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 |---|---|---|
 | `-` | device | keeps no configuration of its own on device; its pages and their data are bundled in the APK from build.json and web/. |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
@@ -441,7 +456,7 @@ Coverage: 16 covered, 0 gaps.
 
 ## cloud-camera — `cld.camera`
 
-Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-ui-icons.
+Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -454,6 +469,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
 | `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `voice_shutter` | prefs | config | yes | cloud-camera voice shutter on/off toggle ('enabled'). |
@@ -493,7 +509,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-code — `com.diegonmarcos.code`
 
-Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-sysdns, lib-text-tools.
+Module `ac_cloud-code`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-perms, lib-sysdns, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -506,7 +522,10 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-crash, lib-devtools, lib-fle
 | `code_chat_sessions` | file | config | GAP | Cloud Code's chats, mirrored by the web layer from localStorage to files/chat-sessions.json (text and attachment names, never bytes or a token) and seeded back from it on a restored phone. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -519,7 +538,7 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-crash, lib-devtools, lib-fle
 | `ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions` | config | The chats kept on this phone (text and attachment names, never attachment bytes); mirrored to files/chat-sessions.json and carried through the code_chat_sessions store. |
 | `encrypted prefs cloud_code_chat_secrets` | secret | The OpenRouter token pasted in Profile & Config; vault. |
 
-Coverage: 9 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>, file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions.
+Coverage: 11 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>, file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions.
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
@@ -628,7 +647,7 @@ Coverage: 13 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, fi
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
-Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-perms, lib-text-tools, lib-translate, lib-ui-kit, lib-voice.
+Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-perms, lib-text-tools, lib-theme-background, lib-translate, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-voice.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -637,6 +656,8 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-cra
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -649,7 +670,7 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-cra
 | `libs:keyboard (HeliBoard) default shared prefs <pkg>_preferences` | config | Keyboard layouts, languages, theme, key behaviour; kept in the library's default prefs, not in this module's scanned list. |
 | `filesDir/vosk/<model-dir>` | device | Downloaded Vosk model files (re-downloadable); the selected model name is declared/held in the host app prefs, not in this lib |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 7 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
@@ -695,7 +716,7 @@ Coverage: 12 covered, 2 gaps — datastore:settings, mail_signatures.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 
-Module `ac_cloud-matrix`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-matrix`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -719,7 +740,10 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `datastore:vector_analytics` | datastore | config (keys: analytics_id→device, did_ask_user_consent→device) | GAP | Analytics opt-in consent choice (user_consent); analytics_id and did_ask_user_consent are device-local. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -729,7 +753,7 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `databases/ SessionDatabase (SQLDelight) sessions table` | secret | Access/refresh tokens, homeserver URL, user id; homeserver+user id are the account link, tokens go via vault or re-login. |
 | `cacheDir/ (media, logs)` | device | Caches. |
 
-Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elementx_preferences, datastore:elementx_rageshake, datastore:elementx_voice_player, datastore:pin_code_store, datastore:push_store_<userId>, datastore:session_<hash>_preferences, datastore:vector_analytics, file:databases/ SessionDatabase (SQLDelight) sessions table.
+Coverage: 4 covered, 9 gaps — datastore:elementx_featureflag, datastore:elementx_preferences, datastore:elementx_rageshake, datastore:elementx_voice_player, datastore:pin_code_store, datastore:push_store_<userId>, datastore:session_<hash>_preferences, datastore:vector_analytics, file:databases/ SessionDatabase (SQLDelight) sessions table.
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
@@ -800,7 +824,7 @@ Coverage: 7 covered, 1 gaps — datastore:settings.
 
 ## cloud-myterminal — `com.diegonmarcos.ide`
 
-Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
+Module `ac_cloud-myterminal`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -809,7 +833,10 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-crash, lib-devt
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled, the #787 wake_lock_wanted toggle and the pinch-zoom terminal_font_size (px, 6..32; the frontend reads it through the AndroidTerm bridge and migrates its old localStorage myk-term-font-size into it, so "apply all" carries the size to a new phone); all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -820,7 +847,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-crash, lib-devt
 | `filesDir/terminal_id_ecdsa and terminal_id_ecdsa.pub` | device | Hub's own generated ssh keypair (SshBackend.ensureKeyPair); device identity, never migrate; the new phone generates its own and its pubkey must be added to each env's authorized_keys. |
 | `externalFilesDir/crashes/` | device | Crash report dumps queued for DiagnosticsPush. |
 
-Coverage: 7 covered, 0 gaps.
+Coverage: 9 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
@@ -894,7 +921,7 @@ Coverage: 6 covered, 1 gaps — file:data/sources.json, topics.json (bundled) an
 
 ## cloud-terminal-nix — `cld.termux.nix`
 
-Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-shizuku-adb-debug-tools, lib-sysdns.
+Module `ac_cloud-nix-on-droid`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -904,6 +931,8 @@ Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 | `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -924,7 +953,7 @@ Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 | `$HOME/.hermes/.env, exported keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys; sshd on port 8024)` | config | authorized_keys with the cloud-myterminal hub key; private keys secret. |
 
-Coverage: 10 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
+Coverage: 12 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
@@ -1038,7 +1067,7 @@ Coverage: 12 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 
-Module `ac_cloud-termux`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-shizuku-adb-debug-tools, lib-sysdns.
+Module `ac_cloud-termux`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-perms, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1048,6 +1077,8 @@ Module `ac_cloud-termux`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -1069,11 +1100,11 @@ Module `ac_cloud-termux`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
 | `$HOME/cloud-shared-store` | device | The fleet store (cloud-shared-store): a directory in cld.termux's home (a link to it in cld.termux.nix through the shared uid); recreated at login. |
 
-Coverage: 10 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
+Coverage: 12 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 
-Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ui-icons.
+Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1084,6 +1115,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools,
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
 | `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `room:AuthenticatorDatabase` | room | content | no | Bitwarden Authenticator TOTP items stored locally; user data (secrets inside), migrate only via the vault account, never the bytes. |
 | `room:PasswordHistoryDatabase` | room | content | no | Bitwarden generator password history; user data kept locally, not migrated. |
 | `room:PlatformDatabase` | room | device | no | Bitwarden org-event queue (OrganizationEventDao); pending telemetry/sync state. |
@@ -1103,7 +1135,7 @@ Coverage: 5 covered, 1 gaps — room:PrivilegedAppDatabase.
 
 ## cloud-wallet — `com.diegonmarcos.cloudwallet`
 
-Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-ui-icons, lib-ui-kit, lib-updater, lib-wallet.
+Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-perms, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater, lib-wallet.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1115,6 +1147,7 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |

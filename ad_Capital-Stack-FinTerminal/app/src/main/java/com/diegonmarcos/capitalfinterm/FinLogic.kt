@@ -107,8 +107,9 @@ object FinLogic {
         return (chgPct / scale).coerceIn(-1.0, 1.0).toFloat()
     }
 
-    /** Ink switches to canvas on the saturated tiles (|chg| >= 1.5 %), text on the mid range (spec 2.7). */
-    fun heatInkDark(chgPct: Double?): Boolean = chgPct != null && abs(chgPct) >= 1.5
+    /** Muted heat scale: even a clamped tile blends only this far from surfaceRaised toward up/down, so a quiet FX day never paints solid red. */
+    const val HEAT_MAX_BLEND: Float = 0.55f
+
 
     /** The derived spread tile (`spread: {label, of: [a, b]}`): a - b of two rows' values, in bp when [bp]. */
     fun spread(rows: List<List<String>>, a: String, b: String, bp: Boolean = true): Double? {

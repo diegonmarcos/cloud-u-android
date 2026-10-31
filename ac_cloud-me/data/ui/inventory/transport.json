@@ -1,0 +1,196 @@
+[
+  {
+    "kind": "note",
+    "title": "Transport",
+    "body": "Getting around Berlin and getting out of it: BVG, bike, motorcycle, campervan, boat. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_transport",
+        "title": "Transport",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Public transport",
+              "Bike",
+              "Motorcycle",
+              "Campervan",
+              "Boat",
+              "Insurance",
+              "Inspection",
+              "Berth"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Deutschlandticket",
+            "category": "Public transport",
+            "brand": "BVG Abo",
+            "purchased": "2023-05-01",
+            "monthly": "63.00",
+            "location": "BVG app",
+            "status": "Active",
+            "note": "Monthly cancellable; 63 EUR since Jan 2026"
+          },
+          {
+            "name": "Gravel bike",
+            "category": "Bike",
+            "brand": "Canyon Grail CF SL 7",
+            "purchased": "2023-06-14",
+            "price": "2499.00",
+            "location": "Fahrradkeller",
+            "status": "Good",
+            "note": "Frame no. in Hausrat policy; service every spring"
+          },
+          {
+            "name": "Motorcycle",
+            "category": "Motorcycle",
+            "brand": "Yamaha MT-07 (B-XY 734)",
+            "purchased": "2022-03-19",
+            "price": "7290.00",
+            "location": "Tiefgarage Simon-Dach-Str.",
+            "status": "Good",
+            "note": "Bought new; 18,400 km"
+          },
+          {
+            "name": "Motorcycle insurance",
+            "category": "Insurance",
+            "brand": "HUK-Coburg Haftpflicht + Teilkasko",
+            "purchased": "2022-03-19",
+            "monthly": "24.50",
+            "status": "Active",
+            "note": "SF 4; renews 1 January"
+          },
+          {
+            "name": "Motorcycle HU/TÜV",
+            "category": "Inspection",
+            "brand": "TÜV Süd, Berlin-Lichtenberg",
+            "purchased": "2025-03-12",
+            "price": "143.00",
+            "status": "Active",
+            "note": "Next HU due 2027-03"
+          },
+          {
+            "name": "Campervan",
+            "category": "Campervan",
+            "brand": "VW T6.1 California Ocean 2.0 TDI (B-DM 2210)",
+            "purchased": "2022-08-05",
+            "price": "61900.00",
+            "location": "Stellplatz Schönefeld",
+            "status": "Good",
+            "note": "Used, 42,000 km at purchase; Zahnriemen 2027"
+          },
+          {
+            "name": "Campervan insurance",
+            "category": "Insurance",
+            "brand": "Allianz Vollkasko, 500 SB",
+            "purchased": "2022-08-05",
+            "monthly": "92.00",
+            "status": "Active",
+            "note": "SF 6"
+          },
+          {
+            "name": "Campervan HU/TÜV",
+            "category": "Inspection",
+            "brand": "DEKRA Berlin-Neukölln",
+            "purchased": "2024-08-20",
+            "price": "152.00",
+            "status": "Active",
+            "note": "Next HU due 2026-08: overdue, book"
+          },
+          {
+            "name": "Sailboat",
+            "category": "Boat",
+            "brand": "Bavaria 31 Cruiser 'Ostwind'",
+            "purchased": "2023-04-28",
+            "price": "38500.00",
+            "location": "Wannsee",
+            "status": "Good",
+            "note": "Used 2008 hull; new genoa 2025"
+          },
+          {
+            "name": "Boat berth",
+            "category": "Berth",
+            "brand": "Segel-Club Wannsee Liegeplatz",
+            "purchased": "2023-05-01",
+            "monthly": "165.00",
+            "location": "Wannsee, Steg C 14",
+            "status": "Active",
+            "note": "Season April to October; Winterlager under Parking"
+          },
+          {
+            "name": "Boat insurance",
+            "category": "Insurance",
+            "brand": "Pantaenius Yacht-Kasko + Haftpflicht",
+            "purchased": "2023-04-28",
+            "monthly": "61.00",
+            "status": "Active",
+            "note": "Agreed value 38,500 EUR"
+          }
+        ]
+      }
+    ]
+  }
+]

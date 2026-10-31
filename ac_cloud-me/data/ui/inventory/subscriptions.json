@@ -1,0 +1,148 @@
+[
+  {
+    "kind": "note",
+    "title": "Subscriptions",
+    "body": "Digital services that renew on their own. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_subscriptions",
+        "title": "Subscriptions",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Media",
+              "Cloud",
+              "Software",
+              "News"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Spotify Premium",
+            "category": "Media",
+            "brand": "Spotify",
+            "purchased": "2018-03-01",
+            "monthly": "11.99",
+            "status": "Active"
+          },
+          {
+            "name": "Netflix Standard",
+            "category": "Media",
+            "brand": "Netflix",
+            "purchased": "2020-04-01",
+            "monthly": "13.99",
+            "status": "Active"
+          },
+          {
+            "name": "iCloud+ 200 GB",
+            "category": "Cloud",
+            "brand": "Apple",
+            "purchased": "2021-09-01",
+            "monthly": "2.99",
+            "status": "Active",
+            "note": "Photos from the phone"
+          },
+          {
+            "name": "Hetzner Storage Box BX11",
+            "category": "Cloud",
+            "brand": "Hetzner",
+            "purchased": "2023-02-15",
+            "monthly": "3.81",
+            "location": "Falkenstein",
+            "status": "Active",
+            "note": "NAS offsite backup target"
+          },
+          {
+            "name": "GitHub Pro",
+            "category": "Software",
+            "brand": "GitHub",
+            "purchased": "2022-01-10",
+            "monthly": "3.70",
+            "status": "Active",
+            "note": "4 USD"
+          },
+          {
+            "name": "Komoot Premium",
+            "category": "Software",
+            "brand": "Komoot",
+            "purchased": "2024-03-01",
+            "monthly": "5.00",
+            "status": "Active",
+            "note": "59.99 EUR per year"
+          },
+          {
+            "name": "Tagesspiegel Plus",
+            "category": "News",
+            "brand": "Der Tagesspiegel",
+            "purchased": "2025-01-15",
+            "monthly": "9.99",
+            "status": "Active"
+          }
+        ]
+      }
+    ]
+  }
+]

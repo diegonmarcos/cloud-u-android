@@ -1,0 +1,127 @@
+[
+  {
+    "kind": "note",
+    "title": "Leisure",
+    "body": "Sport and the clubs. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_leisure",
+        "title": "Leisure",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Gym",
+              "Club",
+              "Climbing",
+              "Events"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Gym membership",
+            "category": "Gym",
+            "brand": "John Reed Fitness, Berlin-Mitte",
+            "purchased": "2024-02-01",
+            "monthly": "39.90",
+            "location": "Mitte",
+            "status": "Active",
+            "note": "Plus 29 EUR yearly Trainingspauschale"
+          },
+          {
+            "name": "Sailing club membership",
+            "category": "Club",
+            "brand": "Segel-Club Wannsee e.V.",
+            "purchased": "2023-03-15",
+            "monthly": "40.00",
+            "location": "Wannsee",
+            "status": "Active",
+            "note": "480 EUR per year + 4 Arbeitsstunden"
+          },
+          {
+            "name": "Sailing club entrance fee",
+            "category": "Club",
+            "brand": "Segel-Club Wannsee e.V.",
+            "purchased": "2023-03-15",
+            "price": "600.00",
+            "location": "Wannsee",
+            "status": "Active",
+            "note": "One-off Aufnahmegebühr"
+          },
+          {
+            "name": "Bouldering 10-visit card",
+            "category": "Climbing",
+            "brand": "Berta Block",
+            "purchased": "2026-09-04",
+            "price": "125.00",
+            "location": "Pankow",
+            "status": "Active",
+            "note": "6 visits left"
+          }
+        ]
+      }
+    ]
+  }
+]

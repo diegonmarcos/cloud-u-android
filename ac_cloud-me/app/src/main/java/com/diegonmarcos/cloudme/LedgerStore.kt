@@ -6,13 +6,14 @@ import org.json.JSONArray
 
 /**
  * The one place a section's user data touches disk: one JSON string under `data` in the SharedPreferences file named
- * after the store. `buro_user` and `llc_user` are declared in ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json
+ * after the store. `buro_user`, `llc_user`, `experiences_user` and `inventory_user` (#1367) are declared in ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json
  * (config, migrates), so the backup and the new-phone migration carry them.
  */
 object LedgerStore {
     const val BURO = "buro_user"
     const val LLC = "llc_user"
     const val EXP = "experiences_user"
+    const val INV = "inventory_user"
     private const val KEY = "data"
 
     /** Spelled with literal names so the fleet-config guard sees both stores (a name built at runtime cannot be checked). */
@@ -20,6 +21,7 @@ object LedgerStore {
         BURO -> ctx.getSharedPreferences("buro_user", Context.MODE_PRIVATE)
         LLC -> ctx.getSharedPreferences("llc_user", Context.MODE_PRIVATE)
         EXP -> ctx.getSharedPreferences("experiences_user", Context.MODE_PRIVATE)
+        INV -> ctx.getSharedPreferences("inventory_user", Context.MODE_PRIVATE)
         else -> throw IllegalArgumentException("not a ledger store: $store")
     }
 

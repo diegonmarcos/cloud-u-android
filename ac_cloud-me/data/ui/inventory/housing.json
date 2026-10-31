@@ -1,0 +1,148 @@
+[
+  {
+    "kind": "note",
+    "title": "Housing",
+    "body": "The flat and what keeps it: rent, Nebenkosten, deposit, Hausrat. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_housing",
+        "title": "Housing",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Rent",
+              "Service charges",
+              "Deposit",
+              "Insurance",
+              "Fixtures"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Kaltmiete, 2-Zimmer 68 m²",
+            "category": "Rent",
+            "brand": "Hausverwaltung Kiehl & Partner",
+            "purchased": "2021-04-01",
+            "monthly": "1150.00",
+            "location": "Berlin-Friedrichshain, Boxhagener Str.",
+            "status": "Active",
+            "note": "Mietvertrag unbefristet, 3 months notice; Staffelmiete +2% each April"
+          },
+          {
+            "name": "Nebenkosten-Vorauszahlung",
+            "category": "Service charges",
+            "brand": "Hausverwaltung Kiehl & Partner",
+            "purchased": "2021-04-01",
+            "monthly": "185.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Heating, water, Müllabfuhr, Hausmeister; Betriebskostenabrechnung every June"
+          },
+          {
+            "name": "Heizkosten-Vorauszahlung",
+            "category": "Service charges",
+            "brand": "Techem (Ablesung)",
+            "purchased": "2021-04-01",
+            "monthly": "70.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Fernwärme; 2025 Abrechnung refunded 112 EUR"
+          },
+          {
+            "name": "Mietkaution",
+            "category": "Deposit",
+            "brand": "Mietkautionskonto, Berliner Sparkasse",
+            "purchased": "2021-03-15",
+            "price": "3450.00",
+            "location": "Berliner Sparkasse",
+            "status": "Active",
+            "note": "3 Kaltmieten, paid back on move-out"
+          },
+          {
+            "name": "Hausratversicherung",
+            "category": "Insurance",
+            "brand": "HUK24 Hausrat Classic",
+            "purchased": "2021-04-01",
+            "monthly": "7.90",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Versicherungssumme 65,000 EUR incl. Fahrraddiebstahl"
+          },
+          {
+            "name": "Einbauküche (Ablöse)",
+            "category": "Fixtures",
+            "brand": "Nolte, from previous tenant",
+            "purchased": "2021-04-01",
+            "price": "2200.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Good",
+            "note": "Bought from Vormieter; stays mine on move-out"
+          }
+        ]
+      }
+    ]
+  }
+]

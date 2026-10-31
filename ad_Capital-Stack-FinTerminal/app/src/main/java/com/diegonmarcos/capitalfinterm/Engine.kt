@@ -201,11 +201,14 @@ object Engine {
         fun v(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 1000.0) group(x) else sig(x)
         fun plain(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 10000.0) String.format(Locale.ROOT, "%,.0f", x)
             else java.math.BigDecimal(String.format(Locale.ROOT, "%.4f", x)).stripTrailingZeros().toPlainString()
-        fun chg(p: Pt): String = p.prev?.let { if (bp) String.format(Locale.ROOT, "%+.1f", (p.value - it) * 100.0) else signedSig(p.value - it) } ?: FinFormat.DASH
+        fun chg(p: Pt): String = p.prev?.let { if (bp) String.format(Locale.ROOT, "%+.1f", (p.value - it) * 100.0) else FinFormat.signed(p.value - it, decimals(p.value)) } ?: FinFormat.DASH
         fun pct(p: Pt): Double? = p.prev?.takeIf { it != 0.0 }?.let { (p.value / it - 1.0) * 100.0 }
         fun pctText(p: Pt): String = pct(p)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: FinFormat.DASH
+        // A quotes table whose feed carries no previous value (NY Fed latest) shows no change columns instead of a column of dashes.
+        val noChange = panel.view == Dashboards.VIEW_QUOTES && pts.isNotEmpty() && pts.all { it.prev == null }
         val rows = pts.map { p ->
             when {
+                noChange -> listOf(p.label, v(p.value), p.date)
                 panel.raw.optString("value_columns") == "actual_previous" -> listOf(p.label, plain(p.value), p.prev?.let { plain(it) } ?: FinFormat.DASH, p.date)
                 panel.view == Dashboards.VIEW_QUOTES -> listOf(p.label, v(p.value), chg(p), if (bp) FinFormat.DASH else pctText(p), p.date)
                 else -> listOf(p.label, v(p.value), if (bp) chg(p) else pctText(p), p.date)
@@ -218,7 +221,8 @@ object Engine {
             else -> emptyList()
         }
         val alerts = if (panel.raw.optString("alerts") == "price") Alerts.priceHits(c.user.alerts, pts) else emptyList()
-        return PanelData(panel.columns, rows, emptyList(), chart, pts.maxOfOrNull { it.date }.orEmpty(), "", alerts = alerts)
+        val cols = if (noChange) panel.columns.filterNot { it.startsWith("Chg") } else panel.columns
+        return PanelData(cols, rows, emptyList(), chart, pts.maxOfOrNull { it.date }.orEmpty(), "", alerts = alerts)
     }
 
     /** Events in the declared window (days_back before today to days_ahead after), at or above importance_min, once each, in time order. */
@@ -234,7 +238,9 @@ object Engine {
     /** Importance as three dots: 0 to 3 filled. */
     fun dots(n: Int): String = "\u25CF".repeat(n.coerceIn(0, 3)) + "\u25CB".repeat(3 - n.coerceIn(0, 3))
 
-    private fun signedSig(d: Double): String = if (d == 0.0) sig(0.0) else (if (d > 0) "+" else "-") + sig(Math.abs(d))
+    /** The instrument's display decimals: 2 for a level at or above 1 (indices, prices), 4 below (FX crosses, fractions). */
+    fun decimals(level: Double): Int = if (Math.abs(level) >= 1.0) 2 else 4
+
 
     // ------------------------------------------------------------------ FRED
 
@@ -370,7 +376,8 @@ object Engine {
         }.sortedByDescending { it.second }
         val rows = found.map { listOf(it.first, num(it.second, 2), it.third) }
         val chart = if (panel.view == Dashboards.VIEW_BARS) found.mapIndexed { i, t -> ChartPoint(t.first, i.toDouble(), t.second) } else emptyList()
-        return PanelData(panel.columns, rows, emptyList(), chart, found.maxOfOrNull { it.third }.orEmpty(), "")
+        val cols = if (noChange) panel.columns.filterNot { it.startsWith("Chg") } else panel.columns
+        return PanelData(cols, rows, emptyList(), chart, found.maxOfOrNull { it.third }.orEmpty(), "")
     }
 
     // ------------------------------------------------------------- IMF, World Bank
