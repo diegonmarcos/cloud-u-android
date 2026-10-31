@@ -1,12 +1,12 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.diegonmarcos.cgomniverse.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -99,11 +98,15 @@ private fun groupLabel(g: FilterGroup): Int = when (g) {
 @Composable
 private fun FilterRow(label: String, g: FilterGroup, sel: Map<FilterGroup, Set<String>>, onAll: () -> Unit, onChip: (String) -> Unit) {
     val p = LocalKitPalette.current
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = p.textSecondary, modifier = Modifier.width(72.dp))
-        Chip(stringResource(R.string.filter_all), Store.isAll(sel, g), Tags.chip(g.name, "All"), onAll)
-        g.chips.forEach { c -> Chip(c, c in sel[g].orEmpty(), Tags.chip(g.name, c)) { onChip(c) } }
+    // the label stays at the left; the chips wrap onto as many lines as they need, so every one is on screen (a
+    // horizontally scrolled row hid the last chips past the edge: Type's "Others", Device's "VR Glasses")
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = p.textSecondary,
+            modifier = Modifier.width(72.dp).padding(top = 14.dp))
+        FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Chip(stringResource(R.string.filter_all), Store.isAll(sel, g), Tags.chip(g.name, "All"), onAll)
+            g.chips.forEach { c -> Chip(c, c in sel[g].orEmpty(), Tags.chip(g.name, c)) { onChip(c) } }
+        }
     }
 }
 
