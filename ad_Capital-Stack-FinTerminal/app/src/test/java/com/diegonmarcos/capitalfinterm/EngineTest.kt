@@ -86,7 +86,7 @@ class EngineTest {
         assertEquals(listOf("1 of", "USD", "EUR", "GBP", "AUD", "JPY", "CHF", "CAD", "CNY"), d.columns)
         val row = d.rows.first { it[0] == "EUR" }
         assertEquals("1.1200", row[1])
-        assertEquals("-", row[2])
+        assertEquals(FinFormat.DASH, row[2])
         assertEquals("0.00667", d.rows.first { it[0] == "JPY" }[1])
         assertEquals("168.00", d.rows.first { it[0] == "EUR" }[5])
     }

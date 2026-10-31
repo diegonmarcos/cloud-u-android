@@ -59,7 +59,15 @@ def fleetMeshB64 = b64(meshUrls)
 // #868 ui.bottom_nav + ui.sections + ui.default_section are THE navigation declaration (libs:bottomnav's NavDecl); Decl.kt is the only decoder.
 if (!buildJson.ui?.bottom_nav || !buildJson.ui?.sections)
     throw new GradleException("build.json::ui.bottom_nav / ui.sections missing — the island would draw nothing (#868)")
-def uiSectionsB64    = b64(buildJson.ui.sections)
+// UI spec 4.1: each section's pages (the Clean drawer's sub-page dropdown and the title dropdown) are GENERATED from ui.stacks, one page
+// per `dashboard` entry (id = the dashboard id, label = the entry title), so the dashboards are never typed twice.
+def uiSectionsGen = buildJson.ui.sections.collect { s ->
+    def dash = ((buildJson.ui.stacks ?: [:])[s.id] ?: []).findAll { it.kind == 'dashboard' && it.dashboard }
+    dash ? (s + [pages: dash.collect { [id: it.dashboard, label: it.title, icon: ''] }]) : s
+}
+def uiSectionsB64    = b64(uiSectionsGen)
+// The nav UI mode this app starts in (Classic / Clean) and its scroll-hide default: ui.nav_ui (libs:bottomnav NavUiDecl), base64 of its JSON.
+def uiNavUiB64       = b64(buildJson.ui.nav_ui ?: [:])
 def uiBottomNav      = buildJson.ui.bottom_nav.join(',')
 def uiDefaultSection = (buildJson.ui.default_section ?: buildJson.ui.bottom_nav[0]).toString()
 
@@ -133,6 +141,7 @@ android {
         buildConfigField "String", "LOG_SINK_URL",       "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM",    "\"${logSinkStream}\""
         buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_NAV_UI_B64",      "\"${uiNavUiB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_STACKS_B64",      "\"${uiStacksB64}\""

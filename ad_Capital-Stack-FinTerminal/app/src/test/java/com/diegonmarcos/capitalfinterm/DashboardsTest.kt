@@ -38,7 +38,7 @@ class DashboardsTest {
                 assertNotNull("${d.id}/${p.id} source ${p.source} is not declared", s)
                 assertTrue("${d.id}/${p.id}: ${p.source} does not feed ${d.tab}/${d.entry}", s!!.feeds(d.tab, d.entry))
                 assertTrue("${d.id}/${p.id} view ${p.view}", p.view in Dashboards.VIEWS)
-                assertEquals("${d.id}/${p.id} is live, a placeholder or an allocation", 1, listOf(p.isLive, p.placeholderColumns.isNotEmpty(), p.isStatic).count { it })
+                assertEquals("${d.id}/${p.id} is live, a placeholder or an allocation", 1, listOf(p.isLive, p.isPlaceholder, p.isStatic).count { it })
                 if (p.isLive) {
                     assertTrue("${d.id}/${p.id} fetches live from a key-free source", s.authType == Catalog.AUTH_NONE && s.hasConnector)
                     assertEquals("${d.id}/${p.id} provider matches the source connector", s.connector, p.fetch!!.getString("provider"))

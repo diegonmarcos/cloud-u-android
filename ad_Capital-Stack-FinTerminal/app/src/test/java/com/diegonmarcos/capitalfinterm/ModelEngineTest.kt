@@ -89,7 +89,7 @@ class ModelEngineTest {
         assertEquals(1, http.asked.size)
         assertEquals("", d.servedBy)
         assertEquals(listOf("UST 2Y", "UST 10Y", "UST 30Y"), d.rows.map { it[0] })
-        assertEquals(listOf("UST 2Y", "3.52", "+2.0", "-", "2026-10-30"), d.rows[0])
+        assertEquals(listOf("UST 2Y", "3.52", "+2.0", FinFormat.DASH, "2026-10-30"), d.rows[0])
         // the month just started: this month's file is empty, the declared fallback (last month) serves it and is named
         val early = Fake { u -> if (u.contains("field_tdr_date_value_month=202609")) xml else if (u.contains("202610")) "<feed/>" else null }
         val e = load("market_monitor", "ust", early)
@@ -104,7 +104,7 @@ class ModelEngineTest {
         assertEquals(listOf("1M", "10Y", "30Y"), d.chart.map { it.label })
         assertEquals(listOf(0.083333, 10.0, 30.0), d.chart.map { it.x })
         assertEquals("4.70", d.rows.last()[1])
-        assertEquals("-", d.rows.last()[2])
+        assertEquals(FinFormat.DASH, d.rows.last()[2])
     }
 
     @Test fun onePerItemRequestAndAFailingItemIsSkipped() {

@@ -3,6 +3,8 @@ package com.diegonmarcos.capitalfinterm.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.colorResource
 import com.diegonmarcos.capitalfinterm.R
+import com.diegonmarcos.capitalfinterm.ui.fin.FinTheme
+import com.diegonmarcos.capitalfinterm.ui.fin.FinUi
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
 
@@ -18,5 +20,9 @@ fun AppTheme(content: @Composable () -> Unit) {
         hairline = colorResource(R.color.app_outline),
         tileInk = colorResource(R.color.app_on_accent),
     )
-    CloudKitTheme(palette, content)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    FinUi.load(ctx)
+    // Reduce motion follows the system's animator scale (0 = animations off): no shimmer, no tape scroll, no flash.
+    val still = runCatching { android.provider.Settings.Global.getFloat(ctx.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false)
+    CloudKitTheme(palette) { FinTheme(cvd = FinUi.cvd, reduceMotion = still, content = content) }
 }

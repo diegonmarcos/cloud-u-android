@@ -18,4 +18,8 @@
     <color name="fin_flash_up">#FF163B2A</color>
     <color name="fin_flash_down">#FF3F1E24</color>
     <color name="fin_skeleton">#FF1F2A36</color>
+    <color name="fin_skeleton_hi">#FF26323F</color>
+    <!-- Config > Colour-blind safe (preference fin_cvd): up turns blue, down amber; the sign still carries direction. -->
+    <color name="fin_cvd_up">#FF4C9EEB</color>
+    <color name="fin_cvd_down">#FFF5B740</color>
 </resources>

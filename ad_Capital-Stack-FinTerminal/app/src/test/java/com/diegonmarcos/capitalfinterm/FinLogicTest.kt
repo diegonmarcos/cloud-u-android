@@ -1,0 +1,89 @@
+package com.diegonmarcos.capitalfinterm
+
+import com.diegonmarcos.capitalfinterm.FinLogic.Col
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+import java.time.LocalDate
+
+/** UI spec 2.x rules behind the components: typed columns, sort, importance, ranges, ticks, heat, spread, flags, day headers, A/F/P. */
+class FinLogicTest {
+    @Test fun columnsAreTypedFromHeaderAndCellsUnlessDeclared() {
+        val cols = listOf("Tenor", "Yield %", "1d bp", "Date")
+        val rows = listOf(listOf("1M", "4.07", "-3", "2026-10-28"), listOf("10Y", "5.05", "+6", "2026-10-28"))
+        assertEquals(listOf(Col.TEXT, Col.NUM, Col.CHG, Col.DATE), FinLogic.colTypes(emptyList(), cols, rows))
+        assertEquals(listOf(Col.TEXT, Col.PCT, Col.CHG, Col.DATE), FinLogic.colTypes(listOf("text", "pct"), cols, rows))
+    }
+
+    @Test fun sortIsNumbersDescendingThenReversedThenSourceOrderWithMissingLast() {
+        val rows = listOf(listOf("a", "2"), listOf("b", "10"), listOf("c", FinFormat.DASH), listOf("d", "5"))
+        assertEquals(listOf(1, 3, 0, 2), FinLogic.sortOrder(rows, 1, Col.NUM, 1))
+        assertEquals(listOf(0, 3, 1, 2), FinLogic.sortOrder(rows, 1, Col.NUM, 2))
+        assertEquals(listOf(0, 1, 2, 3), FinLogic.sortOrder(rows, 1, Col.NUM, 0))
+        assertEquals(listOf(3, 2, 1, 0), FinLogic.sortOrder(rows, 0, Col.TEXT, 2))
+    }
+
+    @Test fun importanceCountsFilledDotsOrReadsANumber() {
+        assertEquals(2, FinLogic.importance("●●○"))
+        assertEquals(3, FinLogic.importance("3"))
+        assertEquals(3, FinLogic.importance("●●●●"))
+        assertEquals(0, FinLogic.importance(null))
+    }
+
+    @Test fun ticksAreNiceSteps() {
+        assertEquals(listOf(4.0, 4.5, 5.0, 5.5), FinLogic.ticks(4.0, 5.4, 4))
+    }
+
+    @Test fun heatIsClampedAtTheScale() {
+        assertEquals(0.5f, FinLogic.heat(1.5, 3.0))
+        assertEquals(-1f, FinLogic.heat(-9.0, 3.0))
+        assertEquals(0f, FinLogic.heat(null))
+        assertEquals(true, FinLogic.heatInkDark(-1.5))
+        assertEquals(false, FinLogic.heatInkDark(1.49))
+    }
+
+    @Test fun theDerivedSpreadIsTenMinusTwoInBasisPoints() {
+        val rows = listOf(listOf("UST 2Y", "4.56"), listOf("UST 10Y", "4.94"))
+        assertEquals(38.0, FinLogic.spread(rows, "UST 10Y", "UST 2Y")!!, 0.0)
+        assertNull(FinLogic.spread(rows, "UST 30Y", "UST 2Y"))
+    }
+
+    @Test fun flagsAndDayHeaders() {
+        assertEquals("🇬🇧", FinLogic.flag("GB"))
+        assertEquals(FinLogic.flag("GB"), FinLogic.flag("uk"))
+        assertNull(FinLogic.flag("USA"))
+        assertEquals("Thu 05 Nov", FinLogic.dayHeader("2026-11-05"))
+    }
+
+    @Test fun actualForecastPreviousAreFoundByTheirColumnNames() {
+        val cols = listOf("Time (UTC)", "Ctry", "Event", "Imp", "Cons.", "Actual", "Prev.")
+        val a = FinLogic.afp(cols, listOf("2026-10-30T12:30", "US", "Nonfarm payrolls", "3", "158,900", "159,044", "-"))
+        assertEquals("159,044", a.actual)
+        assertEquals("158,900", a.forecast)
+        assertNull(a.previous)
+    }
+
+    @Test fun cellsNeverShowABareDash() {
+        assertEquals(FinFormat.DASH, FinLogic.cell("-"))
+        assertEquals(FinFormat.DASH, FinLogic.change(null))
+        assertEquals("+0.12", FinLogic.change("0.12"))
+        assertEquals("-0.1", FinLogic.change("-0.1"))
+        assertEquals("0.00", FinLogic.change("0.00"))
+    }
+
+    @Test fun rangesFollowTheSeriesLength() {
+        val start = LocalDate.parse("2025-01-01")
+        val pts = (0 until 400).map { ChartPoint(start.plusDays(it.toLong()).toString(), it.toDouble(), it.toDouble()) }
+        assertEquals(32, FinLogic.range(pts, "1M").size)
+        assertEquals(pts, FinLogic.range(pts, "MAX"))
+        assertEquals(listOf("1M", "6M", "1Y", "5Y"), FinLogic.ranges(pts, curve = false))
+        assertEquals(listOf("1M", "6M"), FinLogic.ranges(pts.take(60), curve = false))
+        assertEquals(emptyList<String>(), FinLogic.ranges(pts, curve = true))
+    }
+
+    @Test fun aCardTableShowsEightRowsUntilExpanded() {
+        assertEquals(8, FinLogic.visibleRows(24, false))
+        assertEquals(24, FinLogic.visibleRows(24, true))
+        assertEquals(5, FinLogic.visibleRows(5, false))
+    }
+}

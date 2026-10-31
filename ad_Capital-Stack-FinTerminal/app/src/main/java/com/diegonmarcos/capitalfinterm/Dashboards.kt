@@ -18,11 +18,19 @@ data class Panel(
     val raw: JSONObject,
 ) {
     val isLive: Boolean get() = fetch != null
-    val isStatic: Boolean get() = fetch == null && placeholderColumns.isEmpty() && view == Dashboards.VIEW_ALLOC
+    /** A panel whose source has no key or connector yet (`placeholder: {reason, note}`): drawn as one 48dp key row (UI spec 2, checklist 1). */
+    val isPlaceholder: Boolean get() = fetch == null && raw.has("placeholder")
+    val isStatic: Boolean get() = fetch == null && !isPlaceholder && view == Dashboards.VIEW_ALLOC
 }
 
 /** One dashboard: the FinTerm entry it belongs to (tab id + entry title) and its panels. */
-data class Dashboard(val id: String, val entry: String, val tab: String, val legs: List<Pair<String, Int>>, val panels: List<Panel>)
+data class Dashboard(
+    val id: String, val entry: String, val tab: String, val legs: List<Pair<String, Int>>, val panels: List<Panel>,
+    /** The tab opens on this dashboard (UI spec 3.x, `"default": true`); the others are listed under the breadcrumb's tab word. */
+    val isDefault: Boolean = false,
+    /** A 48dp search field at the top of the dashboard (`"search": true`: Market Monitor, Quotes, Watchlist; UI spec 4.2). */
+    val search: Boolean = false,
+)
 
 /** What a dashboard shows right now, by its panels and their sources. */
 enum class DashStatus { LIVE, PARTLY_LIVE, NEEDS_KEY, LAYOUT_ONLY }
@@ -52,11 +60,28 @@ object Dashboards {
             Dashboard(
                 id = Catalog.str(d, "id"), entry = Catalog.str(d, "entry"), tab = Catalog.str(d, "tab"), legs = legs,
                 panels = if (panels == null) emptyList() else (0 until panels.length()).mapNotNull { panels.optJSONObject(it) }.map { panel(it) },
+                isDefault = d.optBoolean("default", false), search = d.optBoolean("search", false),
             )
         }
     }
 
     fun byId(list: List<Dashboard>, id: String): Dashboard? = list.firstOrNull { it.id == id }
+
+    /** The dashboard a tab opens on: the one declared `default` among [ids] (the tab's entries in order), else the first. */
+    fun defaultOf(list: List<Dashboard>, ids: List<String>): String? =
+        ids.firstOrNull { id -> list.any { it.id == id && it.isDefault } } ?: ids.firstOrNull { id -> list.any { it.id == id } }
+
+    /**
+     * The panels in drawing order (UI spec 3, checklist 17): live and static panels in their declared order, then the panels with no
+     * source yet (key rows) at the bottom; a panel declared `segment_of` another is drawn inside that one's card, never alone.
+     */
+    fun drawOrder(d: Dashboard): List<Panel> {
+        val shown = d.panels.filter { it.raw.optString("segment_of").isEmpty() }
+        return shown.filter { it.isLive || it.isStatic } + shown.filterNot { it.isLive || it.isStatic }
+    }
+
+    /** The panels drawn as segments (source chips) of [panel]'s card: itself first, then those declared `segment_of` it. */
+    fun segments(d: Dashboard, panel: Panel): List<Panel> = listOf(panel) + d.panels.filter { it.raw.optString("segment_of") == panel.id }
 
     /** Live when every panel is live or static; partly when some are; else needs a key when a placeholder's source wants one. */
     fun status(d: Dashboard, sources: List<Source>): DashStatus {

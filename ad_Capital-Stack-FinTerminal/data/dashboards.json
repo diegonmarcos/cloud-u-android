@@ -1,5 +1,5 @@
 {
-  "_doc": "THE DASHBOARDS of Capital-Stack-FinTerminal (#1335): one per FinTerm entry (build.json::ui.stacks, kind dashboard, `dashboard` = the id here). A panel names its `source` (an id of data/sources.json whose `feeds` lists this entry) and EITHER a `fetch` (a live connector: the key-free sources) OR a `placeholder` (a dashed layout drawn while the source needs a key / has no connector yet, with 'add your key in Config > Sources'). Providers and derivations are named here and implemented in Kotlin (Providers.kt, Derive.kt); no address is typed anywhere but data/sources.json (endpoint) because a request is endpoint + path + params. Read by Dashboards.kt and by test/test-finterm-sources.sh.",
+  "_doc": "THE DASHBOARDS of Capital-Stack-FinTerminal (#1335): one per FinTerm entry (build.json::ui.stacks, kind dashboard, `dashboard` = the id here). A panel names its `source` (an id of data/sources.json whose `feeds` lists this entry) and EITHER a `fetch` (a live connector: the key-free sources) OR a `placeholder` ({reason, note}: drawn as one 48dp key row while the source needs a key / has no connector yet, 'Add your key in Config > Sources'; UI spec 2). UI declarations (UI spec 6.3): dashboard `default` (the tab opens on it) and `search` (a search field on top); panel `display` (kpi | rows | heat | watch), `tape` (its quotes feed the ticker tape), `spread` ({label, of: [a, b]}: a derived KPI tile in bp), `heat_scale`, `segment_of` / `segment_label` (drawn as a source chip of another panel's card), `refresh_s`, `col_types`, `limit`. Providers and derivations are named here and implemented in Kotlin (Providers.kt, Derive.kt); no address is typed anywhere but data/sources.json (endpoint) because a request is endpoint + path + params. Read by Dashboards.kt and by test/test-finterm-sources.sh.",
   "_doc_fetch": "provider: fred_series (one request per series: id + cosd = today - lookback_days), dbnomics_series (path + params; params.dimensions is JSON-encoded), imf_datamapper (path, params; countries filters the answer), worldbank_indicator (path with {countries} joined by ';'), gdelt_artlist (path + params). derive: how the parsed data becomes rows/chart: latest_curve, forward_grid, latest_per_series, imf_latest, worldbank_latest, level_change, fx_spot, fx_cross, articles. view: curve (line chart), bars (bar chart + table), table, news, alloc (model portfolio legs). fallback (fred_series): {source} names the second-priority public source, tried series by series after the primary and the panel's own source returned nothing; a series carries its code there as `dbnomics` (\"<provider>/<dataset>/<series>\", read at endpoint + /series/<code>); a series with no code has no second source.",
   "dashboards": [
     {
@@ -99,7 +99,9 @@
             "Yield %",
             "1d bp",
             "Date"
-          ]
+          ],
+          "segment_of": "ust_official",
+          "segment_label": "FRED"
         },
         {
           "id": "ust_official",
@@ -165,7 +167,8 @@
           ],
           "x_title": "maturity (years)",
           "unit": "%",
-          "change_unit": "bp"
+          "change_unit": "bp",
+          "segment_label": "Treasury"
         },
         {
           "id": "euro",
@@ -219,14 +222,7 @@
           "source": "premium_fi",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Country",
-              "2Y",
-              "5Y",
-              "10Y",
-              "30Y"
-            ],
-            "rows": 4
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -628,13 +624,7 @@
           "source": "fincept_data_api",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Country",
-              "10Y %",
-              "Spread bp",
-              "1d bp"
-            ],
-            "rows": 6
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -682,7 +672,8 @@
             "Chg",
             "Chg %",
             "As of"
-          ]
+          ],
+          "tape": true
         },
         {
           "id": "us",
@@ -735,16 +726,11 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Index",
-              "Level",
-              "1d %",
-              "YTD %"
-            ],
-            "rows": 8
+            "reason": "needs a key or a connector"
           }
         }
-      ]
+      ],
+      "default": true
     },
     {
       "id": "fx",
@@ -781,7 +767,8 @@
             "Chg",
             "Chg %",
             "As of"
-          ]
+          ],
+          "tape": true
         },
         {
           "id": "spot",
@@ -950,16 +937,11 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Pair",
-              "Bid",
-              "Ask",
-              "1M fwd"
-            ],
-            "rows": 6
+            "reason": "needs a key or a connector"
           }
         }
-      ]
+      ],
+      "default": true
     },
     {
       "id": "onshore_usd_rates",
@@ -1062,13 +1044,7 @@
           "source": "premium_fi",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Tenor",
-              "Term SOFR %",
-              "Swap %",
-              "Basis bp"
-            ],
-            "rows": 6
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1108,12 +1084,7 @@
           "source": "gov_releases",
           "view": "news",
           "placeholder": {
-            "columns": [
-              "Release",
-              "Agency",
-              "Date"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         },
         {
@@ -1122,12 +1093,7 @@
           "source": "acled",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Event",
-              "Country",
-              "Date"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         },
         {
@@ -1136,12 +1102,7 @@
           "source": "aisstream",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Vessel",
-              "Area",
-              "Speed kn"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1157,13 +1118,7 @@
           "source": "fincept_data_api",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Sleeve",
-              "Weight %",
-              "Return %",
-              "Contribution %"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         },
         {
@@ -1172,12 +1127,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Factor",
-              "Exposure",
-              "Risk %"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         },
         {
@@ -1186,16 +1136,11 @@
           "source": "deribit",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Scenario",
-              "P&L %",
-              "Delta",
-              "Vega"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
-      ]
+      ],
+      "default": true
     },
     {
       "id": "mp_40_60",
@@ -1226,11 +1171,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1264,11 +1205,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1302,11 +1239,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1340,11 +1273,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1378,11 +1307,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1416,11 +1341,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1454,11 +1375,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1492,11 +1409,7 @@
           "source": "polygon",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Metric",
-              "Value"
-            ],
-            "rows": 5
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -1506,6 +1419,213 @@
       "entry": "Market Monitor",
       "tab": "fi",
       "panels": [
+        {
+          "id": "ust",
+          "title": "US Treasuries (par, official)",
+          "source": "treasury_xml",
+          "view": "quotes",
+          "derive": "points",
+          "fetch": {
+            "provider": "treasury_xml",
+            "path": "/xml",
+            "params": {
+              "data": "daily_treasury_yield_curve",
+              "field_tdr_date_value_month": "{yyyymm}"
+            },
+            "fallbacks": [
+              {
+                "source": "treasury_xml",
+                "provider": "treasury_xml",
+                "path": "/xml",
+                "params": {
+                  "data": "daily_treasury_yield_curve",
+                  "field_tdr_date_value_month": "{prev_yyyymm}"
+                }
+              }
+            ],
+            "labels": {
+              "BC_2YEAR": "UST 2Y",
+              "BC_10YEAR": "UST 10Y",
+              "BC_30YEAR": "UST 30Y"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/curves/ust_par",
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "Chg",
+            "Chg %",
+            "As of"
+          ],
+          "unit": "%",
+          "change_unit": "bp",
+          "display": "kpi",
+          "spread": {
+            "label": "2s10s",
+            "of": [
+              "UST 10Y",
+              "UST 2Y"
+            ]
+          }
+        },
+        {
+          "id": "funding",
+          "title": "USD funding (NY Fed)",
+          "source": "nyfed",
+          "view": "quotes",
+          "derive": "points",
+          "fetch": {
+            "provider": "nyfed_rates",
+            "path": "/api/rates/all/latest.json",
+            "labels": {
+              "SOFR": "SOFR",
+              "EFFR": "Effective Fed funds",
+              "SOFRAI_30D": "SOFR 30-day avg"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/series",
+              "params": {
+                "ids": "nyfed:SOFR,nyfed:EFFR,nyfed:SOFRAI_30D"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "Chg",
+            "Chg %",
+            "As of"
+          ],
+          "unit": "%",
+          "change_unit": "bp",
+          "display": "rows"
+        },
+        {
+          "id": "equity",
+          "title": "US equity indices (15-min delayed)",
+          "source": "cboe",
+          "view": "quotes",
+          "derive": "points",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/quotes/{each}.json",
+            "each": [
+              "_SPX",
+              "_NDX",
+              "_DJX",
+              "_RUT",
+              "_VIX"
+            ],
+            "labels": {
+              "_SPX": "S&P 500",
+              "_NDX": "Nasdaq-100",
+              "_DJX": "Dow Jones (1/100)",
+              "_RUT": "Russell 2000",
+              "_VIX": "VIX"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/quotes",
+              "params": {
+                "symbols": "^SPX,^NDX,^DJX,^RUT,^VIX"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "Chg",
+            "Chg %",
+            "As of"
+          ],
+          "tape": true
+        },
+        {
+          "id": "fx",
+          "title": "FX (ECB reference, per USD)",
+          "source": "frankfurter",
+          "view": "quotes",
+          "derive": "points",
+          "fetch": {
+            "provider": "frankfurter_rates",
+            "path": "/v1/{from}..",
+            "params": {
+              "base": "USD",
+              "symbols": "EUR,GBP,JPY,CHF,CNY"
+            },
+            "lookback_days": 30,
+            "labels": {
+              "EUR": "EUR per USD",
+              "GBP": "GBP per USD",
+              "JPY": "JPY per USD",
+              "CHF": "CHF per USD",
+              "CNY": "CNY per USD"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/fx/spot",
+              "params": {
+                "base": "USD",
+                "symbols": "EUR,GBP,JPY,CHF,CNY"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "Chg",
+            "Chg %",
+            "As of"
+          ],
+          "display": "heat",
+          "heat_scale": 1.0,
+          "tape": true
+        },
+        {
+          "id": "crypto",
+          "title": "Crypto (24h)",
+          "source": "coinbase",
+          "view": "quotes",
+          "derive": "points",
+          "fetch": {
+            "provider": "coinbase_exchange",
+            "path": "/products/{each}/stats",
+            "each": [
+              "BTC-USD",
+              "ETH-USD",
+              "SOL-USD"
+            ],
+            "labels": {
+              "BTC-USD": "Bitcoin",
+              "ETH-USD": "Ether",
+              "SOL-USD": "Solana"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/quotes",
+              "params": {
+                "symbols": "BTC-USD,ETH-USD,SOL-USD"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "Chg",
+            "Chg %",
+            "As of"
+          ],
+          "tape": true
+        },
         {
           "id": "next",
           "title": "Next 48 hours: high-importance events",
@@ -1551,202 +1671,12 @@
             "Cons.",
             "Actual",
             "Prev."
-          ]
-        },
-        {
-          "id": "ust",
-          "title": "US Treasuries (par, official)",
-          "source": "treasury_xml",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "treasury_xml",
-            "path": "/xml",
-            "params": {
-              "data": "daily_treasury_yield_curve",
-              "field_tdr_date_value_month": "{yyyymm}"
-            },
-            "fallbacks": [
-              {
-                "source": "treasury_xml",
-                "provider": "treasury_xml",
-                "path": "/xml",
-                "params": {
-                  "data": "daily_treasury_yield_curve",
-                  "field_tdr_date_value_month": "{prev_yyyymm}"
-                }
-              }
-            ],
-            "labels": {
-              "BC_2YEAR": "UST 2Y",
-              "BC_10YEAR": "UST 10Y",
-              "BC_30YEAR": "UST 30Y"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/curves/ust_par",
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
           ],
-          "unit": "%",
-          "change_unit": "bp"
-        },
-        {
-          "id": "funding",
-          "title": "USD funding (NY Fed)",
-          "source": "nyfed",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "nyfed_rates",
-            "path": "/api/rates/all/latest.json",
-            "labels": {
-              "SOFR": "SOFR",
-              "EFFR": "Effective Fed funds",
-              "SOFRAI_30D": "SOFR 30-day avg"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/series",
-              "params": {
-                "ids": "nyfed:SOFR,nyfed:EFFR,nyfed:SOFRAI_30D"
-              },
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
-          ],
-          "unit": "%",
-          "change_unit": "bp"
-        },
-        {
-          "id": "equity",
-          "title": "US equity indices (15-min delayed)",
-          "source": "cboe",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "cboe_quotes",
-            "path": "/quotes/{each}.json",
-            "each": [
-              "_SPX",
-              "_NDX",
-              "_DJX",
-              "_RUT",
-              "_VIX"
-            ],
-            "labels": {
-              "_SPX": "S&P 500",
-              "_NDX": "Nasdaq-100",
-              "_DJX": "Dow Jones (1/100)",
-              "_RUT": "Russell 2000",
-              "_VIX": "VIX"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/quotes",
-              "params": {
-                "symbols": "^SPX,^NDX,^DJX,^RUT,^VIX"
-              },
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
-          ]
-        },
-        {
-          "id": "fx",
-          "title": "FX (ECB reference, per USD)",
-          "source": "frankfurter",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "frankfurter_rates",
-            "path": "/v1/{from}..",
-            "params": {
-              "base": "USD",
-              "symbols": "EUR,GBP,JPY,CHF,CNY"
-            },
-            "lookback_days": 30,
-            "labels": {
-              "EUR": "EUR per USD",
-              "GBP": "GBP per USD",
-              "JPY": "JPY per USD",
-              "CHF": "CHF per USD",
-              "CNY": "CNY per USD"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/fx/spot",
-              "params": {
-                "base": "USD",
-                "symbols": "EUR,GBP,JPY,CHF,CNY"
-              },
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
-          ]
-        },
-        {
-          "id": "crypto",
-          "title": "Crypto (24h)",
-          "source": "coinbase",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "coinbase_exchange",
-            "path": "/products/{each}/stats",
-            "each": [
-              "BTC-USD",
-              "ETH-USD",
-              "SOL-USD"
-            ],
-            "labels": {
-              "BTC-USD": "Bitcoin",
-              "ETH-USD": "Ether",
-              "SOL-USD": "Solana"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/quotes",
-              "params": {
-                "symbols": "BTC-USD,ETH-USD,SOL-USD"
-              },
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
-          ]
+          "limit": 6
         }
-      ]
+      ],
+      "default": true,
+      "search": true
     },
     {
       "id": "credit",
@@ -1842,13 +1772,7 @@
           "source": "premium_fi",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Index",
-              "Spread bp",
-              "1d bp",
-              "Date"
-            ],
-            "rows": 4
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -2061,17 +1985,11 @@
           "source": "finnhub",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Symbol",
-              "Last",
-              "Bid",
-              "Ask",
-              "Time"
-            ],
-            "rows": 4
+            "reason": "needs a key or a connector"
           }
         }
-      ]
+      ],
+      "search": true
     },
     {
       "id": "equity_fundamentals",
@@ -2207,14 +2125,7 @@
           "source": "finnhub",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Symbol",
-              "Date",
-              "EPS est.",
-              "EPS",
-              "Surprise %"
-            ],
-            "rows": 4
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -2255,7 +2166,8 @@
             "Chg %",
             "As of"
           ],
-          "alerts": "price"
+          "alerts": "price",
+          "display": "watch"
         },
         {
           "id": "events",
@@ -2305,7 +2217,8 @@
           ],
           "alerts": "event"
         }
-      ]
+      ],
+      "search": true
     },
     {
       "id": "crypto",
@@ -2352,7 +2265,8 @@
             "Chg",
             "Chg %",
             "As of"
-          ]
+          ],
+          "tape": true
         },
         {
           "id": "btc",
@@ -2434,13 +2348,7 @@
           "source": "eia",
           "view": "table",
           "placeholder": {
-            "columns": [
-              "Series",
-              "Last",
-              "1w %",
-              "Date"
-            ],
-            "rows": 4
+            "reason": "needs a key or a connector"
           }
         }
       ]
@@ -2587,7 +2495,8 @@
           "value_columns": "actual_previous",
           "unit": "%"
         }
-      ]
+      ],
+      "default": true
     },
     {
       "id": "central_bank_calendar",

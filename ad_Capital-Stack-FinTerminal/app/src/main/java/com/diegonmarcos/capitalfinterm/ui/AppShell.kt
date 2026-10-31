@@ -1,5 +1,13 @@
 package com.diegonmarcos.capitalfinterm.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
@@ -8,15 +16,29 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.diegonmarcos.capitalfinterm.AssetData
+import com.diegonmarcos.capitalfinterm.BuildConfig
+import com.diegonmarcos.capitalfinterm.Dashboards
 import com.diegonmarcos.capitalfinterm.Decl
+import com.diegonmarcos.capitalfinterm.FinNavStack
+import com.diegonmarcos.capitalfinterm.FinSearchIndex
+import com.diegonmarcos.capitalfinterm.Pages
 import com.diegonmarcos.capitalfinterm.R
+import com.diegonmarcos.capitalfinterm.ui.fin.FinSearch
+import com.diegonmarcos.capitalfinterm.ui.fin.LocalFinPalette
+import com.diegonmarcos.capitalfinterm.ui.fin.LocalReduceMotion
+import com.diegonmarcos.superapp.bottomnav.LocalNavUiDefault
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
@@ -34,11 +56,6 @@ object Tags {
     const val CONTROL = "container_control"
     const val MESH_ONLY = "container_mesh_only"
     fun action(id: String): String = "container_action:$id"
-    const val BACK = "dash_back"
-    const val REFRESH = "dash_refresh"
-    const val CHART = "dash_chart"
-    const val PLACEHOLDER = "dash_placeholder"
-    const val OPEN_SOURCES = "dash_open_sources"
     fun entry(title: String): String = "entry:$title"
     fun panel(id: String): String = "panel:$id"
     fun source(id: String): String = "source:$id"
@@ -46,32 +63,97 @@ object Tags {
 }
 
 /**
- * The shell: the shared first row (Profile at the top right opens Cloud Account, the gear opens the Config section (Sources, About)), the shared
- * bottom nav, the shared page gradient and the shared scroll collapse, all from libs (#1154, #1157). Which sections exist is
- * build.json::ui, read through [Decl.nav]; what a section's page shows is ui.stacks, drawn by [SectionPage].
+ * The shell (UI spec 4): the shared first row and bottom island from libs, in the mode build.json::ui.nav_ui declares (Clean: the
+ * hamburger drawer lists the tab's dashboards, generated from ui.stacks), each tab with its own back stack ([FinNavStack]: the tab's
+ * list, the default dashboard, a quote pushed on top), the search overlay, the flat terminal canvas (the fleet gradient only behind
+ * About and Config). Which sections exist is build.json::ui through [Decl.nav]; what a section shows is ui.stacks, drawn by [SectionPage].
  */
 @Composable
 fun AppShell() {
+    val ctx = LocalContext.current
     val nav = Decl.nav
-    var section by rememberSaveable { mutableStateOf(nav.default()?.id ?: Decl.SECTION_ABOUT) }
+    val dashboards = remember { AssetData.dashboards(ctx) }
+    val homeSection = nav.default()?.id ?: Decl.SECTION_ABOUT
+    var section by rememberSaveable { mutableStateOf(homeSection) }
+    var stacks by rememberSaveable { mutableStateOf(mapOf<String, List<String>>()) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    fun defaultDash(sec: String): String? = Dashboards.defaultOf(dashboards, Pages.entries(Decl.stacks, sec).filter { it.kind == Pages.KIND_DASHBOARD }.map { it.dashboard })
+    fun stackOf(sec: String): List<String> = stacks[sec] ?: FinNavStack.initial(defaultDash(sec))
+    fun setStack(sec: String, s: List<String>) { stacks = stacks + (sec to s) }
+    val stack = stackOf(section)
+    val top = stack.last()
     val sec = nav.section(section)
-    Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {
-        NavBarTopFirstRowScaffold(
-            title = sec?.label ?: stringResource(R.string.app_name),
-            hierarchy = sec?.let { titleHierarchy(it, null) }.orEmpty(),
-            onNavigate = { e -> section = e.sectionId },
-            onAccount = rememberAccountLauncher(),
-            onConfigs = { section = Decl.SECTION_CONFIG },
-            dark = true,
-        ) {
-            NavBarBottomHost(
-                entries = nav.islandEntries(),
-                selectedId = section,
-                onSelect = { section = it.id },
-                modifier = Modifier.testTag(Tags.SHELL),
-            ) {
-                SectionPage(section, onOpenConfig = { section = Decl.SECTION_CONFIG })
+    val finNav = remember(section, stacks) {
+        object : FinNav {
+            override fun openDashboard(id: String) {
+                val owner = dashboards.firstOrNull { it.id == id }?.tab?.takeIf { nav.section(it) != null } ?: section
+                section = owner
+                setStack(owner, FinNavStack.open(stackOf(owner), id))
             }
+            override fun openQuote(symbol: String) { setStack(section, FinNavStack.quote(stackOf(section), symbol)) }
+            override fun openSources() { section = Decl.SECTION_CONFIG }
+            override fun search() { searching = true }
+        }
+    }
+    // Back (UI spec 4.4): search -> quote pops -> a non-default dashboard -> the tab's default -> the home tab -> exit.
+    val back = FinNavStack.back(stack, defaultDash(section), section == homeSection)
+    BackHandler(enabled = back != null) {
+        when (val b = back) {
+            null -> Unit
+            FinNavStack.HOME -> section = homeSection
+            else -> setStack(section, b)
+        }
+    }
+    val terminal = section != Decl.SECTION_ABOUT && section != Decl.SECTION_CONFIG
+    val p = LocalFinPalette.current
+    val canvas = if (terminal) Modifier.background(p.canvas) else Modifier.themeBackground(dark = true)
+    CompositionLocalProvider(LocalNavUiDefault provides NavUiDecl.fromBuildConfig(BuildConfig.UI_NAV_UI_B64)) {
+        Box(Modifier.fillMaxSize().then(canvas).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {
+            NavBarTopFirstRowScaffold(
+                title = sec?.label ?: stringResource(R.string.app_name),
+                hierarchy = sec?.let { titleHierarchy(it, FinNavStack.dashboardOf(stack)) }.orEmpty(),
+                onNavigate = { e ->
+                    if (e.depth == 0) {
+                        // The breadcrumb's tab word: the tab's dashboard list (UI spec 3); another tab: switch to it.
+                        if (e.sectionId == section) setStack(section, FinNavStack.LIST_ONLY) else section = e.sectionId
+                    } else finNav.openDashboard(e.id)
+                },
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { section = Decl.SECTION_CONFIG },
+                dark = true,
+                sections = nav.sections,
+                leaf = FinNavStack.symbolOf(top),
+            ) {
+                NavBarBottomHost(
+                    entries = nav.islandEntries(),
+                    selectedId = section,
+                    onSelect = { section = it.id },
+                    modifier = Modifier.testTag(Tags.SHELL),
+                ) {
+                    val still = LocalReduceMotion.current
+                    AnimatedContent(
+                        targetState = section to top,
+                        transitionSpec = {
+                            val pushQuote = FinNavStack.symbolOf(targetState.second) != null && targetState.first == initialState.first
+                            if (still || !pushQuote) fadeIn(androidx.compose.animation.core.tween(100)) togetherWith fadeOut(androidx.compose.animation.core.tween(100))
+                            else slideInHorizontally(androidx.compose.animation.core.tween(200)) { it } togetherWith fadeOut(androidx.compose.animation.core.tween(200))
+                        },
+                        label = "screen",
+                    ) { (s, _) ->
+                        SectionPage(s, stackOf(s), finNav, onSelectList = { id -> setStack(s, FinNavStack.open(stackOf(s), id)) }, onOpenConfig = { section = Decl.SECTION_CONFIG })
+                    }
+                }
+            }
+        }
+    }
+    if (searching) {
+        val catalogue = remember(searching) {
+            val box = EncryptedSecretBox(ctx)
+            searchCatalogue(dashboards, com.diegonmarcos.capitalfinterm.Alerts.watchlist(box.get(KEY_WATCHLIST)))
+        }
+        FinSearch(catalogue, onDismiss = { searching = false }) { item ->
+            searching = false
+            if (item.kind == FinSearchIndex.KIND_DASHBOARD) finNav.openDashboard(item.target) else finNav.openQuote(item.symbol)
         }
     }
 }

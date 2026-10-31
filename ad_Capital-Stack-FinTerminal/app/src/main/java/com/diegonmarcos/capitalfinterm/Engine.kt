@@ -201,13 +201,13 @@ object Engine {
         fun v(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 1000.0) group(x) else sig(x)
         fun plain(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 10000.0) String.format(Locale.ROOT, "%,.0f", x)
             else java.math.BigDecimal(String.format(Locale.ROOT, "%.4f", x)).stripTrailingZeros().toPlainString()
-        fun chg(p: Pt): String = p.prev?.let { if (bp) String.format(Locale.ROOT, "%+.1f", (p.value - it) * 100.0) else signedSig(p.value - it) } ?: "-"
+        fun chg(p: Pt): String = p.prev?.let { if (bp) String.format(Locale.ROOT, "%+.1f", (p.value - it) * 100.0) else signedSig(p.value - it) } ?: FinFormat.DASH
         fun pct(p: Pt): Double? = p.prev?.takeIf { it != 0.0 }?.let { (p.value / it - 1.0) * 100.0 }
-        fun pctText(p: Pt): String = pct(p)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: "-"
+        fun pctText(p: Pt): String = pct(p)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: FinFormat.DASH
         val rows = pts.map { p ->
             when {
-                panel.raw.optString("value_columns") == "actual_previous" -> listOf(p.label, plain(p.value), p.prev?.let { plain(it) } ?: "-", p.date)
-                panel.view == Dashboards.VIEW_QUOTES -> listOf(p.label, v(p.value), chg(p), if (bp) "-" else pctText(p), p.date)
+                panel.raw.optString("value_columns") == "actual_previous" -> listOf(p.label, plain(p.value), p.prev?.let { plain(it) } ?: FinFormat.DASH, p.date)
+                panel.view == Dashboards.VIEW_QUOTES -> listOf(p.label, v(p.value), chg(p), if (bp) FinFormat.DASH else pctText(p), p.date)
                 else -> listOf(p.label, v(p.value), if (bp) chg(p) else pctText(p), p.date)
             }
         }
@@ -234,7 +234,7 @@ object Engine {
     /** Importance as three dots: 0 to 3 filled. */
     fun dots(n: Int): String = "\u25CF".repeat(n.coerceIn(0, 3)) + "\u25CB".repeat(3 - n.coerceIn(0, 3))
 
-    private fun signedSig(d: Double): String = (if (d >= 0) "+" else "-") + sig(Math.abs(d))
+    private fun signedSig(d: Double): String = if (d == 0.0) sig(0.0) else (if (d > 0) "+" else "-") + sig(Math.abs(d))
 
     // ------------------------------------------------------------------ FRED
 
@@ -355,7 +355,7 @@ object Engine {
             if (v > 0.0) usd[Catalog.str(s.spec, "ccy")] = if (Catalog.str(s.spec, "quote") == "usd_per") v else 1.0 / v
         }
         val names = usd.keys.toList()
-        val rows = names.map { i -> listOf(i) + names.map { j -> if (i == j) "-" else sig(usd.getValue(i) / usd.getValue(j)) } }
+        val rows = names.map { i -> listOf(i) + names.map { j -> if (i == j) FinFormat.DASH else sig(usd.getValue(i) / usd.getValue(j)) } }
         return PanelData(panel.columns + names, rows, emptyList(), emptyList(), asOf, note)
     }
 
@@ -414,22 +414,22 @@ object Engine {
 
     private fun years(v: Double): String = if (v == Math.floor(v)) v.toInt().toString() else num(v, 1)
 
-    fun num(v: Double, digits: Int): String = if (v.isFinite()) String.format(Locale.ROOT, "%.${digits}f", v) else "-"
+    fun num(v: Double, digits: Int): String = if (v.isFinite()) String.format(Locale.ROOT, "%.${digits}f", v) else FinFormat.DASH
 
     fun group(v: Double): String = String.format(Locale.ROOT, "%,.2f", v)
 
     /** Four significant-ish digits: 156.87, 1.1199, 0.00638. */
     fun sig(v: Double): String = when {
-        !v.isFinite() -> "-"
+        !v.isFinite() -> FinFormat.DASH
         Math.abs(v) >= 100.0 -> String.format(Locale.ROOT, "%.2f", v)
         Math.abs(v) >= 1.0 -> String.format(Locale.ROOT, "%.4f", v)
         else -> String.format(Locale.ROOT, "%.5f", v)
     }
 
     private fun change(last: Obs, prev: Obs?, scale: Double, digits: Int): String =
-        if (prev == null) "-" else String.format(Locale.ROOT, "%+.${digits}f", (last.value - prev.value) * scale)
+        if (prev == null) FinFormat.DASH else String.format(Locale.ROOT, "%+.${digits}f", (last.value - prev.value) * scale)
 
     private fun pct(last: Obs, prev: Obs?): Double? = if (prev == null || prev.value == 0.0) null else (last.value / prev.value - 1.0) * 100.0
 
-    private fun pctChange(last: Obs, prev: Obs?): String = pct(last, prev)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: "-"
+    private fun pctChange(last: Obs, prev: Obs?): String = pct(last, prev)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: FinFormat.DASH
 }
