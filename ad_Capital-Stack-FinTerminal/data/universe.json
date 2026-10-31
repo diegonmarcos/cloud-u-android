@@ -94,646 +94,144 @@
   }
  },
  "history": {
+  "_doc": "The symbols are DERIVED by gen-fetchers.mjs from every dashboards.json panel whose fetch.primary.api is the store route (/v1/history), with the panel's labels; resolve overrides a symbol, else the panel's symbol_map names the Cboe code (an ETF other than the symbol is an etf_proxy), else a plain US ticker is read from Cboe and a Coinbase pair from Coinbase. A symbol none of these covers must be declared unavailable with its reason (the generator fails otherwise). extra adds symbols no table reads yet.",
+  "route": "/v1/history",
   "years": 12,
   "daily_every_s": 86400,
   "overlap_days": 10,
-  "symbols": [
-   {
-    "symbol": "XLE",
-    "name": "Energy Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLE",
-    "kind": "etf"
+  "resolve": {
+   "^NDX": {
+    "source": "fred",
+    "code": "NASDAQ100",
+    "kind": "index",
+    "note": "index level (FRED, from Nasdaq)"
    },
-   {
-    "symbol": "XLK",
-    "name": "Technology Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLK",
-    "kind": "etf"
+   "^DJI": {
+    "source": "fred",
+    "code": "DJIA",
+    "kind": "index",
+    "note": "index level (FRED, from S&P Dow Jones; FRED keeps 10 years)"
    },
-   {
-    "symbol": "XLRE",
-    "name": "Real Estate Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLRE",
-    "kind": "etf"
+   "^N225": {
+    "source": "fred",
+    "code": "NIKKEI225",
+    "kind": "index",
+    "note": "index level (FRED, from Nikkei)"
    },
-   {
-    "symbol": "XLF",
-    "name": "Financials Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLF",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLV",
-    "name": "Health Care Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLV",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLI",
-    "name": "Industrials Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLI",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLY",
-    "name": "Consumer Discretionary Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLY",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLP",
-    "name": "Consumer Staples Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLP",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLU",
-    "name": "Utilities Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLU",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLB",
-    "name": "Materials Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLB",
-    "kind": "etf"
-   },
-   {
-    "symbol": "XLC",
-    "name": "Communication Services Select Sector SPDR",
-    "group": "us_sectors",
-    "source": "cboe",
-    "code": "XLC",
-    "kind": "etf"
-   },
-   {
-    "symbol": "IWF",
-    "name": "Russell 1000 Growth",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "IWF",
-    "kind": "etf"
-   },
-   {
-    "symbol": "IWD",
-    "name": "Russell 1000 Value",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "IWD",
-    "kind": "etf"
-   },
-   {
-    "symbol": "MTUM",
-    "name": "MSCI USA Momentum",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "MTUM",
-    "kind": "etf"
-   },
-   {
-    "symbol": "QUAL",
-    "name": "MSCI USA Quality",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "QUAL",
-    "kind": "etf"
-   },
-   {
-    "symbol": "USMV",
-    "name": "MSCI USA Min Vol",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "USMV",
-    "kind": "etf"
-   },
-   {
-    "symbol": "IWM",
-    "name": "Russell 2000",
-    "group": "strategies",
+   "^RUT": {
     "source": "cboe",
     "code": "IWM",
-    "kind": "etf"
+    "kind": "etf_proxy",
+    "proxy": "IWM",
+    "note": "Cboe publishes no Russell 2000 index history; iShares Russell 2000 ETF"
    },
-   {
-    "symbol": "SCHD",
-    "name": "US Dividend Equity",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "SCHD",
-    "kind": "etf"
+   "HO=F": {
+    "source": "fred",
+    "code": "DHOILNYH",
+    "kind": "spot",
+    "note": "New York Harbor No. 2 heating oil spot (EIA via FRED), not the futures"
    },
+   "EMBOND:BR": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "BR",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:MX": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "MX",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:ID": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "ID",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:TR": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "TR",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:SA": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "SA",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:PL": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "PL",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:IN": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "IN",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:CN": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "CN",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:AR": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "AR",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   },
+   "EMBOND:ZA": {
+    "source": "computed",
+    "kind": "computed",
+    "country": "ZA",
+    "note": "monthly unhedged USD total-return index of the 10-year local government bond (em_bonds.method), 100 at the first month"
+   }
+  },
+  "unavailable": {
+   "ALI=F": "no key-free daily source for aluminium futures and no listed US ETF proxy",
+   "KC=F": "no key-free daily source for coffee futures and no listed US ETF proxy",
+   "CC=F": "no key-free daily source for cocoa futures and no listed US ETF proxy",
+   "LE=F": "no key-free daily source for live cattle futures and no listed US ETF proxy",
+   "EMFN": "no such listed ETF on Cboe (no US-listed EM financials sector ETF)",
+   "EMIT": "no such listed ETF on Cboe (no US-listed EM information technology sector ETF)"
+  },
+  "extra": [
    {
     "symbol": "VIG",
-    "name": "Dividend Appreciation",
-    "group": "strategies",
+    "name": "Vanguard Dividend Appreciation",
     "source": "cboe",
     "code": "VIG",
     "kind": "etf"
    },
    {
-    "symbol": "RSP",
-    "name": "S&P 500 Equal Weight",
-    "group": "strategies",
-    "source": "cboe",
-    "code": "RSP",
-    "kind": "etf"
-   },
-   {
     "symbol": "CQQQ",
-    "name": "China Technology",
-    "group": "em_sectors",
+    "name": "China Technology (Invesco)",
     "source": "cboe",
     "code": "CQQQ",
     "kind": "etf"
    },
    {
     "symbol": "KWEB",
-    "name": "China Internet",
-    "group": "em_sectors",
+    "name": "China Internet (KraneShares)",
     "source": "cboe",
     "code": "KWEB",
     "kind": "etf"
    },
    {
     "symbol": "CHIQ",
-    "name": "China Consumer Discretionary",
-    "group": "em_sectors",
+    "name": "China Consumer Discretionary (Global X)",
     "source": "cboe",
     "code": "CHIQ",
     "kind": "etf"
    },
    {
-    "symbol": "EMQQ",
-    "name": "EM Internet & E-commerce",
-    "group": "em_sectors",
-    "source": "cboe",
-    "code": "EMQQ",
-    "kind": "etf"
-   },
-   {
-    "symbol": "SPX",
-    "name": "S&P 500",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "_SPX",
-    "kind": "index"
-   },
-   {
-    "symbol": "NDX",
-    "name": "Nasdaq-100",
-    "group": "global_indices",
-    "source": "fred",
-    "code": "NASDAQ100",
-    "kind": "index"
-   },
-   {
-    "symbol": "DJI",
-    "name": "Dow Jones Industrial Average",
-    "group": "global_indices",
-    "source": "fred",
-    "code": "DJIA",
-    "kind": "index"
-   },
-   {
-    "symbol": "RUT",
-    "name": "Russell 2000",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "IWM",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares Russell 2000 ETF"
-   },
-   {
-    "symbol": "TSX",
-    "name": "S&P/TSX Composite",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWC",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Canada ETF"
-   },
-   {
-    "symbol": "IBOV",
-    "name": "Bovespa",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWZ",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Brazil ETF"
-   },
-   {
-    "symbol": "MXX",
-    "name": "S&P/BMV IPC",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWW",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Mexico ETF"
-   },
-   {
-    "symbol": "UKX",
-    "name": "FTSE 100",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWU",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI United Kingdom ETF"
-   },
-   {
-    "symbol": "DAX",
-    "name": "DAX",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWG",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Germany ETF"
-   },
-   {
-    "symbol": "CAC",
-    "name": "CAC 40",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWQ",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI France ETF"
-   },
-   {
-    "symbol": "SX5E",
-    "name": "Euro Stoxx 50",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "FEZ",
-    "kind": "etf_proxy",
-    "proxy_for": "SPDR Euro Stoxx 50 ETF"
-   },
-   {
-    "symbol": "IBEX",
-    "name": "IBEX 35",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWP",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Spain ETF"
-   },
-   {
-    "symbol": "FTSEMIB",
-    "name": "FTSE MIB",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWI",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Italy ETF"
-   },
-   {
-    "symbol": "AEX",
-    "name": "AEX",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWN",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Netherlands ETF"
-   },
-   {
-    "symbol": "SMI",
-    "name": "SMI",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWL",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Switzerland ETF"
-   },
-   {
-    "symbol": "OMX",
-    "name": "OMX Stockholm 30",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWD",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Sweden ETF"
-   },
-   {
-    "symbol": "N225",
-    "name": "Nikkei 225",
-    "group": "global_indices",
-    "source": "fred",
-    "code": "NIKKEI225",
-    "kind": "index"
-   },
-   {
-    "symbol": "TOPIX",
-    "name": "TOPIX",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWJ",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Japan ETF"
-   },
-   {
-    "symbol": "HSI",
-    "name": "Hang Seng",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWH",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Hong Kong ETF"
-   },
-   {
-    "symbol": "SHCOMP",
-    "name": "Shanghai Composite",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "ASHR",
-    "kind": "etf_proxy",
-    "proxy_for": "Xtrackers Harvest CSI 300 China A ETF"
-   },
-   {
-    "symbol": "SZCOMP",
-    "name": "Shenzhen Component",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "CNXT",
-    "kind": "etf_proxy",
-    "proxy_for": "VanEck ChiNext ETF"
-   },
-   {
-    "symbol": "KOSPI",
-    "name": "KOSPI",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWY",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI South Korea ETF"
-   },
-   {
-    "symbol": "TAIEX",
-    "name": "TAIEX",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWT",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Taiwan ETF"
-   },
-   {
-    "symbol": "NIFTY",
-    "name": "Nifty 50",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "INDY",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares India 50 ETF"
-   },
-   {
-    "symbol": "SENSEX",
-    "name": "BSE Sensex",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "INDA",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI India ETF"
-   },
-   {
-    "symbol": "AS51",
-    "name": "S&P/ASX 200",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EWA",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Australia ETF"
-   },
-   {
-    "symbol": "NZ50",
-    "name": "S&P/NZX 50",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "ENZL",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI New Zealand ETF"
-   },
-   {
-    "symbol": "JTOPI",
-    "name": "FTSE/JSE Top 40",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EZA",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI South Africa ETF"
-   },
-   {
-    "symbol": "TASI",
-    "name": "Tadawul All Share",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "KSA",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Saudi Arabia ETF"
-   },
-   {
-    "symbol": "MSCIWORLD",
-    "name": "MSCI World",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "URTH",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI World ETF"
-   },
-   {
-    "symbol": "MSCIEM",
-    "name": "MSCI Emerging Markets",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "EEM",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI Emerging Markets ETF"
-   },
-   {
-    "symbol": "MSCIACWI",
-    "name": "MSCI ACWI",
-    "group": "global_indices",
-    "source": "cboe",
-    "code": "ACWI",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares MSCI ACWI ETF"
-   },
-   {
-    "symbol": "WTI",
-    "name": "WTI crude (spot, EIA via FRED)",
-    "group": "commodities",
-    "source": "fred",
-    "code": "DCOILWTICO",
-    "kind": "spot"
-   },
-   {
-    "symbol": "BRENT",
-    "name": "Brent crude (spot, EIA via FRED)",
-    "group": "commodities",
-    "source": "fred",
-    "code": "DCOILBRENTEU",
-    "kind": "spot"
-   },
-   {
-    "symbol": "NATGAS",
-    "name": "Henry Hub natural gas (spot, EIA via FRED)",
-    "group": "commodities",
-    "source": "fred",
-    "code": "DHHNGSP",
-    "kind": "spot"
-   },
-   {
-    "symbol": "GOLD",
-    "name": "Gold",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "GLD",
-    "kind": "etf_proxy",
-    "proxy_for": "SPDR Gold Shares"
-   },
-   {
-    "symbol": "SILVER",
-    "name": "Silver",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "SLV",
-    "kind": "etf_proxy",
-    "proxy_for": "iShares Silver Trust"
-   },
-   {
-    "symbol": "PLATINUM",
-    "name": "Platinum",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "PPLT",
-    "kind": "etf_proxy",
-    "proxy_for": "abrdn Platinum ETF"
-   },
-   {
-    "symbol": "PALLADIUM",
-    "name": "Palladium",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "PALL",
-    "kind": "etf_proxy",
-    "proxy_for": "abrdn Palladium ETF"
-   },
-   {
-    "symbol": "COPPER",
-    "name": "Copper",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "CPER",
-    "kind": "etf_proxy",
-    "proxy_for": "United States Copper Index Fund"
-   },
-   {
-    "symbol": "CRUDE_FUT",
-    "name": "Crude oil front-month futures",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "USO",
-    "kind": "etf_proxy",
-    "proxy_for": "United States Oil Fund"
-   },
-   {
-    "symbol": "NATGAS_FUT",
-    "name": "Natural gas front-month futures",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "UNG",
-    "kind": "etf_proxy",
-    "proxy_for": "United States Natural Gas Fund"
-   },
-   {
-    "symbol": "AGRI",
-    "name": "Agriculture basket",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "DBA",
-    "kind": "etf_proxy",
-    "proxy_for": "Invesco DB Agriculture Fund"
-   },
-   {
-    "symbol": "CORN",
-    "name": "Corn",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "CORN",
-    "kind": "etf_proxy",
-    "proxy_for": "Teucrium Corn Fund"
-   },
-   {
-    "symbol": "WHEAT",
-    "name": "Wheat",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "WEAT",
-    "kind": "etf_proxy",
-    "proxy_for": "Teucrium Wheat Fund"
-   },
-   {
-    "symbol": "SOYBEANS",
-    "name": "Soybeans",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "SOYB",
-    "kind": "etf_proxy",
-    "proxy_for": "Teucrium Soybean Fund"
-   },
-   {
-    "symbol": "BASEMETALS",
-    "name": "Base metals basket",
-    "group": "commodities",
-    "source": "cboe",
-    "code": "DBB",
-    "kind": "etf_proxy",
-    "proxy_for": "Invesco DB Base Metals Fund"
-   },
-   {
-    "symbol": "BTC-USD",
-    "name": "Bitcoin",
-    "group": "crypto",
-    "source": "coinbase",
-    "code": "BTC-USD",
-    "kind": "spot"
-   },
-   {
-    "symbol": "ETH-USD",
-    "name": "Ether",
-    "group": "crypto",
-    "source": "coinbase",
-    "code": "ETH-USD",
-    "kind": "spot"
-   },
-   {
-    "symbol": "EMB",
-    "name": "USD EM sovereign bonds (iShares J.P. Morgan USD EM Bond)",
-    "group": "em_bonds",
-    "source": "cboe",
-    "code": "EMB",
-    "kind": "etf"
-   },
-   {
     "symbol": "EMLC",
-    "name": "Local-currency EM government bonds (VanEck J.P. Morgan EM LC)",
-    "group": "em_bonds",
+    "name": "Local-currency EM government bonds (VanEck)",
     "source": "cboe",
     "code": "EMLC",
     "kind": "etf"
@@ -741,10 +239,57 @@
    {
     "symbol": "VWOB",
     "name": "USD EM government bonds (Vanguard)",
-    "group": "em_bonds",
     "source": "cboe",
     "code": "VWOB",
     "kind": "etf"
+   },
+   {
+    "symbol": "SZCOMP",
+    "name": "Shenzhen Component",
+    "source": "cboe",
+    "code": "CNXT",
+    "kind": "etf_proxy",
+    "proxy": "CNXT",
+    "note": "VanEck ChiNext ETF"
+   },
+   {
+    "symbol": "NZ50",
+    "name": "S&P/NZX 50",
+    "source": "cboe",
+    "code": "ENZL",
+    "kind": "etf_proxy",
+    "proxy": "ENZL",
+    "note": "iShares MSCI New Zealand ETF"
+   },
+   {
+    "symbol": "JTOPI",
+    "name": "FTSE/JSE Top 40",
+    "source": "cboe",
+    "code": "EZA",
+    "kind": "etf_proxy",
+    "proxy": "EZA",
+    "note": "iShares MSCI South Africa ETF"
+   },
+   {
+    "symbol": "WTI",
+    "name": "WTI crude oil spot (EIA via FRED)",
+    "source": "fred",
+    "code": "DCOILWTICO",
+    "kind": "spot"
+   },
+   {
+    "symbol": "BRENT",
+    "name": "Brent crude oil spot (EIA via FRED)",
+    "source": "fred",
+    "code": "DCOILBRENTEU",
+    "kind": "spot"
+   },
+   {
+    "symbol": "NATGAS",
+    "name": "Henry Hub natural gas spot (EIA via FRED)",
+    "source": "fred",
+    "code": "DHHNGSP",
+    "kind": "spot"
    }
   ]
  },
