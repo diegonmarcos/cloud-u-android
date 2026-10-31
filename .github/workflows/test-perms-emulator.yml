@@ -33,11 +33,14 @@ jobs:
           while read -r key wf prefer; do
             q="repos/$REPO/actions/workflows/$wf/runs?status=success&per_page=20"
             [ -n "$SHA" ] && q="$q&head_sha=$SHA"
-            id="$(gh api "$q" --jq '.workflow_runs[0].id // empty')"
-            [ -z "$id" ] && { echo "no successful run of $wf"; continue; }
-            name="$(gh api "repos/$REPO/actions/runs/$id/artifacts" --jq "[.artifacts[].name | select(test(\"$prefer\"))][0] // empty")"
-            [ -z "$name" ] && name="$(gh api "repos/$REPO/actions/runs/$id/artifacts" --jq '[.artifacts[].name | select(test("arm64"))][0] // empty')"
-            [ -z "$name" ] && { echo "no APK artifact in run $id"; continue; }
+            # the newest successful run that carries an APK (a run that skipped its build has no artifact)
+            id=""; name=""
+            for cand in $(gh api "$q" --jq '.workflow_runs[].id'); do
+              name="$(gh api "repos/$REPO/actions/runs/$cand/artifacts" --jq "[.artifacts[].name | select(test(\"$prefer\"))][0] // empty")"
+              [ -z "$name" ] && name="$(gh api "repos/$REPO/actions/runs/$cand/artifacts" --jq '[.artifacts[].name | select(test("arm64"))][0] // empty')"
+              [ -n "$name" ] && { id="$cand"; break; }
+            done
+            [ -z "$id" ] && { echo "no successful run of $wf with an APK artifact"; continue; }
             gh run download "$id" -R "$REPO" -n "$name" -D "dl-$key" && f="$(find "dl-$key" -name '*.apk' | head -1)" && cp "$f" "apk/$key.apk"
             echo "$key <- run $id artifact $name"
           done <<'APPS'
@@ -45,6 +48,7 @@ jobs:
           me ship-cloud-me.yml x86_64
           notes ship-cloud-notes.yml x86_64
           finterm ship-capital-stack-finterminal.yml x86_64
+          calc ship-cloud-calc.yml x86_64
           browser ship-cloud-browser.yml x86_64
           gallery ship-cloud-gallery.yml x86_64
           APPS

@@ -5,31 +5,38 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * #1274 the Permissions page libs:perms hosts in any app without a [PermsHost] page of its own (Calc, Browser, Nav,
@@ -37,6 +44,8 @@ import androidx.compose.ui.unit.dp
  * place in that app that asks: opened by [PermsLink.open] it lists the requesting feature's entries first and highlighted,
  * then every other applicable entry this app declares. Runtime entries go through the system dialog, the rest through
  * [PermsSettings.open] (the exact settings page). Re-read on every resume, so a grant made in Settings shows on return.
+ * #1372 first run ([FIRST_RUN]) is a bottom sheet over the app (the window is translucent): what is missing in plain
+ * words, Grant all and Later; it closes by itself once nothing is missing.
  */
 class PermsActivity : ComponentActivity() {
     private var tick by mutableIntStateOf(0)
@@ -44,12 +53,13 @@ class PermsActivity : ComponentActivity() {
     private val ask = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val feature = intent.getStringExtra(EXTRA_FEATURE).orEmpty()
         val ids = intent.getStringArrayExtra(EXTRA_IDS)?.toSet().orEmpty()
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-                Surface { Page(feature, ids, tick) }
+                if (feature == FIRST_RUN) Sheet(ids, tick) else Surface(Modifier.fillMaxSize()) { Page(feature, ids, tick) }
             }
         }
     }
@@ -58,13 +68,26 @@ class PermsActivity : ComponentActivity() {
 
     @Composable
     private fun Page(feature: String, ids: Set<String>, tick: Int) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(
-                when (feature) { "" -> "Permissions"; FIRST_RUN -> "Before you start: grant what this app needs"; else -> "Permissions needed by $feature" },
-                style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag("perms:title"))
+                when (feature) { "" -> "Permissions"; else -> "Permissions needed by $feature" },
+                fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp).semantics { heading() }.testTag("perms:title"))
             // #1360 the one shared section: this app's declared grants and its helper apps', live, Grant / Open, Grant all.
-            AppPermsSection(tick, PermsStyle(ink = MaterialTheme.colorScheme.onSurface, dim = MaterialTheme.colorScheme.onSurfaceVariant), ids)
-            if (feature == FIRST_RUN) OutlinedButton(onClick = { finish() }, modifier = Modifier.testTag("perms:later")) { Text("Later") }
+            AppPermsSection(tick, highlight = ids)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun Sheet(ids: Set<String>, tick: Int) {
+        val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val perms = rememberAppPerms(tick, ids)
+        val name = remember { applicationInfo.loadLabel(packageManager).toString() }
+        // nothing left to ask (granted from the sheet, or in Settings meanwhile): the sheet has done its job
+        LaunchedEffect(perms.missing) { if (perms.missing == 0) finish() }
+        ModalBottomSheet(onDismissRequest = { finish() }, sheetState = state, containerColor = MaterialTheme.colorScheme.surface) {
+            FirstRunSheetBody(name, perms.items, onGrantAll = perms.grantAll, onLater = { finish() })
         }
     }
 

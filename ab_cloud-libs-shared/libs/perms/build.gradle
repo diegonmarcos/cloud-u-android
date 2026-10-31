@@ -23,6 +23,9 @@ android {
 
     buildFeatures { compose = true }
 
+    // PermsViewTest is plain JVM; the Android stubs answer defaults instead of throwing if a rule ever touches one.
+    testOptions { unitTests.returnDefaultValues = true }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -42,4 +45,6 @@ dependencies {
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.activity:activity-compose:1.9.3'
+    // #1372 PermsViewTest: the Perms UI's view rules (grouping, chips, progress, folded groups, the walk), plain JVM.
+    testImplementation 'junit:junit:4.13.2'
 }

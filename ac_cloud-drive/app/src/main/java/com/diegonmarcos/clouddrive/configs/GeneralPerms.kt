@@ -25,7 +25,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -36,20 +35,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.diegonmarcos.clouddrive.BuildConfig
-import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.clouddrive.ui.DriveCard
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.IconCatalog
-import com.diegonmarcos.clouddrive.ui.Pill
-import com.diegonmarcos.clouddrive.ui.PillRow
-import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
+import com.diegonmarcos.superapp.perms.PermAction
+import com.diegonmarcos.superapp.perms.PermEntry
+import com.diegonmarcos.superapp.perms.PermItem
+import com.diegonmarcos.superapp.perms.PermItemKind
+import com.diegonmarcos.superapp.perms.PermState
+import com.diegonmarcos.superapp.perms.Perms
+import com.diegonmarcos.superapp.perms.PermsList
+import com.diegonmarcos.superapp.perms.PermsStyle
+import com.diegonmarcos.superapp.perms.PermsView
 
 /**
  * #1333 the Perms section of Configs > General and its anchor row. The LIST is build.json::ui.general.perms (GeneralDecl);
@@ -122,7 +124,32 @@ fun GeneralAnchorRow(anchors: List<GeneralDecl.Anchor>, onSelect: (Int) -> Unit,
     }
 }
 
-/** The Perms section body: one card per declared entry, status refreshed every time the app resumes. */
+/**
+ * #1372 a declared entry as a row of the shared libs:perms list: the catalogue's one-line reason and icon when the id is a
+ * catalogue entry, else the first sentence of the declared reason; `grant: none` entries are Granted at install, the git
+ * engine's grant is a helper row. The button is the runtime dialog or the declared settings screens.
+ */
+fun GeneralPerms.item(e: GeneralDecl.PermEntry, st: GeneralDecl.Status, cat: PermEntry?): PermItem {
+    val state = when (st) {
+        GeneralDecl.Status.GRANTED -> PermState.GRANTED
+        GeneralDecl.Status.DENIED -> PermState.DENIED
+        GeneralDecl.Status.NOT_APPLICABLE -> PermState.NOT_APPLICABLE
+        GeneralDecl.Status.INFO -> PermState.UNKNOWN
+    }
+    val kind = when {
+        e.grant == "none" -> PermItemKind.INSTALL
+        e.check == "engine_all_files" -> PermItemKind.HELPER
+        e.grant == "runtime" -> PermItemKind.RUNTIME
+        else -> PermItemKind.SPECIAL
+    }
+    val canFix = e.grant != "none" && (st == GeneralDecl.Status.DENIED || (st == GeneralDecl.Status.INFO && e.intents.isNotEmpty()))
+    val line = cat?.why?.takeIf { it.isNotBlank() } ?: e.why.split(". ", ": ").first().trimEnd('.') + "."
+    val icon = cat?.icon?.takeIf { it.isNotBlank() } ?: when (kind) { PermItemKind.INSTALL -> "check"; PermItemKind.HELPER -> "folder"; else -> if (e.oem.isNotBlank()) "bolt" else "security" }
+    return PermItem(e.id, e.label, line, icon, kind, state,
+        action = if (!canFix) null else if (e.grant == "runtime") PermAction.GRANT else PermAction.OPEN)
+}
+
+/** The Perms section body: libs:perms' shared list (summary, Grant all, groups) over the declared entries, re-read on resume. */
 @Composable
 fun GeneralPermsSection(perms: List<GeneralDecl.PermEntry>) {
     val ctx = LocalContext.current
@@ -136,27 +163,15 @@ fun GeneralPermsSection(perms: List<GeneralDecl.PermEntry>) {
         tick++
     }
     val engineGrant = rememberEngineGrant()
-    perms.forEach { e ->
-        val st = remember(tick, e.id, engineGrant) { GeneralPerms.status(ctx, e) }
-        val light = when (st) { GeneralDecl.Status.GRANTED -> StatusLight.State.ON; GeneralDecl.Status.DENIED -> StatusLight.State.OFF; else -> null }
-        val badge = when (st) {
-            GeneralDecl.Status.NOT_APPLICABLE -> stringResource(R.string.perms_status_na)
-            GeneralDecl.Status.INFO -> stringResource(R.string.perms_status_info)
-            else -> null
-        }
-        DriveCard(e.label, light = light, badge = badge, tag = DriveTags.CONFIGS_CARD) {
-            Text(e.why, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val canFix = e.grant != "none" && (st == GeneralDecl.Status.DENIED || (st == GeneralDecl.Status.INFO && e.intents.isNotEmpty()))
-            if (canFix) PillRow {
-                Pill(
-                    stringResource(if (e.grant == "runtime") R.string.perms_btn_grant else R.string.perms_btn_settings),
-                    {
-                        val first = GeneralPerms.vars().let { v -> e.permissions.map { GeneralDecl.resolve(it, v) }.firstOrNull { ctx.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED } }
-                        if (e.grant == "runtime" && first != null) { pending = e; launcher.launch(first) } else GeneralPerms.open(ctx, e)
-                    },
-                    filled = st == GeneralDecl.Status.DENIED,
-                )
-            }
-        }
+    val cat = remember { Perms.catalogue(ctx) }
+    val items = remember(tick, engineGrant, perms) { perms.map { e -> GeneralPerms.item(e, GeneralPerms.status(ctx, e), cat.byId(e.id)) } }
+    fun act(i: PermItem) {
+        val e = perms.firstOrNull { it.id == i.id } ?: return
+        val first = GeneralPerms.vars().let { v -> e.permissions.map { GeneralDecl.resolve(it, v) }.firstOrNull { ctx.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED } }
+        if (e.grant == "runtime" && first != null) { pending = e; launcher.launch(first) } else GeneralPerms.open(ctx, e)
     }
+    // Grant all: the first missing row each tap (one dialog or settings screen at a time; the list re-reads on return)
+    val next = PermsView.walk(items).firstOrNull()
+    PermsList(items, ::act, next?.let { n -> { act(n) } }, Modifier.padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.CONFIGS_CARD),
+        PermsStyle(ink = MaterialTheme.colorScheme.onSurface, dim = MaterialTheme.colorScheme.onSurfaceVariant, accent = MaterialTheme.colorScheme.primary))
 }

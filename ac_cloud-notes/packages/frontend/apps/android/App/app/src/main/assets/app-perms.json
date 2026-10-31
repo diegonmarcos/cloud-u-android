@@ -8,7 +8,7 @@
   "helpers": [
     {
       "package": "cld.termux",
-      "label": "cloud-terminal-termux",
+      "label": "Cloud Termux",
       "needs": [
         "all_files"
       ],

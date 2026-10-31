@@ -1,7 +1,8 @@
 #!/bin/bash
 # #1358 Emulator test: the git engine's MISSING All files access is said up front, once, and its button opens the right page.
 #   1. Cloud Drive + the git sync engine installed; Drive holds its own All files access, the ENGINE does not;
-#   2. the first-run prompt says "Grant All files access to <engine>" (next to Drive's own grant); "Later" closes it;
+#   2. #1372 on launch (Drive opens on Git) the libs:perms prompt card says "Grant All files access to <engine>";
+#      its Dismiss closes it; a relaunch brings it back (dismissed for that screen, not for good);
 #   3. the Git page shows the ONE banner with the same sentence and an "Open settings" button;
 #   4. the button lands on Settings (the engine's All files access page);
 #   5. `appops set <engine> MANAGE_EXTERNAL_STORAGE allow`, back to Drive: the banner is gone.
@@ -42,29 +43,36 @@ timeout 120 adb shell am start -W -n "$act" >/dev/null; sleep 8
 for _ in 1 2 3; do tap '^Continue with local files$' && break; sleep 2; done || true
 sleep 3
 
-# ── 2. the first-run prompt ──
-seen "$SENTENCE" 40 || fail "no first-run prompt saying '$SENTENCE <engine>'"
-grep -o "text=\"$SENTENCE[^\"]*\"" "$OUT/ui.xml" | head -1 | tee "$OUT/prompt.txt"
-shot 1-first-run-prompt.png
-tap '^Later$' || fail "the prompt has no Later button"
-sleep 2
-
-# ── 3. the Git page banner (Drive opens on Git; else Sync > Git) ──
-if ! seen "$SENTENCE" 10; then
+# ── 2. the first-run card (Drive opens on Git; else Sync > Git) ──
+if ! seen "$SENTENCE" 20; then
   for _ in 1 2 3; do tap '^Sync$' && break; sleep 2; done
   sleep 2; tap '^Git$' || true; sleep 3
 fi
-seen "$SENTENCE" 30 || fail "the Git page shows no '$SENTENCE' banner"
+seen "$SENTENCE" 30 || fail "no prompt card saying '$SENTENCE <engine>'"
+grep -o "text=\"$SENTENCE[^\"]*\"" "$OUT/ui.xml" | head -1 | tee "$OUT/prompt.txt"
+shot 1-first-run-prompt.png
+tap '^Dismiss$' || fail "the card has no Dismiss"
+sleep 2
+if seen "$SENTENCE" 2; then fail "Dismiss did not close the card"; fi
+
+# ── 3. back on the next launch, exactly once, with its Grant button ──
+timeout 120 adb shell am start -S -W -n "$act" >/dev/null; sleep 8
+for _ in 1 2 3; do tap '^Continue with local files$' && break; sleep 2; done || true
+if ! seen "$SENTENCE" 20; then
+  for _ in 1 2 3; do tap '^Sync$' && break; sleep 2; done
+  sleep 2; tap '^Git$' || true; sleep 3
+fi
+seen "$SENTENCE" 30 || fail "the Git page shows no '$SENTENCE' card after a relaunch"
 grep -o "text=\"$SENTENCE[^\"]*\"" "$OUT/ui.xml" | head -1 | tee "$OUT/banner.txt"
-[ "$(grep -o "text=\"$SENTENCE" "$OUT/ui.xml" | wc -l)" -eq 1 ] || fail "the banner is not shown exactly once"
-grep -q 'text="Open settings"' "$OUT/ui.xml" || fail "the banner has no Open settings button"
+[ "$(grep -o "text=\"$SENTENCE" "$OUT/ui.xml" | wc -l)" -eq 1 ] || fail "the card is not shown exactly once"
+grep -q 'text="Grant"' "$OUT/ui.xml" || fail "the card has no Grant button"
 shot 2-git-banner.png
 
 # ── 4. the button opens Settings ──
-tap '^Open settings$' || fail "cannot tap Open settings"
+tap '^Grant$' || fail "cannot tap Grant"
 sleep 4
 adb shell dumpsys window | tr -d '\r' | grep -m1 mCurrentFocus | tee "$OUT/after-button.txt"
-grep -qi 'settings' "$OUT/after-button.txt" || fail "Open settings did not land on Settings"
+grep -qi 'settings' "$OUT/after-button.txt" || fail "Grant did not land on Settings"
 shot 3-settings-page.png
 
 # ── 5. grant: the banner goes ──
@@ -74,4 +82,4 @@ timeout 60 adb shell am start -W -n "$act" >/dev/null; sleep 8
 dump >/dev/null
 if grep -qF "$SENTENCE" "$OUT/ui.xml"; then fail "the banner is still shown after the grant"; fi
 shot 4-granted-no-banner.png
-echo "OK engine grant banner: prompt, one banner, button to Settings, gone after the grant"
+echo "OK engine grant card: shown on launch, dismissible, back once on relaunch, Grant to Settings, gone after the grant"

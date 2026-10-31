@@ -1,0 +1,93 @@
+# #1372 libs:perms Perms UI mutation proof: the view rules every app's Perms UI draws from (PermsView: state chips, the
+# progress count, grouping, folded groups, the first-run list, the Grant all walk) are pinned by PermsViewTest. This job
+# runs that suite once on the real tree (GREEN expected), then once per planted mutant (RED expected, one break each).
+# It fails if the real tree is red or any mutant stays green. The suite runs through Cloud Calc's own test entry (Calc
+# links libs:perms) with the task narrowed to :libs:perms:testDebugUnitTest. Manual only.
+name: perms-mutation
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "all | one of the mutant names below"
+        required: false
+        default: "all"
+permissions:
+  contents: read
+env:
+  WORK_DIR: ac_cloud-calc
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+      - name: Set up Gradle 8.10.2 (cached)
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.10.2"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
+      - name: Checkout vault (shared Android signing key, read by app/build.gradle at configuration)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me-pvt-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Install ORAS + sops (pinned)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
+      - name: Real tree GREEN, every mutant RED
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          ONLY: ${{ inputs.name }}
+        run: |
+          set -u
+          jq '.tests.unit.task = ":libs:perms:testDebugUnitTest"' "$WORK_DIR/build.json" > /tmp/b.json && mv /tmp/b.json "$WORK_DIR/build.json"
+          V=ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/PermsView.kt
+          suite() { sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR" > /tmp/suite.log 2>&1; }
+          sub() { python3 -c 'import sys; p, a, b = sys.argv[1:]; s = open(p).read(); assert a in s, "anchor missing: " + a; open(p, "w").write(s.replace(a, b, 1))' "$V" "$1" "$2"; }
+          suite || { tail -60 /tmp/suite.log; echo "::error::the real tree is RED"; exit 1; }
+          echo "real tree: GREEN"
+          stayed=0
+          while IFS='@' read -r name a b; do
+            [ -z "$name" ] && continue
+            [ "$ONLY" != "all" ] && [ "$ONLY" != "$name" ] && continue
+            git checkout -- "$V"
+            sub "$a" "$b" || { echo "::error::$name: mutation anchor missing"; stayed=$((stayed + 1)); continue; }
+            if suite; then echo "::error::mutant stayed GREEN: $name"; stayed=$((stayed + 1)); else echo "RED (caught): $name"; fi
+          done <<'MUTANTS'
+          chip-denied@PermState.PERMANENTLY_DENIED -> PermChip.DENIED@PermState.PERMANENTLY_DENIED -> PermChip.MISSING
+          reason-denied@-> "Denied twice: allow it in Settings"@-> i.reason
+          progress-install@(it.kind == PermItemKind.RUNTIME || it.kind == PermItemKind.SPECIAL || it.kind == PermItemKind.HELPER) &&@it.kind != PermItemKind.HEALTH &&
+          progress-unfixable@(it.state == PermState.GRANTED || (it.missing && it.action != null))@(it.state == PermState.GRANTED || it.missing)
+          progress-health-once@hs == PermState.GRANTED -> 1 to 1@hs == PermState.GRANTED -> health.size to health.size
+          health-any@h.any { it.missing } -> PermState.DENIED@h.all { it.missing } -> PermState.DENIED
+          group-order@Group(SPECIAL, of(PermItemKind.SPECIAL))@Group(SPECIAL, of(PermItemKind.RUNTIME))
+          unused-open@Group(NOT_USED, items.filter { !it.used }, collapsed = true)@Group(NOT_USED, items.filter { !it.used }, collapsed = false)
+          unused-mixed@items.filter { it.used && it.kind == kind }@items.filter { it.kind == kind }
+          install-fold@INSTALL_OPEN_MAX = 3@INSTALL_OPEN_MAX = 4
+          highlight-first@sortedBy { if (it.highlight) 0 else 1 }@sortedBy { if (it.highlight) 1 else 0 }
+          sheet-health-once@rows + health.first { it.missing }.copy(@rows + health.filter { it.missing } + health.first { it.missing }.copy(
+          walk-unknown@(it.missing || (it.kind == PermItemKind.HELPER && it.state == PermState.UNKNOWN))@(it.missing || it.state == PermState.UNKNOWN)
+          walk-order@return todo.filter { it.action == PermAction.GRANT } +@return todo.filter { it.action == PermAction.GRANT && it.kind == PermItemKind.HELPER } +
+          MUTANTS
+          git checkout -- "$V"
+          [ "$stayed" -eq 0 ] || { echo "::error::$stayed mutant(s) stayed green"; exit 1; }
+          echo "every mutant RED"

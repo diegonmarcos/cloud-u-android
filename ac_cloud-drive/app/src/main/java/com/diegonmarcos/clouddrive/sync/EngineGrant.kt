@@ -6,30 +6,23 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.clouddrive.ui.DriveCard
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
-import com.diegonmarcos.clouddrive.ui.Pill
-import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.cloudlib.gitsync.GitLink
+import com.diegonmarcos.superapp.perms.PermsPromptCard
+import com.diegonmarcos.superapp.perms.PermsStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,8 +40,8 @@ import org.json.JSONObject
  *
  * The engine itself is the only reliable reader of its grant (AppOps refuses another uid's op without a privileged
  * permission), so [refresh] asks its `info` call ({files_access}) on IO and [state] holds the answer for the banner
- * ([EngineGrantBanner]), the first-run prompt ([EngineGrantPrompt]), Configs > General > Perms (check `engine_all_files`)
- * and the row reason ([REASON]). The pure parts ([fromInfo], [touchesSharedStorage]) are JVM-tested (EngineGrantTest).
+ * ([EngineGrantBanner], the fleet's compact libs:perms prompt card, #1372), Configs > General > Perms (check
+ * `engine_all_files`) and the row reason ([REASON]). Drive opens on the Git page, so the card is also the first-run ask. The pure parts ([fromInfo], [touchesSharedStorage]) are JVM-tested (EngineGrantTest).
  */
 object EngineGrant {
     enum class Grant { UNKNOWN, NOT_INSTALLED, MISSING, GRANTED }
@@ -107,12 +100,6 @@ object EngineGrant {
     fun open(ctx: Context): Boolean = intents().any { i -> runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess }
 
     const val TAG_BANNER = "engine_grant_banner"
-    const val TAG_BUTTON = "engine_grant_open"
-    private const val PREFS = "cloud-drive-prefs"
-    private const val KEY_PROMPTED = "engine_grant.prompted"
-
-    fun prompted(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PROMPTED, false)
-    fun markPrompted(ctx: Context) { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_PROMPTED, true).apply() }
 }
 
 /** Re-asks the engine every time the host resumes (the owner comes back from Settings), and returns the live grant. */
@@ -125,33 +112,14 @@ fun rememberEngineGrant(): EngineGrant.Grant {
     return g
 }
 
-/** THE ONE BANNER of the Git page: shown only while the engine is installed and lacks the grant. */
+/** THE ONE PROMPT of the Git page: libs:perms' compact card (icon, one sentence, Grant, dismiss), only while the engine lacks the grant. */
 @Composable
 fun EngineGrantBanner() {
     val ctx = LocalContext.current
     if (rememberEngineGrant() != EngineGrant.Grant.MISSING) return
     val label = remember { EngineGrant.label(ctx) }
-    DriveCard(stringResource(R.string.engine_grant_title, label), Modifier.testTag(EngineGrant.TAG_BANNER), tag = EngineGrant.TAG_BANNER) {
-        Text(stringResource(R.string.engine_grant_why, EngineGrant.PACKAGE), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        PillRow { Pill(stringResource(R.string.engine_grant_button), { EngineGrant.open(ctx) }, Modifier.testTag(EngineGrant.TAG_BUTTON), filled = true) }
-    }
-}
-
-/** The first-run prompt, next to Drive's own All files access request: once, and only when the engine says it lacks the grant. */
-@Composable
-fun EngineGrantPrompt() {
-    val ctx = LocalContext.current
-    val g = rememberEngineGrant()
-    var dismissed by remember { mutableStateOf(EngineGrant.prompted(ctx)) }
-    if (dismissed || g != EngineGrant.Grant.MISSING) return
-    val label = remember { EngineGrant.label(ctx) }
-    val done = { EngineGrant.markPrompted(ctx); dismissed = true }
-    AlertDialog(
-        onDismissRequest = done,
-        title = { Text(stringResource(R.string.engine_grant_title, label)) },
-        text = { Text(stringResource(R.string.engine_grant_why, EngineGrant.PACKAGE)) },
-        confirmButton = { TextButton(onClick = { done(); EngineGrant.open(ctx) }, modifier = Modifier.testTag(EngineGrant.TAG_BUTTON)) { Text(stringResource(R.string.engine_grant_button)) } },
-        dismissButton = { TextButton(onClick = done) { Text(stringResource(R.string.engine_grant_later)) } },
-        modifier = Modifier.testTag(EngineGrant.TAG_BANNER + "_prompt"),
-    )
+    PermsPromptCard(stringResource(R.string.engine_grant_title, label), onGrant = { EngineGrant.open(ctx) },
+        modifier = Modifier.padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap), icon = "folder", dismissKey = EngineGrant.TAG_BANNER,
+        style = PermsStyle(ink = MaterialTheme.colorScheme.onSurface, dim = MaterialTheme.colorScheme.onSurfaceVariant, accent = MaterialTheme.colorScheme.primary),
+        tag = EngineGrant.TAG_BANNER)
 }

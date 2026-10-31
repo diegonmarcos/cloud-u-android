@@ -255,9 +255,8 @@ private fun PermsSection(c: ThemeColors, tick: Int) {
     val ctx = LocalContext.current
     // #1360 the ONE shared section (libs:perms): every grant this app declares in build.json::perms (its own and its
     // helper apps'), live state, Grant / Open per row and Grant all. Never a second list here.
-    com.diegonmarcos.superapp.perms.AppPermsSection(tick, com.diegonmarcos.superapp.perms.PermsStyle(ink = c.ink, dim = c.inkDim))
-    val normal = remember(tick) { permissionRows(ctx).count { !it.dangerous } }
-    if (normal > 0) Text("$normal install-time permissions granted with the app.", color = c.inkDim, fontSize = 11.sp)
+    // #1372 the lib draws the install-time grants too (Granted at install), so no count line here.
+    com.diegonmarcos.superapp.perms.AppPermsSection(tick, com.diegonmarcos.superapp.perms.PermsStyle(ink = c.ink, dim = c.inkDim, accent = c.accent))
     ActionButton("App info", c, "fleetcfg_open_perms") { com.diegonmarcos.superapp.perms.PermsPages.openAppInfo(ctx, ctx.packageName) }
 }
 

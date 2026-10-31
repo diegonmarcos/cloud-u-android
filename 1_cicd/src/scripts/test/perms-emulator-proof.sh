@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# #1360 emulator proof of the shared Perms mechanism on the key apps (Drive, Me, Notes, FinTerminal, Browser, Gallery).
+# #1360 emulator proof of the shared Perms mechanism on the key apps (Drive, Me, Notes, FinTerminal, Calc, Browser, Gallery).
 # Per app, on a clean install (no -g, so nothing is pre-granted):
 #   1 first run: launched from the launcher, the app opens its Perms page by itself when a declared grant is missing
 #   2 the Perms page (libs:perms PermsActivity, started as root) lists every declared grant with its live state,
 #     Grant all on top, helper apps (cld.termux for Drive and Notes) in their own section
 #   3 grant one entry from a shell -> the row reads Granted on resume
-#   4 revoke it -> the row reads Not granted again, with its Grant / Open button (the in-place prompt)
+#   4 revoke it -> the row's chip reads Missing again, with its Grant / Open button (the in-place prompt)
+#   5 #1372 the same page in dark mode (the Perms UI is drawn for both)
 # Each step: a screenshot and a uiautomator dump in OUT, and a verdict line in OUT/verdicts.txt.
 # Usage: perms-emulator-proof.sh APK_DIR OUT   (APK_DIR/<key>.apk, keys below)
 set -u
@@ -30,7 +31,8 @@ adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
 adb shell settings put global cloud_perms_first_run 1
 
 # key | label of the entry granted and revoked | grant cmd | revoke cmd | texts the page must show
-while IFS='|' read -r key entry grant revoke texts; do
+# fd 3: every adb shell below reads stdin and would swallow the rest of the table (only the first app ever ran)
+while IFS='|' read -r -u 3 key entry grant revoke texts; do
   [ -z "$key" ] && continue
   apk="$APKS/$key.apk"
   if [ ! -f "$apk" ]; then say "FAIL $key: no APK"; fails=$((fails+1)); continue; fi
@@ -56,12 +58,18 @@ while IFS='|' read -r key entry grant revoke texts; do
   # 4 revoke -> the row asks again
   eval "${revoke//\{pkg\}/$pkg}" >/dev/null 2>&1
   perms_page "$pkg" "$key-4-revoked"
-  check "$key after the revoke: $entry reads Not granted with its button" "$key-4-revoked" "$entry" "Not granted" "Grant all"
-done <<'TABLE'
-drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;cloud-terminal-termux;Grant all
+  check "$key after the revoke: $entry reads Missing with its button" "$key-4-revoked" "$entry" "Missing" "Grant all"
+  # 5 dark mode
+  adb shell cmd uimode night yes >/dev/null 2>&1; sleep 2
+  perms_page "$pkg" "$key-5-dark"
+  check "$key Perms page in dark mode" "$key-5-dark" "${want[@]}"
+  adb shell cmd uimode night no >/dev/null 2>&1; sleep 1
+done 3<<'TABLE'
+drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Termux;Grant all
 me|Notifications|adb shell pm grant {pkg} android.permission.POST_NOTIFICATIONS|adb shell pm revoke {pkg} android.permission.POST_NOTIFICATIONS|Notifications;Health Connect;Grant all
-notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;cloud-terminal-termux
+notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Termux
 finterm||||needs no permission
+calc|Camera|adb shell pm grant {pkg} android.permission.CAMERA|adb shell pm revoke {pkg} android.permission.CAMERA|Camera;Microphone;Grant all
 browser|Camera|adb shell pm grant {pkg} android.permission.CAMERA|adb shell pm revoke {pkg} android.permission.CAMERA|Camera;Microphone;Grant all
 gallery|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Photos;Grant all
 TABLE

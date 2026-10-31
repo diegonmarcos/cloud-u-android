@@ -826,8 +826,5 @@
     <string name="repo_autosync_next_off">Auto sync is off: no run scheduled</string>
     <!-- #1358 the git engine's own All files access (EngineGrant): banner, first-run prompt and the row reason. -->
     <string name="engine_grant_title">Grant All files access to %1$s</string>
-    <string name="engine_grant_why">Git on repositories in shared storage (the vaults) runs in %1$s, a separate app. It needs its own All files access: Cloud Drive\'s grant does not cover it.</string>
-    <string name="engine_grant_button">Open settings</string>
-    <string name="engine_grant_later">Later</string>
     <string name="repo_err_files_access">Grant All files access to %1$s (banner above, or Configs ▸ Perms). %2$s</string>
 </resources>

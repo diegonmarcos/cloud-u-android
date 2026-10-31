@@ -153,15 +153,11 @@ class MainActivity : ComponentActivity(), DriveActions {
             }
         }
         prefs = DrivePrefs(this)
-        // #603 the Files tab is a manager over ALL of shared storage, so all-files access is
-        // asked for AT STARTUP rather than waited for: the same request ac_cloud-code makes
-        // (System.java manageAllFiles → ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, guarded
-        // by Environment.isExternalStorageManager), through this app's own helper so nothing is
-        // duplicated. A grant already held asks nothing; below Android 11 there is no such screen.
+        // #603 the Files tab is a manager over ALL of shared storage, so all-files access is asked at startup.
+        // #1372 it is asked by libs:perms' first-run sheet (build.json perms.first_run "libs:perms": All files access
+        // listed with its reason, Grant all and Later), not by opening the bare settings page on every launch; the
+        // Files tab's own grant button (requestStorageAccess) still opens that page directly.
         hadStorageAccess = Places.hasAllFilesAccess(this)
-        guarded("storage access") {
-            if (!hadStorageAccess) requestStorageAccess()
-        }
         guarded("engines") {
             EngineActivity.declareFromBuild(this)
         }
@@ -208,8 +204,6 @@ class MainActivity : ComponentActivity(), DriveActions {
             lifecycle.addObserver(observer)
             onDispose { lifecycle.removeObserver(observer) }
         }
-        // #1358 the first-run prompt's second grant, right after this app's own: the git engine's All files access (once; never stacked on ours).
-        if (hasAccess) com.diegonmarcos.clouddrive.sync.EngineGrantPrompt()
         val saved = rememberSaveable { mutableStateOf("") }
         val files = remember {
             val snap = prefs.snapshot.value

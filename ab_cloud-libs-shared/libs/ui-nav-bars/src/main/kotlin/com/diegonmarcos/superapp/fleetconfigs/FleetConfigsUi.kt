@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.content.pm.PermissionInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -155,25 +154,10 @@ internal fun ActionButton(label: String, c: ThemeColors, tag: String, onClick: (
 
 // ── device state ────────────────────────────────────────────────────────────────────────────────────────────────
 
-internal data class PermRow(val label: String, val granted: Boolean, val dangerous: Boolean)
-
 internal fun packageInfo(ctx: Context): PackageInfo? =
     runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS) }.getOrNull()
 
 internal fun requested(ctx: Context): List<String> = packageInfo(ctx)?.requestedPermissions?.toList().orEmpty()
-
-internal fun permissionRows(ctx: Context): List<PermRow> {
-    val info = packageInfo(ctx) ?: return emptyList()
-    val names = info.requestedPermissions ?: return emptyList()
-    val flags = info.requestedPermissionsFlags
-    return names.mapIndexed { i, name ->
-        val pi = runCatching { ctx.packageManager.getPermissionInfo(name, 0) }.getOrNull()
-        @Suppress("DEPRECATION") val base = (pi?.protectionLevel ?: 0) and PermissionInfo.PROTECTION_MASK_BASE
-        val granted = flags != null && i < flags.size && (flags[i] and PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
-        val label = pi?.loadLabel(ctx.packageManager)?.toString()?.replaceFirstChar { it.uppercase() } ?: name.substringAfterLast('.')
-        PermRow(label, granted, base == PermissionInfo.PROTECTION_DANGEROUS)
-    }.distinctBy { it.label }.sortedBy { it.label }
-}
 
 /** "1.4.0 (12)": the declared version, or for a fork without android.* the installed package's. */
 internal fun installedVersion(ctx: Context, decl: FleetConfigsDecl): String {

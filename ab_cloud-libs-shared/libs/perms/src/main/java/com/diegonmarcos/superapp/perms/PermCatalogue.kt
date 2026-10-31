@@ -55,9 +55,12 @@ data class PermEntry(
     /** Shell commands without the `adb shell` prefix; {pkg}, {listener}, {a11y}, {admin} are filled at generation time. */
     val adb: List<String> = emptyList(),
     val features: List<String> = emptyList(),
+    /** #1372 the one plain-language line under the row's title, and the name of its icon in [PermCatalogue.icons]. */
+    val why: String = "",
+    val icon: String = "",
 )
 
-data class PermCatalogue(val entries: List<PermEntry>, val groupOrder: List<String>) {
+data class PermCatalogue(val entries: List<PermEntry>, val groupOrder: List<String>, val icons: Map<String, String> = emptyMap()) {
 
     fun byId(id: String): PermEntry? = entries.firstOrNull { it.id == id }
 
@@ -118,9 +121,12 @@ data class PermCatalogue(val entries: List<PermEntry>, val groupOrder: List<Stri
                     instruction = o.optString("instruction", ""),
                     adb = o.optJSONArray("adb").strings(),
                     features = o.optJSONArray("features").strings(),
+                    why = o.optString("why", ""),
+                    icon = o.optString("icon", ""),
                 )
             }
-            return PermCatalogue(out, groups)
+            val icons = root.optJSONObject("icons")?.let { ic -> ic.keys().asSequence().associateWith { ic.getString(it) } }.orEmpty()
+            return PermCatalogue(out, groups, icons)
         }
 
         private fun JSONArray?.strings(): List<String> =

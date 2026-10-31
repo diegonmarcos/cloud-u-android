@@ -8,8 +8,9 @@
 #   P5 wiring: libs:perms is a module the app depends on, the declaration is baked and read, the Kotlin names no permission
 #   P6 the start-up rule: runtime asks only DENIED (never PERMANENTLY_DENIED), Health Connect stops after 2 asks, special
 #      pages open once; MainActivity runs startup on open and Grant all from the banner; Configs shows the list
-#   P7 the page look: every row has a libs:ui-icons icon and a one-line reason, unused ones are collapsed, chips,
-#      dividers, the Grant all primary button with its count, a dismissible banner, ui-kit tokens only, no raw ids in Configs
+#   P7 the page look: every row has a libs:ui-icons icon and a one-line reason; the page and banner are libs:perms'
+#      shared PermsList / PermsPromptCard (#1372: unused collapsed, chips, dividers, the Grant all primary button with its
+#      count, a dismissible banner), MePerms.kt uses the ui-kit palette only, no raw ids in Configs
 # Then each mutation below is planted in a scratch copy and must turn the check RED.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"; APP="$(cd "$HERE/.." && pwd)"; ROOT="$(cd "$APP/.." && pwd)"
@@ -75,24 +76,28 @@ if not any(e.get("used") is False for e in p["entries"]): bad("P7 no permission 
 for x in c:
     for f in ("title", "subtitle"):
         if re.search(r"::|build\.json|\bui\.[a-z_]+", x.get(f, "")): bad("P7 Configs shows a raw id in %s: %s" % (f, x[f]))
-ui = k.split("object PermissionTags", 1)[-1]
-for need, why in (("KitStatePill(chip.word, chip.kit", "rows carry the state chip"), ("HorizontalDivider(", "rows are divided"),
-                  ("KitButton(", "Grant all is a primary button"), ("prog.label", "Grant all shows the progress count"),
-                  ("Group(NOT_USED, rows.filter { !it.used }, collapsed = true)", "unused permissions are collapsed under Not used yet"),
-                  ("testTag(PermissionTags.BANNER_DISMISS)", "the banner can be dismissed"), ("maxLines = 1, overflow = TextOverflow.Ellipsis", "row text never wraps into the chip"),
-                  ("UiIcons.vector(", "rows draw the fleet icon")):
-    if need not in ui: bad("P7 " + why + " (" + need + " missing)")
-if re.search(r"\bfontSize = \d+\.sp|colorResource\(", ui): bad("P7 Perms UI hardcodes a size or colour instead of the libs:ui-kit tokens")
+# #1372 the page and banner are libs:perms' shared UI (PermsList, PermsPromptCard over PermsView rules); Cloud Me feeds it
+lib = root + "/ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms"
+ui = open(lib + "/PermsUi.kt").read(); view = open(lib + "/PermsView.kt").read()
+for need, why in (("PermsList(", "the page is the shared PermsList"), ("PermsPromptCard(", "the banner is the shared prompt card"),
+                  ("MePermView.items(rows)", "the rows are fed as shared items"), ("UiIcons.vector(", "rows draw the fleet icon")):
+    if need not in k: bad("P7 " + why + " (" + need + " missing in MePerms.kt)")
+for need, why in (("ChipView(chip, p", "rows carry the state chip"), ("HorizontalDivider(", "rows are divided"),
+                  ("onGrantAll != null) Button(", "Grant all is a primary button"), ("prog.label", "Grant all shows the progress count"),
+                  ("testTag(PermsTags.DISMISS)", "the banner can be dismissed"), ("maxLines = 1, overflow = TextOverflow.Ellipsis", "row text never wraps into the chip")):
+    if need not in ui: bad("P7 " + why + " (" + need + " missing in PermsUi.kt)")
+if "Group(NOT_USED, items.filter { !it.used }, collapsed = true)" not in view: bad("P7 unused permissions are not collapsed under Not used yet")
+if re.search(r"\bfontSize = \d+\.sp|colorResource\(", k): bad("P7 MePerms.kt hardcodes a size or colour instead of the libs:ui-kit palette")
 print("\n".join(out)); sys.exit(1 if out else 0)
 PY
 echo "[ac_cloud-me] Configs > Perms declaration"
 r="$(python3 "$CHECK" "$ROOT" 2>&1)" && ok "declaration, manifest, Health Connect set and start-up rule agree" || bad "$r"
-FILES="ac_cloud-me/build.json ac_cloud-me/app/src/main/AndroidManifest.xml ac_cloud-me/app/build.gradle ac_cloud-me/data/ui/configs/configs.json ac_cloud-me/app/src/main/java/com/diegonmarcos/cloudme/MePerms.kt ac_cloud-me/app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json ab_cloud-libs-shared/libs/health/src/main/AndroidManifest.xml ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt"
+FILES="ac_cloud-me/build.json ac_cloud-me/app/src/main/AndroidManifest.xml ac_cloud-me/app/build.gradle ac_cloud-me/data/ui/configs/configs.json ac_cloud-me/app/src/main/java/com/diegonmarcos/cloudme/MePerms.kt ac_cloud-me/app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json ab_cloud-libs-shared/libs/health/src/main/AndroidManifest.xml ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/PermsUi.kt ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/PermsView.kt"
 plant() { # <name> <python acting on T>
   rm -rf "$S/t"; for f in $FILES; do mkdir -p "$S/t/$(dirname "$f")"; cp "$ROOT/$f" "$S/t/$f"; done
   python3 - "$S/t" <<PY
 import re, sys
-T = sys.argv[1]; A = T + "/ac_cloud-me"; K = A + "/app/src/main/java/com/diegonmarcos/cloudme"
+T = sys.argv[1]; A = T + "/ac_cloud-me"; K = A + "/app/src/main/java/com/diegonmarcos/cloudme"; L = T + "/ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms"
 def sub(path, a, b):
     s = open(path).read(); assert a in s, "mutation anchor missing: " + a; open(path, "w").write(s.replace(a, b, 1))
 $2
@@ -114,9 +119,10 @@ plant "a row names an icon the fleet does not have" 'sub(A + "/build.json", "\"i
 plant "a reason runs over one line"                'sub(A + "/build.json", "\"why\": \"Heart rate from a connected wearable.\"", "\"why\": \"Heart rate from a connected wearable, read through the sensors API while the app is open.\"")'
 plant "nothing is flagged unused"                  'import re; s = open(A + "/build.json").read(); open(A + "/build.json", "w").write(s.replace(", \"used\": false", ""))'
 plant "Configs shows a raw build.json id"          'sub(A + "/data/ui/configs/configs.json", "What Cloud Me can access", "build.json::ui.permissions: what Cloud Me can access")'
-plant "unused rows are not collapsed"              'sub(K + "/MePerms.kt", "rows.filter { !it.used }, collapsed = true)", "rows.filter { !it.used })")'
-plant "the banner loses its dismiss"               'sub(K + "/MePerms.kt", "testTag(PermissionTags.BANNER_DISMISS)", "testTag(\"x\")")'
-plant "the state chip is dropped"                  'sub(K + "/MePerms.kt", "KitStatePill(chip.word, chip.kit", "Text(chip.word")'
-plant "Grant all is plain text again"              'sub(K + "/MePerms.kt", "if (all.isNotEmpty()) KitButton(", "if (all.isNotEmpty()) KitTextButton(")'
-plant "a hardcoded font size"                      'sub(K + "/MePerms.kt", "fontSize = KitDensity.body, maxLines = 2", "fontSize = 13.sp, maxLines = 2")'
+plant "unused rows are not collapsed"              'sub(L + "/PermsView.kt", "items.filter { !it.used }, collapsed = true)", "items.filter { !it.used })")'
+plant "the banner loses its dismiss"               'sub(L + "/PermsUi.kt", "testTag(PermsTags.DISMISS)", "testTag(\"x\")")'
+plant "the state chip is dropped"                  'sub(L + "/PermsUi.kt", "ChipView(chip, p", "Pill(chip.word, p.dim")'
+plant "Grant all is plain text again"              'sub(L + "/PermsUi.kt", "onGrantAll != null) Button(", "onGrantAll != null) TextButton(")'
+plant "Cloud Me draws its own list again"          'sub(K + "/MePerms.kt", "    PermsList(\n", "    MeList(\n")'
+plant "a hardcoded font size"                      'sub(K + "/MePerms.kt", "button = \"Grant all\"", "button = \"Grant all\", fontSize = 13.sp")'
 echo; [ "$FAILS" -eq 0 ] && { echo "OK me perms"; exit 0; } || { echo "FAILED $FAILS"; exit 1; }
