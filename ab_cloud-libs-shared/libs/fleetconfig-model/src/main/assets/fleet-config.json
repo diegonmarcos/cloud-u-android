@@ -2269,10 +2269,17 @@
       "class": "content",
       "doc": "The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content.",
       "used_by": [
-        "ad_CG-Omniverse",
         "ad_Capital-Stack-FinTerminal",
         "ad_Hardtech-CAD",
         "ad_Hardtech-Sim2Real"
+      ]
+    },
+    "worlds": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "CG-Omniverse's Galaxy worlds: whether each embedded world opens in desktop mode, one boolean per world id (key desktop.<worldId>). A user view choice, so it migrates with the app's settings.",
+      "used_by": [
+        "ad_CG-Omniverse"
       ]
     },
     "avatar": {
