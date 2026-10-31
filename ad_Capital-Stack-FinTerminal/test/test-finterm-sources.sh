@@ -164,7 +164,7 @@ man = read(os.path.join(app, "app/src/main/AndroidManifest.xml"))
 if "android.permission.INTERNET" not in man or "networkSecurityConfig" not in man: bad.append("S6 the manifest lacks INTERNET or the network security config for the mesh")
 # S7 model panels (Feeds.kt): sources declare cors / schedule / rate_limit; panels route container first, then key-free fallbacks that feed the entry
 LEGACY = {"fred_series", "dbnomics_series", "imf_datamapper", "worldbank_indicator", "gdelt_artlist", "fincept_topic"}
-VIEWS_OF = {"points": {"quotes", "curve", "bars", "table"}, "events": {"calendar"}, "candles": {"candles"}, "kv": {"kv"}, "filings": {"news", "table"}}
+VIEWS_OF = {"points": {"quotes", "curve", "bars", "table"}, "events": {"calendar"}, "candles": {"candles"}, "kv": {"kv"}, "filings": {"news", "table"}, "performance": {"table"}, "portfolio_performance": {"table"}, "yields_matrix": {"table"}}
 SLOTS = {"each", "each_csv", "today", "from", "yyyymm", "prev_yyyymm", "cik"}
 feeds_kt = ktf("Feeds.kt")
 for s in S:
@@ -200,6 +200,42 @@ for d in dash["dashboards"]:
             if "{each}" in text and not (f.get("each") or f.get("each_days") or f.get("each_user") or route.get("each")): bad.append("S7 panel %s asks per {each} with no items" % where)
         web = [own] + [byid.get(fb.get("source"), {}) for fb in f.get("fallbacks", [])]
         if p.get("alerts") not in (None, "price", "event"): bad.append("S7 panel %s alerts %r is not price or event" % (where, p.get("alerts")))
+
+# S9 per-item tables (Tables.kt / engine.ts): performance columns come from Performance.COLUMNS (or whole-year CAGR NY, Vol 1Y, MaxDD 1Y);
+# every item has a label and every symbol_map key is an item; a matrix has a tenor column per declared tenor, DM/EM inside its items and a GDP weight each
+perf_kt = ktf("Performance.kt")
+pcols = re.search(r'COLUMNS = listOf\(([^)]*)\)', perf_kt)
+PCOLS = re.findall(r'"([^"]+)"', pcols.group(1)) if pcols else []
+for d in dash["dashboards"]:
+    for p in d["panels"]:
+        f = p.get("fetch") or {}
+        where = "%s/%s" % (d["id"], p["id"])
+        if p.get("derive") in ("performance", "portfolio_performance"):
+            cols = p.get("columns", [])
+            if cols[:2] != ["Name", "Last"]: bad.append("S9 panel %s columns do not start Name, Last" % where)
+            for c in cols[2:]:
+                if c not in PCOLS and c not in ("Vol 1Y", "MaxDD 1Y") and not re.fullmatch(r"\d+Y", c): bad.append("S9 panel %s column %s is not a Performance column" % (where, c))
+            if p["derive"] == "performance":
+                items = f.get("each", [])
+                for it in items:
+                    if it not in (f.get("labels") or {}): bad.append("S9 panel %s item %s has no label" % (where, it))
+                for r in [f, f.get("primary") or {}] + list(f.get("fallbacks", [])):
+                    for k in (r.get("symbol_map") or {}):
+                        if k not in items: bad.append("S9 panel %s symbol_map names %s, not an item" % (where, k))
+            else:
+                legs = [l[0] for l in (d.get("model_portfolio") or {}).get("legs", [])]
+                for l in legs:
+                    if not (f.get("proxies") or {}).get(l): bad.append("S9 panel %s leg %s has no proxy" % (where, l))
+        if p.get("derive") == "yields_matrix":
+            ten = [t[0] for t in f.get("tenors", [])]
+            if p.get("columns", [])[1:] != ten: bad.append("S9 panel %s columns are not its tenors" % where)
+            g = f.get("groups") or {}
+            for grp in ("DM", "EM"):
+                for c in g.get(grp, []):
+                    if c not in f.get("each", []): bad.append("S9 panel %s %s member %s is not an item" % (where, grp, c))
+            for c in f.get("each", []):
+                if not isinstance((f.get("gdp_usd_bn") or {}).get(c), (int, float)): bad.append("S9 panel %s country %s has no GDP weight" % (where, c))
+                if c not in (f.get("labels") or {}): bad.append("S9 panel %s country %s has no label" % (where, c))
 
 # S8 central bank calendar: every bank has its source page; each ts is date + time in tz, as UTC; the last decision is far enough ahead
 cbp = os.path.join(app, "data/central-banks.json")
@@ -273,6 +309,12 @@ mutant "a fallback does not feed the entry" "$JE;d=L('data/sources.json');[s.__s
 mutant "a keyed fallback"                  "$JE;d=L('data/dashboards.json');[p['fetch'].setdefault('fallbacks',[]).append({'source':'finnhub'}) for x in d['dashboards'] if x['id']=='earnings_calendar' for p in x['panels'] if p['id']=='week'];D('data/dashboards.json',d)" "S7 panel earnings_calendar/week fallback finnhub"
 mutant "a view that cannot draw the derive" "$JE;d=L('data/dashboards.json');[p.__setitem__('view','curve') for x in d['dashboards'] if x['id']=='economic_calendar' for p in x['panels'] if p['id']=='week'];D('data/dashboards.json',d)" "S7 panel economic_calendar/week view curve"
 mutant "an unknown slot"                   "$JE;d=L('data/dashboards.json');[p['fetch'].__setitem__('path','/x/{ticker}') for x in d['dashboards'] if x['id']=='crypto' for p in x['panels'] if p['id']=='btc'];D('data/dashboards.json',d)" "S7 panel crypto/btc uses the unknown slot"
+mutant "a performance column drifts"       "$JE;d=L('data/dashboards.json');[p['columns'].__setitem__(3,'2W') for x in d['dashboards'] if x['id']=='eq_dm_us' for p in x['panels'] if p['id']=='sectors'];D('data/dashboards.json',d)" "S9 panel eq_dm_us/sectors column 2W"
+mutant "Performance drops a column"        "$SUB;S('$KT/Performance.kt','\"WTD\", \"MTD\"','\"MTD\"')" "S9 panel bonds_market/us column WTD"
+mutant "a performance item loses its label" "$JE;d=L('data/dashboards.json');[p['fetch']['labels'].pop('XLK') for x in d['dashboards'] if x['id']=='eq_dm_us' for p in x['panels'] if p['id']=='sectors'];D('data/dashboards.json',d)" "S9 panel eq_dm_us/sectors item XLK has no label"
+mutant "a model leg loses its proxy"       "$JE;d=L('data/dashboards.json');[p['fetch']['proxies'].pop('Bonds') for x in d['dashboards'] if x['id']=='mp_60_40' for p in x['panels'] if p['id']=='perf'];D('data/dashboards.json',d)" "S9 panel mp_60_40/perf leg Bonds"
+mutant "a matrix tenor without a column"   "$JE;d=L('data/dashboards.json');[p['fetch']['tenors'].append(['40Y',40]) for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S9 panel yields_matrix/spot columns"
+mutant "a matrix country without GDP"      "$JE;d=L('data/dashboards.json');[p['fetch']['gdp_usd_bn'].pop('BR') for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S9 panel yields_matrix/spot country BR has no GDP"
 mutant "per-item path with no items"       "$JE;d=L('data/dashboards.json');[p['fetch'].pop('each') for x in d['dashboards'] if x['id']=='crypto' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S7 panel crypto/spot asks per"
 mutant "a provider that is not the source's" "$JE;d=L('data/dashboards.json');[p['fetch'].__setitem__('provider','jsonstat') for x in d['dashboards'] if x['id']=='macro' for p in x['panels'] if p['id']=='us'];D('data/dashboards.json',d)" "S7 panel macro/us provider jsonstat"
 mutant "a decision time drifts from its zone" "$JE;d=L('data/central-banks.json');d['banks'][0]['events'][-1]['ts']='2027-12-08T18:00Z';D('data/central-banks.json',d)" "S8 bank fed 2027-12-08 ts"

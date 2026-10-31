@@ -444,8 +444,8 @@ object Feeds {
                 Catalog.str(e, "consensus"), Catalog.str(e, "actual"), Catalog.str(e, "previous"), Catalog.str(e, "kind").ifEmpty { "economic" })
         }
         val bars = objects(o.optJSONArray("bars")).mapNotNull { b ->
-            val c = num(b, "c") ?: return@mapNotNull null
-            Bar(Catalog.str(b, "t").take(10), num(b, "o") ?: c, num(b, "h") ?: c, num(b, "l") ?: c, c)
+            val c = num(b, "c") ?: num(b, "close") ?: return@mapNotNull null
+            Bar(Catalog.str(b, "t").ifEmpty { Catalog.str(b, "date") }.take(10), num(b, "o") ?: num(b, "open") ?: c, num(b, "h") ?: num(b, "high") ?: c, num(b, "l") ?: num(b, "low") ?: c, c)
         }.sortedBy { it.date }
         val kv = o.optJSONObject("profile")?.let { p -> p.keys().asSequence().sorted().map { it to Catalog.str(p, it) }.toList() }.orEmpty()
         val filings = objects(o.optJSONArray("filings"))

@@ -26,7 +26,7 @@ class DashboardsTest {
                 assertEquals(tab, d.tab)
             }
         }
-        assertEquals(28, count)
+        assertEquals(32, count)
         assertEquals(count, dashboards.size)
     }
 
@@ -54,7 +54,7 @@ class DashboardsTest {
         assertEquals(DashStatus.LIVE, status("forward_rates"))
         assertEquals(DashStatus.PARTLY_LIVE, status("yield_curves"))
         assertEquals(DashStatus.NEEDS_KEY, status("portfolio_risk"))
-        assertEquals(DashStatus.NEEDS_KEY, status("mp_40_60"))
+        assertEquals(DashStatus.LIVE, status("mp_40_60"))
     }
 
     @Test fun modelPortfolioLegsSumToOneHundred() {

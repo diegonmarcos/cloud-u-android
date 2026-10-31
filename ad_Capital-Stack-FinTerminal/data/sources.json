@@ -612,7 +612,8 @@
           "tab": "fi",
           "entries": [
             "Market Monitor",
-            "Yield Curves"
+            "Yield Curves",
+            "Yields Matrix"
           ]
         }
       ],
@@ -966,7 +967,8 @@
         {
           "tab": "ex",
           "entries": [
-            "Crypto"
+            "Crypto",
+            "Commodities"
           ]
         }
       ],
@@ -996,7 +998,8 @@
         {
           "tab": "fi",
           "entries": [
-            "Market Monitor"
+            "Market Monitor",
+            "Bonds Market"
           ]
         },
         {
@@ -1004,7 +1007,28 @@
           "entries": [
             "World Equity Indices",
             "Quotes & Charts",
-            "Watchlist & Alerts"
+            "Watchlist & Alerts",
+            "DM Equity (US)",
+            "EM Equity"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "Commodities"
+          ]
+        },
+        {
+          "tab": "pm",
+          "entries": [
+            "40/60",
+            "70/30",
+            "60/40",
+            "30/70",
+            "70/30 DM/EM",
+            "60/40 DM/EM",
+            "40/60 DM/EM",
+            "30/70 DM/EM"
           ]
         }
       ],

@@ -62,7 +62,7 @@ object Engine {
     )
 
     /** The derives of the normalised model (Feeds.kt): points, events, candles, kv, filings. */
-    val MODEL_DERIVES: Set<String> = setOf("points", "events", "candles", "kv", "filings")
+    val MODEL_DERIVES: Set<String> = setOf("points", "events", "candles", "kv", "filings") + Tables.DERIVES
 
     // ------------------------------------------------------------------ model panels
 
@@ -71,6 +71,7 @@ object Engine {
      * fallback in order (a fallback must feed the entry). merge = every route that answers is combined (calendars); else the first that answers wins.
      */
     private fun model(panel: Panel, source: Source, f: JSONObject, http: Http, today: LocalDate, c: ModelCtx): PanelData {
+        if (panel.derive in Tables.DERIVES) return Tables.load(panel, source, f, http, today, c)
         var got = Got()
         var by = ""
         var answered = false

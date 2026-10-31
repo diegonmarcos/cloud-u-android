@@ -1,6 +1,7 @@
 package com.diegonmarcos.capitalfinterm
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,12 +39,20 @@ class DashboardsUiTest {
 
     @Test fun marketMonitorLeadsWithTheTreasuryTilesAndTheDerivedSpread() {
         val mm = d("market_monitor")
-        assertEquals(listOf("ust", "funding", "equity", "fx", "crypto", "next"), mm.panels.map { it.id })
+        assertEquals(listOf("ust", "funding", "fx", "crypto", "next"), mm.panels.map { it.id })
         val ust = mm.panels.first()
         assertEquals("kpi", ust.raw.getString("display"))
         assertEquals("2s10s", ust.raw.getJSONObject("spread").getString("label"))
         assertTrue(mm.search)
-        assertEquals(listOf("equity", "fx", "crypto"), mm.panels.filter { it.raw.optBoolean("tape") }.map { it.id })
+        assertEquals(listOf("fx", "crypto"), mm.panels.filter { it.raw.optBoolean("tape") }.map { it.id })
+    }
+
+    @Test fun fixedIncomeHoldsNoEquityPanel() {
+        // FI is fixed income only: no FI panel reads an equity source, and the Market Monitor equity tiles live in EQ (World Equity Indices)
+        val equitySources = setOf("cboe")
+        for (dd in dashboards.filter { it.tab == "fi" && it.id != "bonds_market" }) for (p in dd.panels)
+            assertFalse("${dd.id}/${p.id} reads ${p.source} in FI", p.source in equitySources)
+        assertTrue(d("world_equity_indices").panels.any { it.source == "cboe" })
     }
 
     @Test fun noPlaceholderDeclaresADashedLayout() {

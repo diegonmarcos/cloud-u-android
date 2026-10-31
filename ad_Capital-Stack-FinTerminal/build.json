@@ -258,6 +258,18 @@
         },
         {
           "kind": "dashboard",
+          "title": "Yields Matrix",
+          "subtitle": "Government yields, country x tenor (3M-30Y), spot or 1y forward; GDP-weighted World / DM / EM averages",
+          "dashboard": "yields_matrix"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Bonds Market",
+          "subtitle": "US bond market: Treasuries by maturity, TIPS, aggregate, MBS, IG, HY, munis (WTD to 10Y)",
+          "dashboard": "bonds_market"
+        },
+        {
+          "kind": "dashboard",
           "title": "Forward Rates",
           "subtitle": "Forward rate curves and the paths they imply",
           "dashboard": "forward_rates"
@@ -293,6 +305,18 @@
           "title": "World Equity Indices",
           "subtitle": "Major equity index levels and moves worldwide",
           "dashboard": "world_equity_indices"
+        },
+        {
+          "kind": "dashboard",
+          "title": "DM Equity (US)",
+          "subtitle": "US sectors and strategies (growth, value, momentum, quality, min-vol, small-cap, dividend, equal-weight)",
+          "dashboard": "eq_dm_us"
+        },
+        {
+          "kind": "dashboard",
+          "title": "EM Equity",
+          "subtitle": "EM sectors and EM government bonds in USD (1y, 10y, 25y)",
+          "dashboard": "eq_em"
         },
         {
           "kind": "dashboard",
@@ -341,7 +365,7 @@
         {
           "kind": "dashboard",
           "title": "Commodities",
-          "subtitle": "Energy spot prices; EIA with your key",
+          "subtitle": "Energy, precious metals, industrial metals and minerals, agriculture, Bitcoin and Ether (WTD to 10Y)",
           "dashboard": "commodities"
         }
       ],

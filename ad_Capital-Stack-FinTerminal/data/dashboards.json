@@ -228,6 +228,505 @@
       ]
     },
     {
+      "id": "yields_matrix",
+      "entry": "Yields Matrix",
+      "tab": "fi",
+      "panels": [
+        {
+          "id": "spot",
+          "title": "Government yields by country and tenor (spot, %)",
+          "source": "treasury_xml",
+          "view": "table",
+          "derive": "yields_matrix",
+          "fetch": {
+            "provider": "treasury_xml",
+            "path": "/xml",
+            "params": {
+              "data": "daily_treasury_yield_curve",
+              "field_tdr_date_value_month": "{yyyymm}"
+            },
+            "symbol_map": {
+              "US": "US"
+            },
+            "fallbacks": [
+              {
+                "source": "treasury_xml",
+                "provider": "treasury_xml",
+                "path": "/xml",
+                "params": {
+                  "data": "daily_treasury_yield_curve",
+                  "field_tdr_date_value_month": "{prev_yyyymm}"
+                },
+                "symbol_map": {
+                  "US": "US"
+                }
+              }
+            ],
+            "each": [
+              "US",
+              "DE",
+              "FR",
+              "IT",
+              "ES",
+              "GB",
+              "JP",
+              "CA",
+              "AU",
+              "CH",
+              "NL",
+              "SE",
+              "CN",
+              "IN",
+              "BR",
+              "RU",
+              "MX",
+              "TR",
+              "ID",
+              "SA",
+              "PL",
+              "AR"
+            ],
+            "labels": {
+              "US": "United States",
+              "DE": "Germany",
+              "FR": "France",
+              "IT": "Italy",
+              "ES": "Spain",
+              "GB": "United Kingdom",
+              "JP": "Japan",
+              "CA": "Canada",
+              "AU": "Australia",
+              "CH": "Switzerland",
+              "NL": "Netherlands",
+              "SE": "Sweden",
+              "CN": "China",
+              "IN": "India",
+              "BR": "Brazil",
+              "RU": "Russia",
+              "MX": "Mexico",
+              "TR": "Turkey",
+              "ID": "Indonesia",
+              "SA": "Saudi Arabia",
+              "PL": "Poland",
+              "AR": "Argentina"
+            },
+            "groups": {
+              "DM": [
+                "US",
+                "DE",
+                "FR",
+                "IT",
+                "ES",
+                "GB",
+                "JP",
+                "CA",
+                "AU",
+                "CH",
+                "NL",
+                "SE"
+              ],
+              "EM": [
+                "CN",
+                "IN",
+                "BR",
+                "RU",
+                "MX",
+                "TR",
+                "ID",
+                "SA",
+                "PL",
+                "AR"
+              ]
+            },
+            "gdp_usd_bn": {
+              "US": 30507,
+              "DE": 4744,
+              "FR": 3211,
+              "IT": 2422,
+              "ES": 1799,
+              "GB": 3839,
+              "JP": 4186,
+              "CA": 2225,
+              "AU": 1771,
+              "CH": 947,
+              "NL": 1273,
+              "SE": 610,
+              "CN": 19232,
+              "IN": 4187,
+              "BR": 2126,
+              "RU": 2076,
+              "MX": 1863,
+              "TR": 1437,
+              "ID": 1430,
+              "SA": 1084,
+              "PL": 980,
+              "AR": 684
+            },
+            "gdp_source": "IMF WEO April 2025, nominal GDP USD bn",
+            "tenors": [
+              [
+                "3M",
+                0.25
+              ],
+              [
+                "6M",
+                0.5
+              ],
+              [
+                "1Y",
+                1
+              ],
+              [
+                "2Y",
+                2
+              ],
+              [
+                "3Y",
+                3
+              ],
+              [
+                "5Y",
+                5
+              ],
+              [
+                "7Y",
+                7
+              ],
+              [
+                "10Y",
+                10
+              ],
+              [
+                "20Y",
+                20
+              ],
+              [
+                "30Y",
+                30
+              ]
+            ],
+            "years": {
+              "BC_1MONTH": 0.083333,
+              "BC_3MONTH": 0.25,
+              "BC_6MONTH": 0.5,
+              "BC_1YEAR": 1,
+              "BC_2YEAR": 2,
+              "BC_3YEAR": 3,
+              "BC_5YEAR": 5,
+              "BC_7YEAR": 7,
+              "BC_10YEAR": 10,
+              "BC_20YEAR": 20,
+              "BC_30YEAR": 30
+            },
+            "forward_start_years": 1,
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/curves/{each}",
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Country",
+            "3M",
+            "6M",
+            "1Y",
+            "2Y",
+            "3Y",
+            "5Y",
+            "7Y",
+            "10Y",
+            "20Y",
+            "30Y"
+          ],
+          "unit": "%",
+          "segment_label": "Spot"
+        },
+        {
+          "id": "fwd",
+          "title": "Government yields by country and tenor (1y forward, %)",
+          "source": "treasury_xml",
+          "view": "table",
+          "derive": "yields_matrix",
+          "fetch": {
+            "provider": "treasury_xml",
+            "path": "/xml",
+            "params": {
+              "data": "daily_treasury_yield_curve",
+              "field_tdr_date_value_month": "{yyyymm}"
+            },
+            "symbol_map": {
+              "US": "US"
+            },
+            "fallbacks": [
+              {
+                "source": "treasury_xml",
+                "provider": "treasury_xml",
+                "path": "/xml",
+                "params": {
+                  "data": "daily_treasury_yield_curve",
+                  "field_tdr_date_value_month": "{prev_yyyymm}"
+                },
+                "symbol_map": {
+                  "US": "US"
+                }
+              }
+            ],
+            "each": [
+              "US",
+              "DE",
+              "FR",
+              "IT",
+              "ES",
+              "GB",
+              "JP",
+              "CA",
+              "AU",
+              "CH",
+              "NL",
+              "SE",
+              "CN",
+              "IN",
+              "BR",
+              "RU",
+              "MX",
+              "TR",
+              "ID",
+              "SA",
+              "PL",
+              "AR"
+            ],
+            "labels": {
+              "US": "United States",
+              "DE": "Germany",
+              "FR": "France",
+              "IT": "Italy",
+              "ES": "Spain",
+              "GB": "United Kingdom",
+              "JP": "Japan",
+              "CA": "Canada",
+              "AU": "Australia",
+              "CH": "Switzerland",
+              "NL": "Netherlands",
+              "SE": "Sweden",
+              "CN": "China",
+              "IN": "India",
+              "BR": "Brazil",
+              "RU": "Russia",
+              "MX": "Mexico",
+              "TR": "Turkey",
+              "ID": "Indonesia",
+              "SA": "Saudi Arabia",
+              "PL": "Poland",
+              "AR": "Argentina"
+            },
+            "groups": {
+              "DM": [
+                "US",
+                "DE",
+                "FR",
+                "IT",
+                "ES",
+                "GB",
+                "JP",
+                "CA",
+                "AU",
+                "CH",
+                "NL",
+                "SE"
+              ],
+              "EM": [
+                "CN",
+                "IN",
+                "BR",
+                "RU",
+                "MX",
+                "TR",
+                "ID",
+                "SA",
+                "PL",
+                "AR"
+              ]
+            },
+            "gdp_usd_bn": {
+              "US": 30507,
+              "DE": 4744,
+              "FR": 3211,
+              "IT": 2422,
+              "ES": 1799,
+              "GB": 3839,
+              "JP": 4186,
+              "CA": 2225,
+              "AU": 1771,
+              "CH": 947,
+              "NL": 1273,
+              "SE": 610,
+              "CN": 19232,
+              "IN": 4187,
+              "BR": 2126,
+              "RU": 2076,
+              "MX": 1863,
+              "TR": 1437,
+              "ID": 1430,
+              "SA": 1084,
+              "PL": 980,
+              "AR": 684
+            },
+            "gdp_source": "IMF WEO April 2025, nominal GDP USD bn",
+            "tenors": [
+              [
+                "3M",
+                0.25
+              ],
+              [
+                "6M",
+                0.5
+              ],
+              [
+                "1Y",
+                1
+              ],
+              [
+                "2Y",
+                2
+              ],
+              [
+                "3Y",
+                3
+              ],
+              [
+                "5Y",
+                5
+              ],
+              [
+                "7Y",
+                7
+              ],
+              [
+                "10Y",
+                10
+              ],
+              [
+                "20Y",
+                20
+              ],
+              [
+                "30Y",
+                30
+              ]
+            ],
+            "years": {
+              "BC_1MONTH": 0.083333,
+              "BC_3MONTH": 0.25,
+              "BC_6MONTH": 0.5,
+              "BC_1YEAR": 1,
+              "BC_2YEAR": 2,
+              "BC_3YEAR": 3,
+              "BC_5YEAR": 5,
+              "BC_7YEAR": 7,
+              "BC_10YEAR": 10,
+              "BC_20YEAR": 20,
+              "BC_30YEAR": 30
+            },
+            "forward_start_years": 1,
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/curves/{each}",
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Country",
+            "3M",
+            "6M",
+            "1Y",
+            "2Y",
+            "3Y",
+            "5Y",
+            "7Y",
+            "10Y",
+            "20Y",
+            "30Y"
+          ],
+          "unit": "%",
+          "mode": "forward",
+          "segment_label": "Forward",
+          "segment_of": "spot"
+        }
+      ]
+    },
+    {
+      "id": "bonds_market",
+      "entry": "Bonds Market",
+      "tab": "fi",
+      "panels": [
+        {
+          "id": "us",
+          "title": "US bond market total return (ETF, USD)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "BIL",
+              "SHY",
+              "IEI",
+              "IEF",
+              "TLH",
+              "TLT",
+              "GOVT",
+              "TIP",
+              "AGG",
+              "MBB",
+              "LQD",
+              "HYG",
+              "MUB"
+            ],
+            "labels": {
+              "BIL": "T-bills 1-3M (BIL)",
+              "SHY": "Treasuries 1-3Y (SHY)",
+              "IEI": "Treasuries 3-7Y (IEI)",
+              "IEF": "Treasuries 7-10Y (IEF)",
+              "TLH": "Treasuries 10-20Y (TLH)",
+              "TLT": "Treasuries 20Y+ (TLT)",
+              "GOVT": "Treasuries all (GOVT)",
+              "TIP": "TIPS (TIP)",
+              "AGG": "US Aggregate (AGG)",
+              "MBB": "Agency MBS (MBB)",
+              "LQD": "IG corporate (LQD)",
+              "HYG": "High yield (HYG)",
+              "MUB": "Municipals (MUB)"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        }
+      ]
+    },
+    {
       "id": "forward_rates",
       "entry": "Forward Rates",
       "tab": "fi",
@@ -630,6 +1129,286 @@
       ]
     },
     {
+      "id": "eq_dm_us",
+      "entry": "DM Equity (US)",
+      "tab": "eq",
+      "panels": [
+        {
+          "id": "sectors",
+          "title": "US sectors (SPDR ETFs, total return USD)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "SPY",
+              "XLK",
+              "XLF",
+              "XLV",
+              "XLY",
+              "XLP",
+              "XLE",
+              "XLI",
+              "XLB",
+              "XLU",
+              "XLRE",
+              "XLC"
+            ],
+            "labels": {
+              "SPY": "S&P 500 (SPY)",
+              "XLK": "Technology (XLK)",
+              "XLF": "Financials (XLF)",
+              "XLV": "Health Care (XLV)",
+              "XLY": "Consumer Discretionary (XLY)",
+              "XLP": "Consumer Staples (XLP)",
+              "XLE": "Energy (XLE)",
+              "XLI": "Industrials (XLI)",
+              "XLB": "Materials (XLB)",
+              "XLU": "Utilities (XLU)",
+              "XLRE": "Real Estate (XLRE)",
+              "XLC": "Communication Services (XLC)"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "strategies",
+          "title": "US strategies / factors (ETFs, USD)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "SPY",
+              "IWF",
+              "IWD",
+              "MTUM",
+              "QUAL",
+              "USMV",
+              "IWM",
+              "SCHD",
+              "RSP"
+            ],
+            "labels": {
+              "SPY": "S&P 500 (SPY)",
+              "IWF": "Growth (IWF)",
+              "IWD": "Value (IWD)",
+              "MTUM": "Momentum (MTUM)",
+              "QUAL": "Quality (QUAL)",
+              "USMV": "Min-Vol (USMV)",
+              "IWM": "Small-cap (IWM)",
+              "SCHD": "Dividend (SCHD)",
+              "RSP": "Equal-weight (RSP)"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        }
+      ]
+    },
+    {
+      "id": "eq_em",
+      "entry": "EM Equity",
+      "tab": "eq",
+      "panels": [
+        {
+          "id": "sectors",
+          "title": "EM sectors (MSCI EM sector indices, USD)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "EEM",
+              "EMQQ",
+              "EMFN",
+              "EMIT",
+              "EMHC",
+              "EMCS",
+              "EMCD",
+              "EMEN",
+              "EMIN",
+              "EMMT",
+              "EMUT",
+              "EMRE",
+              "EMCM"
+            ],
+            "labels": {
+              "EEM": "MSCI EM (EEM)",
+              "EMQQ": "EM Internet & E-commerce (EMQQ)",
+              "EMFN": "EM Financials",
+              "EMIT": "EM Information Technology",
+              "EMHC": "EM Health Care",
+              "EMCS": "EM Consumer Staples",
+              "EMCD": "EM Consumer Discretionary",
+              "EMEN": "EM Energy",
+              "EMIN": "EM Industrials",
+              "EMMT": "EM Materials",
+              "EMUT": "EM Utilities",
+              "EMRE": "EM Real Estate",
+              "EMCM": "EM Communication Services"
+            },
+            "symbol_map": {
+              "EEM": "EEM",
+              "EMQQ": "EMQQ"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1",
+              "symbol_map": {
+                "EEM": "EEM",
+                "EMQQ": "EMQQ",
+                "EMFN": "MSCIEM:FN",
+                "EMIT": "MSCIEM:IT",
+                "EMHC": "MSCIEM:HC",
+                "EMCS": "MSCIEM:CS",
+                "EMCD": "MSCIEM:CD",
+                "EMEN": "MSCIEM:EN",
+                "EMIN": "MSCIEM:IN",
+                "EMMT": "MSCIEM:MT",
+                "EMUT": "MSCIEM:UT",
+                "EMRE": "MSCIEM:RE",
+                "EMCM": "MSCIEM:CM"
+              }
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "bonds",
+          "title": "EM government bonds in USD (total return)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "EMB",
+              "PCY",
+              "EMBOND:BR",
+              "EMBOND:MX",
+              "EMBOND:ID",
+              "EMBOND:TR",
+              "EMBOND:SA",
+              "EMBOND:PL",
+              "EMBOND:IN",
+              "EMBOND:CN",
+              "EMBOND:AR",
+              "EMBOND:ZA"
+            ],
+            "labels": {
+              "EMB": "EM USD sovereigns (EMB)",
+              "PCY": "EM USD sovereigns (PCY)",
+              "EMBOND:BR": "Brazil USD sovereign",
+              "EMBOND:MX": "Mexico USD sovereign",
+              "EMBOND:ID": "Indonesia USD sovereign",
+              "EMBOND:TR": "Turkey USD sovereign",
+              "EMBOND:SA": "Saudi Arabia USD sovereign",
+              "EMBOND:PL": "Poland USD sovereign",
+              "EMBOND:IN": "India USD sovereign",
+              "EMBOND:CN": "China USD sovereign",
+              "EMBOND:AR": "Argentina USD sovereign",
+              "EMBOND:ZA": "South Africa USD sovereign"
+            },
+            "symbol_map": {
+              "EMB": "EMB",
+              "PCY": "PCY"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "1Y",
+            "10Y",
+            "25Y"
+          ],
+          "unit": "%"
+        }
+      ]
+    },
+    {
       "id": "world_equity_indices",
       "entry": "World Equity Indices",
       "tab": "eq",
@@ -683,6 +1462,143 @@
           "placeholder": {
             "reason": "needs a key or a connector"
           }
+        },
+        {
+          "id": "global",
+          "title": "Top 32 world indices: performance (local index; direct fallback = USD ETF proxy)",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "^GSPC",
+              "^NDX",
+              "^DJI",
+              "^RUT",
+              "^GSPTSE",
+              "^BVSP",
+              "^MXX",
+              "^MERV",
+              "^STOXX50E",
+              "^STOXX",
+              "^GDAXI",
+              "^FCHI",
+              "^FTSE",
+              "FTSEMIB.MI",
+              "^IBEX",
+              "^AEX",
+              "^SSMI",
+              "^OMX",
+              "^N225",
+              "^TOPX",
+              "^HSI",
+              "000001.SS",
+              "000300.SS",
+              "^KS11",
+              "^TWII",
+              "^BSESN",
+              "^NSEI",
+              "^AXJO",
+              "^JKSE",
+              "^TASI.SR",
+              "XU100.IS",
+              "EEM"
+            ],
+            "labels": {
+              "^GSPC": "S&P 500",
+              "^NDX": "Nasdaq-100",
+              "^DJI": "Dow Jones Industrial",
+              "^RUT": "Russell 2000",
+              "^GSPTSE": "S&P/TSX Composite",
+              "^BVSP": "Bovespa",
+              "^MXX": "S&P/BMV IPC",
+              "^MERV": "Merval",
+              "^STOXX50E": "Euro Stoxx 50",
+              "^STOXX": "Stoxx Europe 600",
+              "^GDAXI": "DAX",
+              "^FCHI": "CAC 40",
+              "^FTSE": "FTSE 100",
+              "FTSEMIB.MI": "FTSE MIB",
+              "^IBEX": "IBEX 35",
+              "^AEX": "AEX",
+              "^SSMI": "SMI",
+              "^OMX": "OMX Stockholm 30",
+              "^N225": "Nikkei 225",
+              "^TOPX": "TOPIX",
+              "^HSI": "Hang Seng",
+              "000001.SS": "Shanghai Composite",
+              "000300.SS": "CSI 300",
+              "^KS11": "KOSPI",
+              "^TWII": "TAIEX",
+              "^BSESN": "BSE Sensex",
+              "^NSEI": "Nifty 50",
+              "^AXJO": "S&P/ASX 200",
+              "^JKSE": "Jakarta Composite",
+              "^TASI.SR": "Tadawul All Share",
+              "XU100.IS": "BIST 100",
+              "EEM": "MSCI Emerging Markets"
+            },
+            "symbol_map": {
+              "^GSPC": "_SPX",
+              "^NDX": "_NDX",
+              "^DJI": "_DJX",
+              "^RUT": "_RUT",
+              "^GSPTSE": "EWC",
+              "^BVSP": "EWZ",
+              "^MXX": "EWW",
+              "^MERV": "ARGT",
+              "^STOXX50E": "FEZ",
+              "^STOXX": "IEUR",
+              "^GDAXI": "EWG",
+              "^FCHI": "EWQ",
+              "^FTSE": "EWU",
+              "FTSEMIB.MI": "EWI",
+              "^IBEX": "EWP",
+              "^AEX": "EWN",
+              "^SSMI": "EWL",
+              "^OMX": "EWD",
+              "^N225": "EWJ",
+              "^TOPX": "BBJP",
+              "^HSI": "EWH",
+              "000001.SS": "MCHI",
+              "000300.SS": "ASHR",
+              "^KS11": "EWY",
+              "^TWII": "EWT",
+              "^BSESN": "INDA",
+              "^NSEI": "INDY",
+              "^AXJO": "EWA",
+              "^JKSE": "EIDO",
+              "^TASI.SR": "KSA",
+              "XU100.IS": "TUR",
+              "EEM": "EEM"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
         }
       ],
       "default": true
@@ -1122,12 +2038,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Bonds": "AGG",
+              "Equity": "ACWI"
+            },
+            "each": [
+              "AGG",
+              "ACWI"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1156,12 +2108,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Bonds": "AGG",
+              "Equity": "ACWI"
+            },
+            "each": [
+              "AGG",
+              "ACWI"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1190,12 +2178,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Bonds": "AGG",
+              "Equity": "ACWI"
+            },
+            "each": [
+              "AGG",
+              "ACWI"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1224,12 +2248,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Bonds": "AGG",
+              "Equity": "ACWI"
+            },
+            "each": [
+              "AGG",
+              "ACWI"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1258,12 +2318,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Developed Markets": "URTH",
+              "Emerging Markets": "EEM"
+            },
+            "each": [
+              "URTH",
+              "EEM"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1292,12 +2388,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Developed Markets": "URTH",
+              "Emerging Markets": "EEM"
+            },
+            "each": [
+              "URTH",
+              "EEM"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1326,12 +2458,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Developed Markets": "URTH",
+              "Emerging Markets": "EEM"
+            },
+            "each": [
+              "URTH",
+              "EEM"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1360,12 +2528,48 @@
         },
         {
           "id": "perf",
-          "title": "Performance and risk (needs prices)",
-          "source": "polygon",
+          "title": "Performance and risk (ETF proxies, daily rebalanced)",
+          "source": "cboe",
           "view": "table",
-          "placeholder": {
-            "reason": "needs a key or a connector"
-          }
+          "derive": "portfolio_performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "proxies": {
+              "Developed Markets": "URTH",
+              "Emerging Markets": "EEM"
+            },
+            "each": [
+              "URTH",
+              "EEM"
+            ],
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y",
+            "Vol 1Y",
+            "MaxDD 1Y"
+          ],
+          "unit": "%"
         }
       ]
     },
@@ -1460,47 +2664,6 @@
           "unit": "%",
           "change_unit": "bp",
           "display": "rows"
-        },
-        {
-          "id": "equity",
-          "title": "US equity indices (15-min delayed)",
-          "source": "cboe",
-          "view": "quotes",
-          "derive": "points",
-          "fetch": {
-            "provider": "cboe_quotes",
-            "path": "/quotes/{each}.json",
-            "each": [
-              "_SPX",
-              "_NDX",
-              "_DJX",
-              "_RUT",
-              "_VIX"
-            ],
-            "labels": {
-              "_SPX": "S&P 500",
-              "_NDX": "Nasdaq-100",
-              "_DJX": "DJX (Dow/100)",
-              "_RUT": "Russell 2000",
-              "_VIX": "VIX"
-            },
-            "primary": {
-              "source": "cloud_fincept",
-              "api": "/v1/quotes",
-              "params": {
-                "symbols": "^SPX,^NDX,^DJX,^RUT,^VIX"
-              },
-              "parse": "finterm_v1"
-            }
-          },
-          "columns": [
-            "Name",
-            "Last",
-            "Chg",
-            "Chg %",
-            "As of"
-          ],
-          "tape": true
         },
         {
           "id": "fx",
@@ -2295,6 +3458,279 @@
             "Date"
           ],
           "chart_value": "change_pct",
+          "unit": "%"
+        },
+        {
+          "id": "energy_perf",
+          "title": "Energy",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "CL=F",
+              "BZ=F",
+              "NG=F",
+              "RB=F",
+              "HO=F"
+            ],
+            "labels": {
+              "CL=F": "WTI crude",
+              "BZ=F": "Brent crude",
+              "NG=F": "Natural gas (Henry Hub)",
+              "RB=F": "Gasoline (RBOB)",
+              "HO=F": "Heating oil"
+            },
+            "symbol_map": {
+              "CL=F": "USO",
+              "BZ=F": "BNO",
+              "NG=F": "UNG",
+              "RB=F": "UGA"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "precious",
+          "title": "Precious metals",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "GC=F",
+              "SI=F",
+              "PL=F",
+              "PA=F"
+            ],
+            "labels": {
+              "GC=F": "Gold",
+              "SI=F": "Silver",
+              "PL=F": "Platinum",
+              "PA=F": "Palladium"
+            },
+            "symbol_map": {
+              "GC=F": "GLD",
+              "SI=F": "SLV",
+              "PL=F": "PPLT",
+              "PA=F": "PALL"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "industrial",
+          "title": "Industrial metals and minerals",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "HG=F",
+              "ALI=F",
+              "DBB",
+              "URA",
+              "LIT",
+              "REMX"
+            ],
+            "labels": {
+              "HG=F": "Copper",
+              "ALI=F": "Aluminium",
+              "DBB": "Base metals basket (DBB)",
+              "URA": "Uranium (URA)",
+              "LIT": "Lithium (LIT)",
+              "REMX": "Rare earths (REMX)"
+            },
+            "symbol_map": {
+              "HG=F": "CPER",
+              "DBB": "DBB",
+              "URA": "URA",
+              "LIT": "LIT",
+              "REMX": "REMX"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "agri",
+          "title": "Agriculture and food",
+          "source": "cboe",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "cboe_quotes",
+            "path": "/charts/historical/{each}.json",
+            "last": 100000,
+            "each": [
+              "ZC=F",
+              "ZW=F",
+              "ZS=F",
+              "SB=F",
+              "KC=F",
+              "CC=F",
+              "LE=F",
+              "DBA"
+            ],
+            "labels": {
+              "ZC=F": "Corn",
+              "ZW=F": "Wheat",
+              "ZS=F": "Soybeans",
+              "SB=F": "Sugar",
+              "KC=F": "Coffee",
+              "CC=F": "Cocoa",
+              "LE=F": "Live cattle",
+              "DBA": "Agriculture basket (DBA)"
+            },
+            "symbol_map": {
+              "ZC=F": "CORN",
+              "ZW=F": "WEAT",
+              "ZS=F": "SOYB",
+              "SB=F": "CANE",
+              "DBA": "DBA"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
+          "unit": "%"
+        },
+        {
+          "id": "digital",
+          "title": "Digital commodities (Bitcoin, Ether)",
+          "source": "coinbase",
+          "view": "table",
+          "derive": "performance",
+          "fetch": {
+            "provider": "coinbase_exchange",
+            "path": "/products/{each}/candles",
+            "params": {
+              "granularity": "86400"
+            },
+            "each": [
+              "BTC-USD",
+              "ETH-USD"
+            ],
+            "labels": {
+              "BTC-USD": "Bitcoin",
+              "ETH-USD": "Ether"
+            },
+            "primary": {
+              "source": "cloud_fincept",
+              "api": "/v1/history",
+              "params": {
+                "symbol": "{each}",
+                "interval": "1d",
+                "range": "max"
+              },
+              "parse": "finterm_v1"
+            }
+          },
+          "columns": [
+            "Name",
+            "Last",
+            "WTD",
+            "MTD",
+            "YTD",
+            "1M",
+            "3M",
+            "1Y",
+            "3Y",
+            "10Y"
+          ],
           "unit": "%"
         },
         {

@@ -32,6 +32,16 @@ object Performance {
         )
     }
 
+    /** Trailing [years]-year CAGR on the [row] rule (base = last close on or before as-of minus [years]); for declared columns past 10Y (25Y). */
+    fun trailing(closes: List<Pair<LocalDate, Double>>, years: Int): Double? {
+        val s = closes.filter { it.second.isFinite() }.sortedBy { it.first }
+        if (s.isEmpty() || years <= 0) return null
+        val (asOf, last) = s.last()
+        val d = asOf.minusYears(years.toLong())
+        val start = if (s.first().first.isAfter(d)) null else s.lastOrNull { !it.first.isAfter(d) }?.second
+        return cagr(start, last, years.toDouble())
+    }
+
     fun simple(start: Double?, end: Double): Double? =
         if (start == null || start <= 0.0 || end <= 0.0) null else end / start - 1.0
 
