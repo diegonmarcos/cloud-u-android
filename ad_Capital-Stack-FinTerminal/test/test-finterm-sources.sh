@@ -228,7 +228,11 @@ for d in dash["dashboards"]:
                     if not (f.get("proxies") or {}).get(l): bad.append("S9 panel %s leg %s has no proxy" % (where, l))
         if p.get("derive") == "yields_matrix":
             ten = [t[0] for t in f.get("tenors", [])]
-            if p.get("columns", [])[1:] != ten: bad.append("S9 panel %s columns are not its tenors" % where)
+            # Country, Cov (the GDP coverage of each average, #1374), then the tenors
+            if p.get("columns", [])[1:2] != ["Cov"]: bad.append("S9 panel %s has no Cov column after Country" % where)
+            if p.get("columns", [])[2:] != ten: bad.append("S9 panel %s columns are not its tenors" % where)
+            mc = f.get("min_coverage_gdp")
+            if not isinstance(mc, (int, float)) or not 0 < mc <= 1: bad.append("S9 panel %s declares no min_coverage_gdp in (0, 1]" % where)
             g = f.get("groups") or {}
             for grp in ("DM", "EM"):
                 for c in g.get(grp, []):
@@ -314,6 +318,8 @@ mutant "Performance drops a column"        "$SUB;S('$KT/Performance.kt','\"WTD\"
 mutant "a performance item loses its label" "$JE;d=L('data/dashboards.json');[p['fetch']['labels'].pop('XLK') for x in d['dashboards'] if x['id']=='eq_dm_us' for p in x['panels'] if p['id']=='sectors'];D('data/dashboards.json',d)" "S9 panel eq_dm_us/sectors item XLK has no label"
 mutant "a model leg loses its proxy"       "$JE;d=L('data/dashboards.json');[p['fetch']['proxies'].pop('Bonds') for x in d['dashboards'] if x['id']=='mp_60_40' for p in x['panels'] if p['id']=='perf'];D('data/dashboards.json',d)" "S9 panel mp_60_40/perf leg Bonds"
 mutant "a matrix tenor without a column"   "$JE;d=L('data/dashboards.json');[p['fetch']['tenors'].append(['40Y',40]) for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S9 panel yields_matrix/spot columns"
+mutant "the matrix loses its Cov column"   "$JE;d=L('data/dashboards.json');[p['columns'].remove('Cov') for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='fwd'];D('data/dashboards.json',d)" "S9 panel yields_matrix/fwd has no Cov column"
+mutant "the matrix averages without a coverage minimum" "$JE;d=L('data/dashboards.json');[p['fetch'].pop('min_coverage_gdp') for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S9 panel yields_matrix/spot declares no min_coverage_gdp"
 mutant "a matrix country without GDP"      "$JE;d=L('data/dashboards.json');[p['fetch']['gdp_usd_bn'].pop('BR') for x in d['dashboards'] if x['id']=='yields_matrix' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S9 panel yields_matrix/spot country BR has no GDP"
 mutant "per-item path with no items"       "$JE;d=L('data/dashboards.json');[p['fetch'].pop('each') for x in d['dashboards'] if x['id']=='crypto' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S7 panel crypto/spot asks per"
 mutant "a provider that is not the source's" "$JE;d=L('data/dashboards.json');[p['fetch'].__setitem__('provider','jsonstat') for x in d['dashboards'] if x['id']=='macro' for p in x['panels'] if p['id']=='us'];D('data/dashboards.json',d)" "S7 panel macro/us provider jsonstat"
