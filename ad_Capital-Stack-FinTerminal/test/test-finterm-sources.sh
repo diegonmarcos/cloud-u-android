@@ -125,7 +125,8 @@ def strings(o):
         for v in o: yield from strings(v)
 for name, doc in (("sources", cat), ("dashboards", dash), ("control", ctl)):
     for v in strings(doc):
-        if re.fullmatch(r"[A-Za-z0-9_\-]{28,}", v): bad.append("S4 data/%s.json holds a key-shaped literal %s..." % (name, v[:6]))
+        # a declared name (lowercase words joined by '-', e.g. the container capital-stack-finterminal-api) is not a key
+        if re.fullmatch(r"[A-Za-z0-9_\-]{28,}", v) and not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)+", v): bad.append("S4 data/%s.json holds a key-shaped literal %s..." % (name, v[:6]))
 
 # S5
 acts = {a["id"]: a for a in ctl["actions"]}
