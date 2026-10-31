@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -339,18 +340,22 @@ private fun AboutCard(o: JSONObject) {
     val ctx = LocalContext.current
     MeCard {
         CardTitle(o.optString("title").ifBlank { ctx.getString(R.string.app_name) })
-        KeyValueRow("Version", versionName(ctx))
-        KeyValueRow("Commit", BuildConfig.GIT_SHORT_SHA)
-        KeyValueRow("Built", BuildConfig.BUILD_TIMESTAMP)
-        KeyValueRow("Package", ctx.packageName)
-        ActionRow("Check for updates now") { Updater.checkNow(ctx) }
+        // one line per fact, divided; long values ellipsize instead of pushing the label off the card
+        listOf("Version" to versionName(ctx), "Commit" to BuildConfig.GIT_SHORT_SHA, "Built" to BuildConfig.BUILD_TIMESTAMP, "Package" to ctx.packageName)
+            .forEachIndexed { i, (k, v) ->
+                if (i > 0) androidx.compose.material3.HorizontalDivider(color = colorResource(R.color.me_outline), thickness = 1.dp)
+                KeyValueRow(k, v, Modifier.padding(bottom = 8.dp))
+            }
+        com.diegonmarcos.superapp.uikit.KitTonalButton(onClick = { Updater.checkNow(ctx) },
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp).testTag("me:about:check-updates")) { Text("Check for updates") }
     }
 }
 
 @Composable
 private fun PermissionsCard(o: JSONObject) {
-    // The rows, the requests and the settings link are PermissionsList's; the one launcher lives in MainActivity.
-    MeCard { PermissionsList(o.optString("title"), o.optString("subtitle")) }
+    // The page's own heading, then PermissionsList's summary and group cards; the one launcher lives in MainActivity.
+    Titles(o)
+    PermissionsList()
 }
 
 // ── small helpers ────────────────────────────────────────────────
@@ -391,15 +396,12 @@ private fun NoteCard(title: String, body: String) = MeCard {
 
 @Composable
 private fun KeyValueRow(label: String, value: String, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().padding(top = 7.dp)) {
-        Text(label, color = colorResource(R.color.me_text_dim), fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(value, color = colorResource(R.color.me_text), fontSize = 13.sp, textAlign = TextAlign.End)
+    Row(modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = colorResource(R.color.me_text_dim), fontSize = 13.sp, maxLines = 1)
+        Text(value, color = colorResource(R.color.me_text), fontSize = 13.sp, textAlign = TextAlign.End, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp))
     }
 }
-
-@Composable
-private fun ActionRow(label: String, action: String = "open", onTap: () -> Unit) =
-    KeyValueRow(label, action, Modifier.clickable { onTap() })
 
 private fun versionName(ctx: Context): String = runCatching {
     ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "—"

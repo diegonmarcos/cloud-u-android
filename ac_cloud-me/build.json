@@ -138,29 +138,30 @@
   "ui": {
     "_doc": "Cloud Me's whole navigation is this block: seven bottom-nav sections (`ui.bottom_nav`, in order: Health, Study, Achieves, Profile, Duties, Buro, LLC), the Settings entries at the top right (`ui.settings`: the sections the top bar's Profile and Configs icons open; the left side menu opens by tapping the hamburger only, there is no swipe gesture), and the page tabs of every section drawn as Samsung-Health icon pills (icon-only, the selected tab also shows its name). A section's `pages` are its tab strip, and a page may declare `pages` of its own. A page with an `action` is a launch tab: it hands that `extapp:`/`page:` target to MainActivity.onTarget instead of showing content (Buro > Account launches Cloud Account). Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json, shipped as an asset. The same `page:<section>/<page>` grammar arrives from OUTSIDE the app too: the SuperApp's Dashboard icons launch Cloud Me with a `shortcut_action` extra carrying one of these strings.",
     "permissions": {
-      "_doc": "Configs > Perms, declared: EVERY permission Cloud Me needs. `entries` are ids of the shared libs:perms catalogue (ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json), which owns each one's label, kind (runtime dialog, special settings page, app-op, OEM guide), live check and settings intents; `why` is Cloud Me's reason. `install` are install-time permissions, listed as granted. `health` is the Health Connect set: `read` is the SuperApp's exact set (libs:health's manifest), `write` what Health > Tracked's manual entry writes. MePerms.kt holds no permission name. The start-up rule (MePermPlan.startup): runtime permissions never asked are asked, a denied one is asked again until Android stops showing its dialog (permanently denied: never again at start), Health Connect is asked until it has been declined twice (Health Connect's own limit), a special access is opened once on first launch and then only from the banner or Grant all. test/test-me-perms.sh pins this list to AndroidManifest.xml both ways.",
+      "_doc": "Configs > Perms, declared: EVERY permission Cloud Me needs. `entries` are ids of the shared libs:perms catalogue (ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json), which owns each one's label, kind (runtime dialog, special settings page, app-op, OEM guide), live check and settings intents; `why` is Cloud Me's reason, one line on the row; `icon` is a libs:ui-icons name; `used: false` marks a permission on the list that no feature uses yet, shown collapsed under Not used yet (still in Grant all). `install` are install-time permissions, listed as granted. `health` is the Health Connect set: `read` is the SuperApp's exact set (libs:health's manifest), `write` what Health > Tracked's manual entry writes. MePerms.kt holds no permission name. The start-up rule (MePermPlan.startup): runtime permissions never asked are asked, a denied one is asked again until Android stops showing its dialog (permanently denied: never again at start), Health Connect is asked until it has been declined twice (Health Connect's own limit), a special access is opened once on first launch and then only from the banner or Grant all. test/test-me-perms.sh pins this list to AndroidManifest.xml both ways.",
       "entries": [
-        {"id": "notifications", "why": "Update progress and the fleet updater's notices."},
-        {"id": "calendar_read", "why": "Agenda reads CalDAV events and todos through the cal engine."},
-        {"id": "activity_recognition", "why": "Health: the phone's own step and activity detection, so Tracked has steps and active minutes without a watch."},
-        {"id": "body_sensors", "why": "Health: heart rate from a connected wearable's sensors."},
-        {"id": "install_unknown", "why": "The in-app updater installs new Cloud Me builds from GHCR."},
-        {"id": "exact_alarm", "why": "On the owner's Cloud Me permission list (Agenda and Duties reminders); no Cloud Me code schedules an exact alarm yet."},
-        {"id": "all_files", "why": "On the owner's Cloud Me permission list (documents in shared storage); today the Dossier PDF goes out through a FileProvider and needs no storage access."},
-        {"id": "usage_access", "why": "On the owner's Cloud Me permission list (screen time for the circadian and sleep pages); no page reads usage stats yet."},
-        {"id": "notification_listener", "why": "On the owner's Cloud Me permission list. Cloud Me ships no listener service, so the row reads not applicable until one exists."},
-        {"id": "overlay", "why": "On the owner's Cloud Me permission list; no Cloud Me screen draws over other apps yet."},
-        {"id": "battery_opt", "why": "Background updater, Lnktree prefetch and Health Connect sync are throttled by Doze without the exemption."},
-        {"id": "background_run", "why": "The same background work on One UI, where the app-op is separate from the exemption."},
-        {"id": "samsung_never_sleeping", "why": "Samsung's battery manager stops background apps even with the Android exemption."}
+        {"id": "notifications", "icon": "notifications", "why": "Update progress and the updater's notices."},
+        {"id": "calendar_read", "icon": "event", "why": "Agenda reads your CalDAV events and todos."},
+        {"id": "activity_recognition", "icon": "directions_walk", "why": "Steps and active minutes without a watch."},
+        {"id": "body_sensors", "icon": "monitor_heart", "why": "Heart rate from a connected wearable."},
+        {"id": "install_unknown", "icon": "download", "why": "Installs new Cloud Me builds from GHCR."},
+        {"id": "exact_alarm", "icon": "schedule", "why": "Agenda and Duties reminders, once they exist.", "used": false},
+        {"id": "all_files", "icon": "folder_open", "why": "Documents in shared storage, once a page needs it.", "used": false},
+        {"id": "usage_access", "icon": "insights", "why": "Screen time for Circadian and Sleep, once they read it.", "used": false},
+        {"id": "notification_listener", "icon": "sms", "why": "Reading notifications, once a listener ships.", "used": false},
+        {"id": "overlay", "icon": "layers", "why": "Drawing over other apps, once a screen needs it.", "used": false},
+        {"id": "battery_opt", "icon": "bolt", "why": "Keeps updates, prefetch and Health sync out of Doze."},
+        {"id": "background_run", "icon": "sync", "why": "The same background work on One UI."},
+        {"id": "samsung_never_sleeping", "icon": "smartphone", "why": "Stops Samsung's battery manager pausing sync."}
       ],
       "install": [
-        {"perm": "android.permission.INTERNET", "label": "Internet", "why": "Everything the app reads from the cloud."},
-        {"perm": "android.permission.ACCESS_NETWORK_STATE", "label": "Network state", "why": "Waits for a network before syncing."},
-        {"perm": "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION", "label": "Silent self-update", "why": "Makes the updater's install silent on Android 12+."},
-        {"perm": "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", "label": "Battery exemption request", "why": "Lets the battery_opt row open the one-tap exemption dialog."}
+        {"perm": "android.permission.INTERNET", "icon": "public", "label": "Internet", "why": "Everything the app reads from the cloud."},
+        {"perm": "android.permission.ACCESS_NETWORK_STATE", "icon": "router", "label": "Network state", "why": "Waits for a network before syncing."},
+        {"perm": "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION", "icon": "update", "label": "Silent self-update", "why": "Makes the updater's install silent on Android 12+."},
+        {"perm": "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", "icon": "bolt", "label": "Battery exemption request", "why": "Opens the one-tap battery exemption dialog."}
       ],
       "health": {
+        "icon": "monitor_heart",
         "rationale": "Cloud Me reads your activity, heart, sleep, body, nutrition and cycle records from Health Connect to draw the Health section, and writes only the entries you add by hand on Health > Tracked (steps, distance, active calories, workouts, heart rate, sleep, weight, water). Nothing leaves the phone: Health Connect data is never uploaded.",
         "read": [
           "android.permission.health.READ_STEPS",
