@@ -310,12 +310,12 @@
     "category": "data"
   },
   {
-    "name": "fin-api",
-    "service": "fin-api",
+    "name": "capital-stack-finterminal-api",
+    "service": "capital-stack-finterminal-api",
     "vm": "oci-A1-f_0",
-    "public_url": "api.diegonmarcos.com/fin-api",
+    "public_url": "api.diegonmarcos.com/capital-stack-finterminal-api",
     "auth": "two_factor",
-    "private_dns": "fin-api.mesh.diegonmarcos.com:8340",
+    "private_dns": "capital-stack-finterminal-api.mesh.diegonmarcos.com:8340",
     "port": 8340,
     "category": "fin"
   },

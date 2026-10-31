@@ -402,7 +402,7 @@
   {
     "name": "mcp-oauth",
     "service": "mcp-oauth",
-    "vm": "gcp-E2-f_0",
+    "vm": "local",
     "private_dns": "mcp-oauth.mesh.diegonmarcos.com:4183",
     "port": 4183,
     "protocol": "http",
@@ -567,6 +567,16 @@
     "port": null,
     "protocol": "tcp",
     "category": "app",
+    "db_engine": null
+  },
+  {
+    "name": "capital-stack-finterminal-web",
+    "service": "capital-stack-finterminal-web",
+    "vm": "oci-A1-f_0",
+    "private_dns": "capital-stack-finterminal-web.mesh.diegonmarcos.com:8341",
+    "port": 8341,
+    "protocol": "http",
+    "category": "fin",
     "db_engine": null
   },
   {
