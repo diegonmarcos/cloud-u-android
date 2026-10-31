@@ -137,8 +137,8 @@ PY
 a1() {
     grep -qF '<string name="sync_history">Activity Logs</string>' "$STR" && grep -qF '<string name="sync_history_section">Activity Logs</string>' "$STR" || { echo "    strings still say History"; return 1; }
     ! grep -qE 'SectionHeader\(stringResource\(R\.string\.sync_history_section\)' "$1" || { echo "    the History section is still at the bottom"; return 1; }
-    grep -qF '"open_activity" -> showActivity = true' "$1" || { echo "    no top-bar item opens Activity Logs"; return 1; }
-    python3 -c 'import json,sys; g=json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["top_bar"]; assert any(i["kind"]=="open_activity" for grp in g["groups"] for i in grp["items"])' "$BJ" || { echo "    Activity Logs is not a declared top-bar item"; return 1; }
+    grep -qF '"open_logs" -> { logsTab = ' "$1" || { echo "    no top-bar item opens Logs (Activity Logs is its App tab, #1356)"; return 1; }
+    python3 -c 'import json,sys; g=json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["top_bar"]; assert any(i["kind"]=="open_logs" for grp in g["groups"] for i in grp["items"])' "$BJ" || { echo "    Activity Logs is not a declared top-bar item"; return 1; }
 }
 n1() { for t in 'heightIn(min = slot)' 'LocalNavBottomClearance provides slot' 'navBottomSlotShouldMeasure(collapse.collapsed, collapse.hidden)'; do grep -qF "$t" "$1" || { echo "    host lacks $t"; return 1; }; done; }
 

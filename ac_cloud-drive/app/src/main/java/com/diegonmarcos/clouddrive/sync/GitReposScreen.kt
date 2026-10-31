@@ -217,6 +217,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var statusFor by remember { mutableStateOf("") }
     // #1258 Activity Logs (was History): a top button opens it as its own view.
     var showActivity by remember { mutableStateOf(false) }
+    // #1356 which Logs tab opens: Logs in the top nav -> the first declared tab (repos); the job line -> app.
+    var logsTab by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf("") }
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
@@ -830,7 +832,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             "compound" -> coordinator.runCompoundAll(item.op, scopeTargets)
             "pull" -> coordinator.pullAll(force = item.force, only = scopeTargets.map { it.id }.toSet())
             "depth" -> page.depthAction(item.action)?.let { a -> if (a.confirm) depthConfirm = a else runDepthAll(a) }
-            "open_activity" -> showActivity = true
+            "open_logs" -> { logsTab = page.topBar.logs.tabs.firstOrNull()?.first.orEmpty(); showActivity = true }
             "open_report" -> showDepthReport = true
             "toggle_filter" -> page.filters.firstOrNull { it.id == item.filter }?.let { f -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, item.option)) }
             "legend" -> showLegend = true
@@ -847,7 +849,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
                 GitTopBar(page.topBar, prefs, enabledReason = { item -> GitTopBarState.reason(item, writingJob, scopeTargets.size, page.topBar::label) }, onItem = ::onTopItem)
                 GitJobLine(jobLine, page.topBar::label, onCancel = { jobLine?.let { coordinator.jobs.cancel(it.id) } }, onDismiss = { jobLine?.let { coordinator.jobs.dismiss(it.id) } },
-                    onOpen = { if (depthRun != null) showDepthReport = true else showActivity = true })
+                    onOpen = { if (depthRun != null) showDepthReport = true else { logsTab = "app"; showActivity = true } })
                 fullProgress?.let { p -> Text(stringResource(R.string.repo_full_progress, p.done, p.total), Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset).testTag(DriveTags.SYNC_GIT_FULL_PROGRESS), style = MaterialTheme.typography.labelSmall) }
                 GitSearchRow(page.topBar, query, { query = it }, RepoFilters.active(page.filters, filterSel), onFilters = { showFilters = true }, onClear = { coordinator.clearFilters(); query = "" })
                 QuickFilterRail(page.filters, filterSel, ::countsOf) { f, o -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, o)) }
@@ -1095,7 +1097,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
     // #1258 ACTIVITY LOGS: the one sync / operation history, opened from the top button, full screen.
-    if (showActivity) ActivityLogsWindow(events, fmt, onClose = { showActivity = false }) { e -> HistoryRow(e, fmt) }
+    // #1356 LOGS (Repos | App): App is the Activity Logs view that used to open from More.
+    if (showActivity) GitLogsWindow(page.topBar.logs, logsTab, coordinator, events, fmt, onClose = { showActivity = false })
     if (showDepthReport) depthRun?.let { r -> DepthReportWindow(r, onCancel = { coordinator.cancelDepthRun() }, onClose = { showDepthReport = false }) }
     topConfirm?.let { item -> GitTopConfirm(item, page.topBar, scopeTargets.size, onConfirm = { runTopItem(item); topConfirm = null }, onDismiss = { topConfirm = null }, cancelLabel = stringResource(R.string.chrome_cancel)) }
     if (showFilters) GitFilterSheet(page.topBar, page.filters, filterSel, ::countsOf, onPick = { f, o -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, o)) }, onClear = { coordinator.clearFilters(); query = "" }, onDismiss = { showFilters = false })

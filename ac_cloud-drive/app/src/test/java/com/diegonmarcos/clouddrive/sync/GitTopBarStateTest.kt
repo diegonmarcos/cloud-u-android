@@ -23,11 +23,14 @@ class GitTopBarStateTest {
     private val labels: (String) -> String = { bar.label(it) }
 
     @Test fun `the bar is declared with groups, known kinds, the audit verbs and depth actions that exist`() {
-        assertEquals(listOf("check", "sync", "clone", "more"), bar.groups.map { it.id })
+        assertEquals(listOf("check", "sync", "clone", "logs", "more"), bar.groups.map { it.id })
+        // #1356 Check | Sync | Clone | Logs are one-item buttons; More holds the rest.
+        assertEquals(listOf("check_full", "sync_all", "clone_missing", "logs"), bar.groups.take(4).map { it.items.single().id })
+        assertEquals(listOf("repos", "app"), bar.logs.tabs.map { it.first })
         val items = bar.groups.flatMap { it.items }
         assertTrue(items.isNotEmpty() && items.all { it.kind in Declarations.TOP_KINDS })
         assertEquals(items.map { it.id }.distinct(), items.map { it.id })
-        for (k in listOf("check_light", "check_full", "check_remote", "check_sizes", "open_activity", "legend", "toggle_filter")) assertTrue(k, items.any { it.kind == k })
+        for (k in listOf("check_light", "check_full", "check_remote", "check_sizes", "open_logs", "legend", "toggle_filter")) assertTrue(k, items.any { it.kind == k })
         items.filter { it.kind == "depth" }.forEach { assertNotNull("${it.id} names a declared scope-all depth action", page.depthActions(Declarations.DEPTH_SCOPE_ALL).firstOrNull { a -> a.id == it.action }) }
         items.filter { it.kind == "compound" }.forEach { assertTrue(it.id, RepoActions.isCompound(it.op)) }
         items.filter { it.kind == "toggle_filter" }.forEach { assertNotNull(it.id, page.filters.firstOrNull { f -> f.id == it.filter }?.option(it.option)) }

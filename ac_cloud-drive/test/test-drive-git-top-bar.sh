@@ -111,4 +111,32 @@ t3 "$tmp/S.kt" "$SYNC/GitTopBar.kt" >/dev/null 2>&1 && fail "T3 passed a title r
 sed 's|GitSearchField(query, onQuery|OutlinedTextField(query, onQuery|' "$SYNC/GitTopBar.kt" > "$tmp/B.kt"
 t3 "$SYNC/SyncScreen.kt" "$tmp/B.kt" >/dev/null 2>&1 && fail "T3 passed an outlined search (vacuous)" || pass "an OutlinedTextField search → T3 RED"
 
+# T4 #1356 the top nav is Check | Sync | Clone | Logs | More ..... Settings: those five groups in that order, the first four ONE
+#    item each (check_full, sync_all, clone_missing, the open_logs item) run on tap, More keeps every other action of the bar
+#    (none lost), Settings sits after the groups' weighted row; Logs declares the tabs repos, app and App is Activity Logs.
+KEEP="check_light check_remote check_sizes scan_inventory cancel_checks pull_all force_pull_all stash_push_all fetch_all mirror_all shrink_all last_report show_archived legend"
+t4() { python3 - "$1" "$2" "$3" "$KEEP" <<'PY'
+import json, sys
+g = json.load(open(sys.argv[1]))["ui"]["sync"]["git"]; bar = open(sys.argv[2]).read(); ui = open(sys.argv[3]).read(); keep = sys.argv[4].split()
+groups = g["top_bar"]["groups"]; bad = []
+if [x["id"] for x in groups] != ["check", "sync", "clone", "logs", "more"]: bad.append("groups are %s" % [x["id"] for x in groups])
+else:
+    want = [("check_full", "check_full"), ("sync_all", "compound"), ("clone_missing", "depth"), ("logs", "open_logs")]
+    got = [(x["items"][0]["id"], x["items"][0]["kind"]) if len(x["items"]) == 1 else None for x in groups[:4]]
+    if got != want: bad.append("the four buttons are %s, want %s" % (got, want))
+    more = [i["id"] for i in groups[4]["items"]]
+    lost = [k for k in keep if k not in more]
+    if lost: bad.append("More lost %s" % lost)
+if [t["id"] for t in g.get("logs", {}).get("tabs", [])] != ["repos", "app"]: bad.append("logs.tabs is not repos, app")
+if "val single = g.items.singleOrNull()" not in bar or "onItem(single)" not in bar: bad.append("a one-item group does not run on tap")
+if bar.find("Modifier.weight(1f).horizontalScroll") < 0 or bar.find("Modifier.weight(1f).horizontalScroll") > bar.find("SYNC_AUTO_SETTINGS"): bad.append("Settings is not after the groups' weighted row")
+if '"app" -> Column(' not in ui or "ActivityLogsView(events, fmt)" not in ui or "RepoLogsList(" not in ui or "runFeed(" not in ui or "loadDetails(" not in ui: bad.append("Logs lacks App = Activity Logs or Repos = commits + CI")
+print("\n".join(bad)); sys.exit(1 if bad else 0)
+PY
+}
+echo "== T4 Check | Sync | Clone | Logs | More ..... Settings =="
+out=$(t4 "$BJ" "$SYNC/GitTopBar.kt" "$SYNC/GitDepthUi.kt") && pass "the top nav is the five declared groups, More keeps every other action, Logs = Repos | App" || fail "T4: $out"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); g=d["ui"]["sync"]["git"]["top_bar"]["groups"]; g[4]["items"]=[i for i in g[4]["items"] if i["id"]!="legend"]; json.dump(d,open(sys.argv[2],"w"))' "$BJ" "$tmp/bj4.json"
+t4 "$tmp/bj4.json" "$SYNC/GitTopBar.kt" "$SYNC/GitDepthUi.kt" >/dev/null 2>&1 && fail "T4 passed a More that lost an action (vacuous)" || pass "an action dropped from More → T4 RED"
+
 [ "$FAILURES" -eq 0 ] && { echo "test-drive-git-top-bar: all green"; exit 0; } || { echo "test-drive-git-top-bar: $FAILURES failure(s)"; exit 1; }

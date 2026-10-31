@@ -110,7 +110,7 @@ object Declarations {
     /**
      * #1315 THE TOP BAR as data (ui.sync.git.top_bar): groups in order, each one split-menu button; an item is dispatched on
      * [kind] alone (GitReposScreen's `when (item.kind)`): check_light | check_full | check_remote | check_sizes | scan_inventory |
-     * cancel_checks | op | compound | pull | depth | open_activity | open_report | toggle_filter | legend. [scope] filtered = the
+     * cancel_checks | op | compound | pull | depth | open_logs | open_report | toggle_filter | legend. [scope] filtered = the
      * rows the filters and the search leave, all = every registered clone; [confirm] asks first naming the target count; [danger]
      * is drawn red and always confirms; [exclusive] = refused while another writing job runs.
      */
@@ -120,7 +120,11 @@ object Declarations {
         val filter: String = "", val option: String = "",
     )
     data class GitTopGroupDecl(val id: String, val label: String, val icon: String, val items: List<GitTopItemDecl>)
-    data class GitTopBarDecl(val groups: List<GitTopGroupDecl> = emptyList(), val search: Boolean = true, val searchPlaceholder: String = "", val counters: List<String> = emptyList(), val labels: Map<String, String> = emptyMap()) {
+    /** #1356 the Logs page (ui.sync.git.logs): its title, its tabs in order (repos | app) and its labels. */
+    data class GitLogsDecl(val title: String = "Logs", val tabs: List<Pair<String, String>> = listOf("repos" to "Repos", "app" to "App"), val labels: Map<String, String> = emptyMap()) {
+        fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
+    }
+    data class GitTopBarDecl(val groups: List<GitTopGroupDecl> = emptyList(), val search: Boolean = true, val searchPlaceholder: String = "", val counters: List<String> = emptyList(), val labels: Map<String, String> = emptyMap(), val logs: GitLogsDecl = GitLogsDecl()) {
         fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
         fun item(id: String): GitTopItemDecl? = groups.flatMap { it.items }.firstOrNull { it.id == id }
     }
@@ -665,6 +669,10 @@ object Declarations {
                     },
                     t.bool("search", true), t.str("search_placeholder"), t.strings("counters"),
                     (t["labels"] as? JsonObject)?.entries?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty(),
+                    (o["logs"] as? JsonObject)?.let { l ->
+                        GitLogsDecl(l.str("title", "Logs"), objects(l["tabs"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { it to x.str("label", it) } },
+                            (l["labels"] as? JsonObject)?.entries?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty())
+                    } ?: GitLogsDecl(),
                 )
             } ?: GitTopBarDecl(),
             nameFamilies = o.strings("name_families"),
@@ -897,7 +905,7 @@ object Declarations {
     /** #1288 the runner's scope of a folder command (never declared in depth_actions). */
     const val DEPTH_SCOPE_FOLDER = "folder"
     /** #1315 the top bar's item kinds (ui.sync.git.top_bar.groups[].items[].kind), dispatched by GitReposScreen; test-drive-git-top-bar.sh diffs both ways. */
-    val TOP_KINDS = setOf("check_light", "check_full", "check_remote", "check_sizes", "scan_inventory", "cancel_checks", "op", "compound", "pull", "depth", "open_activity", "open_report", "toggle_filter", "legend")
+    val TOP_KINDS = setOf("check_light", "check_full", "check_remote", "check_sizes", "scan_inventory", "cancel_checks", "op", "compound", "pull", "depth", "open_logs", "open_report", "toggle_filter", "legend")
     const val REMOTE_READONLY = "readonly"
 
     /** #608 the Git page's two sections and the personal section's two groups, by id. */

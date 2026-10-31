@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,10 +98,15 @@ internal fun GitTopBar(
 ) {
     var sheet by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_TOP_BAR), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
+        // #1356 Check | Sync | Clone | Logs | More ..... Settings: the groups scroll inside their own weighted row (the spacer),
+        // so Settings stays at the far right on any width.
+        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
         decl.groups.forEach { g ->
             var open by remember(g.id) { mutableStateOf(false) }
+            // #1356 a group of ONE item (Check, Sync, Clone, Logs) is a button: a tap runs it (a disabled one opens its menu, which says why).
+            val single = g.items.singleOrNull()
             Box {
-                Pill(g.label, { open = true }, icon = IconCatalog.vectorOrDefault(g.icon), modifier = Modifier.testTag(DriveTags.SYNC_GIT_TOP_GROUP + "_" + g.id))
+                Pill(g.label, { if (single != null && enabledReason(single) == null) onItem(single) else open = true }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_TOP_GROUP + "_" + g.id))
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                     g.items.forEach { item ->
                         val why = enabledReason(item)
@@ -119,7 +126,8 @@ internal fun GitTopBar(
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
+        }
+        Spacer(Modifier.width(DriveMetrics.gap))
         if (prefs != null) Row(Modifier.testTag(DriveTags.SYNC_AUTO_SETTINGS)) { IslandAction(Icons.Filled.Settings, decl.label("settings")) { sheet = true } }
     }
     if (sheet && prefs != null) AutoSettingsSheet(AutoChecks.Page.GIT, prefs) { sheet = false }
