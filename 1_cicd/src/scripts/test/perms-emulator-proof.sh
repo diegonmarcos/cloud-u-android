@@ -58,9 +58,9 @@ while IFS='|' read -r key entry grant revoke texts; do
   perms_page "$pkg" "$key-4-revoked"
   check "$key after the revoke: $entry reads Not granted with its button" "$key-4-revoked" "$entry" "Not granted" "Grant all"
 done <<'TABLE'
-drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;Cloud Terminal Termux;Grant all
+drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;cloud-terminal-termux;Grant all
 me|Notifications|adb shell pm grant {pkg} android.permission.POST_NOTIFICATIONS|adb shell pm revoke {pkg} android.permission.POST_NOTIFICATIONS|Notifications;Health Connect;Grant all
-notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;Cloud Terminal Termux
+notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Helper apps;cloud-terminal-termux
 finterm||||needs no permission
 browser|Camera|adb shell pm grant {pkg} android.permission.CAMERA|adb shell pm revoke {pkg} android.permission.CAMERA|Camera;Microphone;Grant all
 gallery|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;Photos;Grant all
