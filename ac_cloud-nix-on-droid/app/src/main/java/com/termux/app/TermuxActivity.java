@@ -671,6 +671,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         menu.add(Menu.NONE, CONTEXT_MENU_TOGGLE_KEEP_SCREEN_ON, Menu.NONE, R.string.action_toggle_keep_screen_on).setCheckable(true).setChecked(mPreferences.shouldKeepScreenOn());
         menu.add(Menu.NONE, CONTEXT_MENU_HELP_ID, Menu.NONE, R.string.action_open_help);
         menu.add(Menu.NONE, CONTEXT_MENU_SETTINGS_ID, Menu.NONE, R.string.action_open_settings);
+        // #1352 Configs ▸ General / ▸ About, the fleet's shared pages (libs:ui-nav-bars)
+        com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.addTo(menu, Menu.NONE);
         menu.add(Menu.NONE, CONTEXT_MENU_REPORT_ID, Menu.NONE, R.string.action_report_issue);
     }
 
@@ -723,6 +725,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
                 mTermuxTerminalViewClient.reportIssueFromTranscript();
                 return true;
             default:
+                if (com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.handle(this, item)) return true;
                 return super.onContextItemSelected(item);
         }
     }

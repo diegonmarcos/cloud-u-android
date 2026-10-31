@@ -81,6 +81,8 @@ android {
         // signature permission into this APK; without them the SuperApp and
         // every sibling cannot see or reach this terminal.
         implementation project(":libs:core")
+        // #1352 Configs ▸ General / ▸ About in the terminal's menu (FleetConfigsEntries, libs:ui-nav-bars)
+        implementation project(":libs:ui-nav-bars")
         // Shizuku client + rish bridge, data-driven from build.json::shizuku_client.
         implementation project(":libs:shizuku-adb-debug-tools")
         // The ADB Shell page (AdbShellActivity) is Compose, compiled against the HOST's Compose

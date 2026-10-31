@@ -51,6 +51,7 @@ on:
       # #771 goose's and hermes' one declaration (version, url) -- rootfs-extras.nix reads it,
       # and it is one of the bootstrap's identity_files.
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
@@ -59,6 +60,9 @@ on:
       - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
+      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ac_cloud-nix-on-droid/**"
 permissions:
   contents: write   # gh release upload

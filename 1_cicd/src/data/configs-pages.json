@@ -277,8 +277,6 @@
     "ac_cloud-code": "Own Compose shell without the shared first-row scaffold; its settings need the two entries.",
     "ac_cloud-matrix": "Element fork with its own settings UI; the fork's preferences need the two entries.",
     "ac_cloud-media-center": "Tauri 2 app (Rust and static web only, no Kotlin UI); needs a native settings entry that starts the activity.",
-    "ac_cloud-nix-on-droid": "Upstream nix-on-droid fork with Views settings; the fork's preferences need the two entries.",
-    "ac_cloud-office": "Upstream office fork with its own settings UI; the fork's preferences need the two entries.",
-    "ac_cloud-termux": "Upstream Termux fork with Views preferences; the fork's settings need the two entries."
+    "ac_cloud-office": "Upstream office fork with its own settings UI; the fork's preferences need the two entries."
   }
 }

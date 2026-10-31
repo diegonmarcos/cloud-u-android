@@ -23,3 +23,12 @@ project(':libs:shizuku-adb-debug-tools').projectDir = new File(rootDir, '../ab_c
 // #1274 libs:shizuku-adb-debug-tools compiles libs:perms (PermsShell: the one place a pm grant line is written): the include is not optional.
 include ':libs:perms'
 project(':libs:perms').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/perms')
+// #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars, in the terminal's menu) and its deps.
+include ':libs:ui-nav-bars'
+project(':libs:ui-nav-bars').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/ui-nav-bars')
+include ':libs:bottomnav'
+project(':libs:bottomnav').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/bottomnav')
+include ':libs:ui-icons'
+project(':libs:ui-icons').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/ui-icons')
+include ':libs:theme-background'
+project(':libs:theme-background').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/theme-background')

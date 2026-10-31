@@ -45,11 +45,13 @@ public object FleetConfigsEntries {
     public const val ID_GENERAL: Int = 0x0F1C0001
     public const val ID_ABOUT: Int = 0x0F1C0002
 
+    @JvmStatic @JvmOverloads
     public fun addTo(menu: android.view.Menu, order: Int = android.view.Menu.NONE) {
         if (menu.findItem(ID_GENERAL) == null) menu.add(android.view.Menu.NONE, ID_GENERAL, order, fleetConfigsEntryLabel(FleetConfigsPage.General))
         if (menu.findItem(ID_ABOUT) == null) menu.add(android.view.Menu.NONE, ID_ABOUT, order, fleetConfigsEntryLabel(FleetConfigsPage.About))
     }
 
+    @JvmStatic
     public fun handle(context: Context, item: android.view.MenuItem): Boolean = when (item.itemId) {
         ID_GENERAL -> { open(context, FleetConfigsPage.General); true }
         ID_ABOUT -> { open(context, FleetConfigsPage.About); true }
@@ -60,6 +62,7 @@ public object FleetConfigsEntries {
      * For a Views settings screen with no menu: inserts the two entries as buttons ([FleetConfigsButtons] in a
      * ComposeView) into [container] at [index] (default: first), so the app needs no Compose dependency of its own.
      */
+    @JvmStatic @JvmOverloads
     public fun addButtons(container: android.view.ViewGroup, index: Int = 0): android.view.View {
         val v = androidx.compose.ui.platform.ComposeView(container.context).apply {
             setContent {
@@ -75,6 +78,7 @@ public object FleetConfigsEntries {
         return v
     }
 
+    @JvmStatic
     public fun open(context: Context, page: FleetConfigsPage) {
         val dark = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
