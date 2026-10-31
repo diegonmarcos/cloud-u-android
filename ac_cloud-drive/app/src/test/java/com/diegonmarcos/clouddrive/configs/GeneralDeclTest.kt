@@ -71,7 +71,7 @@ class GeneralDeclTest {
     @Test fun everyEntryIsWellFormed() {
         assertEquals(general.perms.size, general.perms.map { it.id }.toSet().size)
         general.perms.forEach {
-            assertTrue("${it.id} check", it.check in setOf("permission", "all_files", "battery_opt", "install_unknown", "appop", "declared", "oem"))
+            assertTrue("${it.id} check", it.check in setOf("permission", "all_files", "battery_opt", "install_unknown", "appop", "declared", "oem", "engine_all_files"))
             assertTrue("${it.id} grant", it.grant in setOf("runtime", "settings", "none"))
             assertTrue("${it.id} has a reason", it.why.length > 20)
             if (it.grant != "none") assertTrue("${it.id} grants nothing without an intent", it.intents.isNotEmpty() || it.grant == "runtime")
