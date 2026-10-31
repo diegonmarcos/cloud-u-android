@@ -194,7 +194,7 @@ class ModelEngineTest {
         val http = Fake { u -> if (u.startsWith("https://api.frankfurter.dev")) """{"base":"USD","rates":{"2026-10-29":{"EUR":0.89},"2026-10-30":{"EUR":0.90}}}""" else null }
         val d = load("market_monitor", "fx", http, api)
         assertTrue(http.asked[0].startsWith("http://mesh-base/v1/fx/spot"))
-        assertTrue(http.asked[1].contains("/v1/2026-10-23.."))
+        assertTrue(http.asked[1].contains("/v1/2026-09-30.."))
         assertEquals("", d.servedBy)
         assertEquals(listOf("EUR per USD", "0.90000", "+0.01000", "+1.12", "2026-10-30"), d.rows.single())
     }
