@@ -52,11 +52,11 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 5 | 2 | 71% |
 | cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 5 | 2 | 71% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 11 | 2 | 84% |
-| cg-omniverse | `com.diegonmarcos.cgomniverse` | 6 | 0 | 100% |
+| cg-omniverse | `com.diegonmarcos.cgomniverse` | 7 | 0 | 100% |
 | capital-stack-finterminal | `com.diegonmarcos.capitalfinterm` | 5 | 0 | 100% |
 | hardtech-cad | `com.diegonmarcos.hardtechcad` | 4 | 0 | 100% |
 | hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 4 | 0 | 100% |
-| **fleet** | | **377** | **54** | **87%** |
+| **fleet** | | **378** | **54** | **87%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -1266,15 +1266,15 @@ Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-cgc-3d, lib-core, lib-crash, 
 | `cg_omniverse_ai_keys` | encrypted | secret | yes | CG-Omniverse's AI key for the Avatar editor's "describe your avatar" (#1373): the user's own OpenRouter API key under the slot data/avatar.json::ai.key_slot, pasted in the editor's AI panel (FinTerm's Config > Sources pattern). EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git; sent only in the Authorization header of the request to the declared endpoint. A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
-| `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
 | `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+| `worlds` | prefs | config | yes | CG-Omniverse's Galaxy worlds: whether each embedded world opens in desktop mode, one boolean per world id (key desktop.<worldId>). A user view choice, so it migrates with the app's settings. |
 
-Coverage: 6 covered, 0 gaps.
+Coverage: 7 covered, 0 gaps.
 
 ## capital-stack-finterminal — `com.diegonmarcos.capitalfinterm`
 
