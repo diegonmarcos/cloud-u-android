@@ -669,8 +669,8 @@
     <string name="repo_kind_clean">clean, in sync</string>
     <string name="repo_meta_k_lfs">LFS</string>
     <string name="repo_meta_k_provider">Provider</string>
-    <string name="repo_col_size_main">Size main</string>
-    <string name="repo_col_size_total">Size total</string>
+    <string name="repo_col_size_main">Main (depth 1)</string>
+    <string name="repo_col_size_total">Total (history)</string>
     <string name="repo_col_branches">Branches</string>
     <string name="repo_col_dirty">Dirty</string>
     <string name="repo_col_ab">Ahead/Behind</string>
@@ -688,7 +688,7 @@
     <string name="repo_status_dirty_light">Dirty: not checked (light check reads refs only)</string>
     <string name="repo_status_level_light">Checked: light (refs only), %1$s ago</string>
     <string name="repo_status_level_full">Checked: full (working tree scanned), %1$s ago</string>
-    <string name="repo_col_size_disk">Size on disk</string>
+    <string name="repo_col_size_disk">On disk</string>
     <string name="repo_act_copy_url">Copy URL</string>
     <string name="repo_act_open_web">Open on web</string>
     <string name="repo_not_cloned_why">Not cloned: the greyed actions need the local clone. Clone it first.</string>
@@ -724,7 +724,7 @@
     <string name="repo_meta_k_default_branch">Default branch</string>
     <string name="repo_meta_k_auth">Auth</string>
     <string name="repo_meta_k_last_sync">Last sync</string>
-    <string name="repo_meta_k_size">Size (main / total)</string>
+    <string name="repo_meta_k_size">Size (main depth 1 / total history)</string>
     <string name="repo_meta_k_branches">Branches</string>
     <string name="repo_act_sync_no_winner">Sync: no winner</string>
     <string name="repo_act_sync_remote_wins">Sync: remote wins</string>

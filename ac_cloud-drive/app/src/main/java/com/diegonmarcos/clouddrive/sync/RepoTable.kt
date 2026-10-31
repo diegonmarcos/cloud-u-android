@@ -98,6 +98,17 @@ object RepoTable {
         behind = rows.count { (it.second.behind ?: 0) > 0 },
     )
 
+    /** #1356 Size total: the forge's `size` of the whole packed history, in KiB (GitHub and Gitea both report KiB) -> bytes. */
+    fun totalBytes(totalKb: Long): Long = totalKb * 1024L
+
+    /**
+     * #1356 Size main: a depth-1 checkout of the default branch (tip tree plus one commit). The forge gives the tip tree's
+     * blob sizes UNCOMPRESSED ([treeBlobBytes], git/trees?recursive=1) while Size total is the COMPRESSED pack of every
+     * commit, so the raw sum could read larger than the whole history. A depth-1 pack is a subset of the full pack, so it
+     * can never exceed it: Size main is the smaller of the two, always <= Size total.
+     */
+    fun mainBytes(treeBlobBytes: Long, totalKb: Long): Long = minOf(treeBlobBytes, totalBytes(totalKb))
+
     fun size(bytes: Long?): String = if (bytes == null) DASH else GitRepoScan.humanBytes(bytes)
     fun count(n: Int?): String = n?.toString() ?: DASH
     fun visibility(isPrivate: Boolean?, pvt: String, pub: String): String = when (isPrivate) { null -> DASH; true -> pvt; false -> pub }
@@ -121,8 +132,8 @@ object RepoTable {
         return RepoTableRow(
             name = name,
             isPrivate = declaredPrivate ?: remote?.isPrivate,
-            sizeMainBytes = remote?.sizeMainBytes,
-            sizeTotalBytes = remote?.let { it.sizeTotalKb * 1024 },
+            sizeTotalBytes = remote?.let { totalBytes(it.sizeTotalKb) },
+            sizeMainBytes = remote?.let { mainBytes(it.sizeMainBytes, it.sizeTotalKb) },
             branches = remote?.branches,
             dirtyFiles = if (tree) glance!!.changed + glance.conflicts else null,
             ahead = if (local && glance!!.upstream != null) glance.ahead else null,
