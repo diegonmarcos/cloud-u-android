@@ -16,7 +16,7 @@ import org.junit.Test
  * static twin to go red.
  */
 class ExplorerSearchTest {
-    private val root = File(System.getProperty("user.dir") ?: ".").let { if (File(it, "build.json").isFile) it else it.parentFile }
+    private val root = File(System.getProperty("user.dir")).let { if (File(it, "build.json").isFile) it else it.parentFile }
     private val files = Declarations.parseFiles(Json.parseToJsonElement(File(root, "build.json").readText()).jsonObject["ui"]!!.jsonObject["files"].toString())
     private val decl = files.search
     private val mimes = FileOps.MimeResolver { null }

@@ -75,7 +75,7 @@ jobs:
       - name: The walked apps are exactly the apps ChromeScrollGuardTest holds
         run: |
           set -eu
-          want=$(grep -m1 -A1 'private val apps = listOf' ab_cloud-libs-shared/libs/ui-nav-bars/src/test/kotlin/com/diegonmarcos/superapp/navbartop1/ChromeScrollGuardTest.kt | grep -o 'ac_cloud-[a-z0-9-]*' | sort -u)
+          want=$(grep -m1 -A1 'private val apps = listOf' ab_cloud-libs-shared/libs/ui-nav-bars/src/test/kotlin/com/diegonmarcos/superapp/navbartop1/ChromeScrollGuardTest.kt | grep -oE '(ac_cloud|ad_Capital)-[A-Za-z0-9-]*' | sort -u)
           have=$(jq -r '.apps[].app' 1_cicd/src/data/nav-walk-apps.json | sort -u)
           if [ "$want" != "$have" ]; then
             echo "::error::nav-walk-apps.json and ChromeScrollGuardTest name different apps"

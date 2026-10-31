@@ -1,6 +1,9 @@
 name: "Ship → CG-Omniverse APK (build + push to GHCR via ORAS + attach to GH Release)"
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-ad_CG-Omniverse]
   workflow_dispatch:
     inputs:
       variant:
@@ -43,21 +46,21 @@ on:
       # app compiles is watched above: any change in it ships every consumer.
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cg-omniverse.yml"
+      #   input: "ac_cloud-nav/app/src/main/assets/space/OrbitControls.js"
+      #   input: "ac_cloud-nav/app/src/main/assets/space/three.module.min.js"
       # ── end MANAGED-PATHS-HEADER ──
+      # the Avatar scene's three.js + OrbitControls, copied into the APK from Cloud Nav's assets by app/build.gradle (copyThreeAssets)
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
-      - "ab_cloud-libs-shared/libs/perms/**"
       - "ad_CG-Omniverse/**"
-      # the Avatar scene's three.js + OrbitControls, copied into the APK from Cloud Nav's assets by app/build.gradle (copyThreeAssets)
-      - "ac_cloud-nav/app/src/main/assets/space/three.module.min.js"
-      - "ac_cloud-nav/app/src/main/assets/space/OrbitControls.js"
 permissions:
   contents: write
   packages: write

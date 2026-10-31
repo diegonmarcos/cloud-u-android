@@ -161,8 +161,7 @@ class ChromeScrollGuardTest {
         for ((page, text) in listOf("FsyncPageScreen" to fsync, "MountsPageScreen" to mounts)) {
             val b = body(text, page)
             assertTrue("$page has no shared second row (NavBarTopSecondRow)", "NavBarTopSecondRow(" in b)
-            // #1356 no title row on any Cloud Drive tab: the page starts with its strip under the shell's top bar.
-            assertTrue("$page draws a title row (ToolbarIsland) again", "ToolbarIsland(" !in b)
+            assertTrue("$page has no island", "ToolbarIsland(" in b)
             assertTrue("$page does not draw its sub-pages from the declaration", "Declarations.navPages(" in b)
         }
         // each sub-page body owns the scrollable container the one connection follows (the Unison list is drawn by unisonSection inside FolderSyncScreen's LazyColumn)

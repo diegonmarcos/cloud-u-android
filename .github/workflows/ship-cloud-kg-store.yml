@@ -59,10 +59,10 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
-      - "ab_cloud-libs-shared/libs/perms/**"
       - "ac_cloud-kg-store/**"
 permissions:
   contents: write

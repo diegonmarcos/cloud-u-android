@@ -113,12 +113,12 @@ on:
       - "ab_cloud-libs-shared/libs/decisions/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
-      - "ab_cloud-libs-shared/libs/perms/**"
       - "ac_cloud-writer/**"
       - "!ac_cloud-writer/web/**"
 permissions:
