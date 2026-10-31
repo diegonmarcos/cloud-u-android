@@ -453,7 +453,7 @@
     "configs_ui": ["nav_ui"]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -470,18 +470,65 @@
       ]
     },
     "about": {
-      "what": "The fleet's app store: installs, updates and removes every Cloud app, and shows what runs on this phone.",
+      "tagline": "Install and update every Cloud app",
+      "description": "Cloud Store is the fleet's app store. It lists every Cloud app, installs one from the signed release CI builds for each commit, updates installed apps (automatically on Wi-Fi when enabled), shows what this phone runs, the feed of commits and CI runs, and the access page (mesh, MCP, IPC, identity and permissions). It exists so no app comes from a third-party store and the phone always runs what the repository says.",
       "features": [
         "Cloud: the whole fleet with install and update",
         "Phone: installed and declared apps",
         "Feed of commits and CI runs",
-        "Access: mesh, MCP, IPC, identity and permissions"
+        "Access: mesh, MCP, IPC, identity and permissions",
+        "Background fleet pass that keeps every app current"
+      ],
+      "screens": [
+        {
+          "name": "Cloud",
+          "what": "The whole fleet with install and update."
+        },
+        {
+          "name": "Phone",
+          "what": "Installed and declared apps."
+        },
+        {
+          "name": "Search",
+          "what": "Find an app."
+        },
+        {
+          "name": "Feed",
+          "what": "Commits and CI runs."
+        },
+        {
+          "name": "Access",
+          "what": "Mesh, MCP, IPC, identity and permissions."
+        },
+        {
+          "name": "Settings",
+          "what": "Auto-update and sources."
+        }
+      ],
+      "guide": [
+        "Grant Install unknown apps once.",
+        "Install an app from Cloud.",
+        "Turn on auto-update on Wi-Fi in Settings."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "c3-infra-api",
           "why": "fleet and release data"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-account",
+          "why": "Restores a phone, then the Store installs the fleet."
+        },
+        {
+          "app": "ac_cloud-c3",
+          "why": "Release status of the fleet."
+        },
+        {
+          "app": "ac_cloud-c3-webserver",
+          "why": "Receives this app's crash reports on the phone."
         }
       ]
     }

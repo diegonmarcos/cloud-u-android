@@ -217,7 +217,7 @@
     "default_section": "photo"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -234,15 +234,51 @@
       ]
     },
     "about": {
-      "what": "The fleet's camera: photos and video with portrait, night and HDR modes, plus a QR scanner.",
+      "tagline": "Private photos, video and QR scanning",
+      "description": "Cloud Camera is the fleet's own signed build of GrapheneOS Camera, renamed so it can live next to an official copy. It takes photos and video with modern CameraX modes (auto, portrait, night, HDR, face retouch), scans QR and barcodes, and keeps everything in the phone's own gallery. It has no Play Services and no network calls of its own. It exists so the camera, one of the most privacy-sensitive apps, is built from audited source and updated by the fleet.",
       "features": [
         "QR scanner",
         "Photo modes: auto, portrait, night, HDR, face retouch",
         "Video recording",
-        "Everything stays in the phone's gallery"
+        "Everything stays in the phone's gallery",
+        "Timer, zoom and exposure bars"
+      ],
+      "screens": [
+        {
+          "name": "QR scan",
+          "what": "Scan QR codes and barcodes."
+        },
+        {
+          "name": "Camera",
+          "what": "Photo modes and the shutter."
+        },
+        {
+          "name": "Video",
+          "what": "Record video with sound."
+        }
+      ],
+      "guide": [
+        "Grant Camera (and Microphone for video) the first time.",
+        "Swipe between QR scan, Camera and Video.",
+        "Tap the thumbnail to see the last shot in the gallery."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-gallery",
+          "why": "Shows the photos and videos it takes."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        },
+        {
+          "app": "ac_cloud-c3-webserver",
+          "why": "Receives this app's crash reports on the phone."
+        }
+      ],
+      "credits": "Upstream: GrapheneOS Camera (github.com/GrapheneOS/Camera), MIT licence, by the GrapheneOS project. The fleet build renames the package to cld.camera and adds the fleet's update and crash libraries."
     }
   },
   "perms": {

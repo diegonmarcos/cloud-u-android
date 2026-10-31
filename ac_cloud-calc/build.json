@@ -4787,7 +4787,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -4804,7 +4804,8 @@
       ]
     },
     "about": {
-      "what": "An all-in-one calculator over libqalculate, the engine behind Qalculate!, with a sheet, an AI helper and the phone's sensors as instruments.",
+      "tagline": "A calculator that measures, graphs and reasons",
+      "description": "Cloud Calc is an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by the fleet's calculator engine, so units, currencies, symbolic maths and graphs are exact. Around it sit a spreadsheet, an AI helper (Jev) that turns a problem in words into the right tool, the phone's sensors as measuring instruments, and a toolkit with a light, a voice recorder, a tracker and a clock. It exists to replace a drawer of single-purpose tools with one app that shares history and results.",
       "features": [
         "Calculator with LaTeX, units, graphs and history",
         "Spreadsheet",
@@ -4812,11 +4813,53 @@
         "Measure: sound, sensors, camera, Wi-Fi, Bluetooth, NFC",
         "Toolkit: light, voice recorder, tracker, clock"
       ],
+      "screens": [
+        {
+          "name": "Calc",
+          "what": "The calculator with LaTeX, units, graphs and history."
+        },
+        {
+          "name": "Sheet",
+          "what": "A spreadsheet with formulas and CSV."
+        },
+        {
+          "name": "AI",
+          "what": "Ask Jev to solve a problem in words."
+        },
+        {
+          "name": "Measure",
+          "what": "Sound, sensors, camera, Wi-Fi, Bluetooth and NFC."
+        },
+        {
+          "name": "Toolkit",
+          "what": "Light, voice recorder, tracker and clock."
+        }
+      ],
+      "guide": [
+        "Type an expression; units and conversions work inline (\"3 ft to cm\").",
+        "Swipe up on the result to see the history.",
+        "Ask Jev in AI when you do not know which tool fits.",
+        "Open Measure to use the phone's sensors as instruments."
+      ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "ai-gateway",
           "why": "the AI helper"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-writer",
+          "why": "Text tools on the same AI gateway."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
         }
       ]
     }

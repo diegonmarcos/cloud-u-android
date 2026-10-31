@@ -402,7 +402,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -419,15 +419,62 @@
       ]
     },
     "about": {
-      "what": "The wallet: IDs, payment cards, vCards and event tickets in one place.",
+      "tagline": "IDs, cards and tickets, in one wallet",
+      "description": "Cloud Wallet is the fleet's wallet: IDs and documents, payment cards, vCards to share and event tickets, bookings and passes, including .pkpass imports and QR codes, drawn as a deck of cards. It was lifted out of the SuperApp into its own app. It exists so the things you show at a door or a desk are on the phone without a vendor wallet.",
       "features": [
         "IDs and documents",
         "Payment cards",
         "vCards to share",
-        "Tickets, bookings and passes"
+        "Tickets, bookings and passes",
+        "Import .pkpass passes"
+      ],
+      "screens": [
+        {
+          "name": "IDs",
+          "what": "Identity documents."
+        },
+        {
+          "name": "Pay",
+          "what": "Payment cards."
+        },
+        {
+          "name": "Me",
+          "what": "Your own card."
+        },
+        {
+          "name": "Vcards",
+          "what": "Cards to share."
+        },
+        {
+          "name": "Events",
+          "what": "Tickets and passes."
+        },
+        {
+          "name": "Config",
+          "what": "Wallet settings."
+        }
+      ],
+      "guide": [
+        "Add a card with the plus button or scan its QR code.",
+        "Tap a ticket to show it full screen.",
+        "Share your vCard from Me."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-me",
+          "why": "Personal administration."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ]
     }
   },
   "perms": {

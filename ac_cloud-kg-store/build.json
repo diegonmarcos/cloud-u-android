@@ -387,7 +387,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -404,12 +404,41 @@
       ]
     },
     "about": {
-      "what": "The fleet's knowledge-graph store and browser: the cloud's code, data and APIs, the phone's apps and the web, as one searchable graph.",
+      "tagline": "The cloud, the phone and the web as one graph",
+      "description": "Cloud KG Store is the fleet's knowledge-graph store and browser. It puts the cloud's code, data and APIs, the phone's installed apps and the web's news, media, shopping, real estate and jobs into one searchable graph, with semantic and GraphRAG search over the repositories and an Ask page that answers from the graph. It exists so a question about anything the owner runs or follows has one place to start.",
       "features": [
         "Cloud: binaries, MCP tools, data and debug APIs",
         "Repo: code, CGC, semantic and GraphRAG search",
         "Phone: installed apps",
-        "Web: news, media, shopping, real estate, jobs"
+        "Web: news, media, shopping, real estate, jobs",
+        "Ask: answers grounded in the graph"
+      ],
+      "screens": [
+        {
+          "name": "Cloud",
+          "what": "Binaries, MCP tools, data and debug APIs."
+        },
+        {
+          "name": "Phone",
+          "what": "Installed apps."
+        },
+        {
+          "name": "Web",
+          "what": "News, media, shopping, real estate, jobs."
+        },
+        {
+          "name": "Ask",
+          "what": "Questions answered from the graph."
+        },
+        {
+          "name": "Settings",
+          "what": "Sources and models."
+        }
+      ],
+      "guide": [
+        "Join the private mesh so the graph APIs answer.",
+        "Browse Cloud or Web by group.",
+        "Ask a question on Ask; follow the cited nodes."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -428,6 +457,20 @@
         {
           "id": "cloud-me-api",
           "why": "personal data graph"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-search",
+          "why": "Search over the same knowledge graph."
+        },
+        {
+          "app": "ac_cloud-superintel",
+          "why": "Source-grounded AI chat."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

@@ -520,7 +520,7 @@
     "asserted_by": "tests/test-app-name-reaches-the-user.sh"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -537,14 +537,55 @@
       ]
     },
     "about": {
-      "what": "The fleet's office suite for documents, spreadsheets and presentations.",
+      "tagline": "Documents, sheets and slides, offline",
+      "description": "Cloud Office is the fleet's office suite for documents, spreadsheets and presentations, built from Collabora Online with a series of fleet patches. It opens and edits common office formats offline. It exists so attachments and paperwork can be read and changed on the phone without a cloud office account.",
       "features": [
         "Documents",
         "Spreadsheets",
-        "Presentations"
+        "Presentations",
+        "Opens attachments from Cloud Mail and Drive",
+        "Works offline"
       ],
-      "privacy": "No ads and no third-party trackers. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "screens": [
+        {
+          "name": "Documents",
+          "what": "Text documents."
+        },
+        {
+          "name": "Spreadsheets",
+          "what": "Workbooks."
+        },
+        {
+          "name": "Presentations",
+          "what": "Slides."
+        },
+        {
+          "name": "Recent",
+          "what": "Recently opened files."
+        }
+      ],
+      "guide": [
+        "Open a file from Cloud Drive or a mail attachment.",
+        "Edit and save back to the same place.",
+        "Use Recent to reopen a file."
+      ],
+      "privacy": "No ads and no third-party trackers. It calls no fleet service: documents are opened and saved on the phone only. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback.",
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-drive",
+          "why": "Where the files live."
+        },
+        {
+          "app": "ac_cloud-mail",
+          "why": "Opens attachments here."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: Collabora Online (github.com/CollaboraOnline/online), MPL-2.0, by Collabora Productivity and The Document Foundation (LibreOffice core). The fleet applies a patch series with its own build engine."
     }
   }
 }

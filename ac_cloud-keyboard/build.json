@@ -217,7 +217,7 @@
     "group": "keyboard"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -234,15 +234,59 @@
       ]
     },
     "about": {
-      "what": "The fleet's keyboard: typing with on-device translation, voice input and sticker packs.",
+      "tagline": "A keyboard that translates and listens, on device",
+      "description": "Cloud Keyboard is the fleet's input method: typing with on-device translation, voice input and bundled sticker packs. Translation and voice recognition run on the phone, so what you type does not leave the device; the AI Enhance tool, when you use it, goes through the fleet's own AI gateway. It exists because the keyboard sees every word typed on the phone and must therefore be the most trusted app of all.",
       "features": [
         "On-device translation while typing",
         "Voice input",
         "Bundled sticker packs",
-        "No typing data leaves the phone"
+        "No typing data leaves the phone",
+        "Enhance: rewrite a sentence through the fleet's AI"
+      ],
+      "screens": [
+        {
+          "name": "Keyboard",
+          "what": "Typing with suggestions."
+        },
+        {
+          "name": "Translate",
+          "what": "Translate while typing."
+        },
+        {
+          "name": "Voice",
+          "what": "Dictate instead of typing."
+        },
+        {
+          "name": "Stickers",
+          "what": "Bundled sticker packs."
+        },
+        {
+          "name": "Settings",
+          "what": "Languages, layout and feedback."
+        }
+      ],
+      "guide": [
+        "Enable Cloud Keyboard in Android's keyboard settings and choose it.",
+        "Tap the globe to translate what you type.",
+        "Hold the microphone key to dictate."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-writer",
+          "why": "Longer text tools on the same AI routing."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Profiles and snippets for autofill."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Built over libs:keyboard, derived from HeliBoard (github.com/Helium314/HeliBoard), GPL-3.0, by Helium314 and the AOSP keyboard authors; the APK is therefore GPL-3.0. The shell, translation, voice and stickers are the fleet's own code."
     }
   },
   "perms": {

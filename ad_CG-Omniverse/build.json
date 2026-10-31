@@ -246,7 +246,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -263,14 +263,54 @@
       ]
     },
     "about": {
-      "what": "The CG area's app: the CG Galaxy web app, with a game store and a VR store to come.",
+      "tagline": "The CG area's galaxy, games and VR",
+      "description": "CG-Omniverse is the CG area's app, opened from the SuperApp's Cloud ▸ Lnktree row. Its Galaxy page opens the CG Galaxy web app, whose address is read at build time from the fleet registry rather than typed into the app; the Game Store and VR Store pages are planned and shown greyed until they exist. It exists so each area of the owner's work has its own entry point on the phone, drawn by the same shared navigation as every fleet app.",
       "features": [
         "Galaxy: the CG Galaxy web app",
         "Game Store (planned)",
-        "VR Store (planned)"
+        "VR Store (planned)",
+        "Address of Galaxy read from the registry at build time",
+        "Shared fleet navigation and Configs"
+      ],
+      "screens": [
+        {
+          "name": "Galaxy",
+          "what": "The CG Galaxy web app."
+        },
+        {
+          "name": "Game Store",
+          "what": "Planned: games of the CG area."
+        },
+        {
+          "name": "VR Store",
+          "what": "Planned: VR experiences."
+        },
+        {
+          "name": "About",
+          "what": "What this app is."
+        }
+      ],
+      "guide": [
+        "Open Galaxy to load the CG Galaxy web app.",
+        "Game Store and VR Store are greyed until they ship.",
+        "Update the app from Cloud Store to get new pages."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "aa_cloud-superapp",
+          "why": "Opens this app from Cloud ▸ Lnktree."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        },
+        {
+          "app": "ac_cloud-browser",
+          "why": "Opens Galaxy's links outside the app."
+        }
+      ]
     }
   },
   "perms": {

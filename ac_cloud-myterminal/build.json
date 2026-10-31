@@ -203,7 +203,7 @@
     "browser_package": "com.diegonmarcos.cloudbrowser"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -220,15 +220,55 @@
       ]
     },
     "about": {
-      "what": "A developer constellation: a code editor, a file manager and file utilities, switched and connected by one hub app.",
+      "tagline": "Editor, file manager and tools, joined by one hub",
+      "description": "Cloud MyTerminal is a developer constellation: a code editor, a file manager and file utilities (minimal forks of Acode and Amaze) switched and connected by one thin hub app. The hub shares workspaces, recent files, git status and storage analysis between them over Android IPC. It exists so three strong upstream tools act as one environment without merging their code.",
       "features": [
         "Code editor (Acode)",
         "File manager (Amaze)",
         "File utilities",
-        "Shared workspaces, recent files and git status"
+        "Shared workspaces, recent files and git status",
+        "One workspace root shared by every tool"
+      ],
+      "screens": [
+        {
+          "name": "Hub",
+          "what": "Switch between the tools."
+        },
+        {
+          "name": "Editor",
+          "what": "The code editor."
+        },
+        {
+          "name": "Files",
+          "what": "The file manager."
+        },
+        {
+          "name": "Utilities",
+          "what": "Storage analysis and transfers."
+        }
+      ],
+      "guide": [
+        "Open the hub and pick a tool.",
+        "Set the workspace root once; every tool uses it.",
+        "Install the tools from Cloud Store when the hub asks."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-code",
+          "why": "The full development environment."
+        },
+        {
+          "app": "ac_cloud-drive",
+          "why": "Storage and git."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: Acode (MIT) by Ajit Kumar, Amaze File Manager and Amaze File Utilities (GPL-3.0) by the Team Amaze. The hub is the fleet's own code."
     }
   },
   "perms": {

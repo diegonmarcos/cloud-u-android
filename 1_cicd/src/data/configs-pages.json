@@ -1,13 +1,55 @@
 {
-  "_doc": "THE Configs ▸ General / Configs ▸ About rule of the fleet, read by 1_cicd/src/scripts/cloud-android-configs-pages-guard.py (step of nav-shape-guard.yml, mutation-tested by 1_cicd/src/scripts/test/configs-pages-guard.test.sh). Every app except Cloud SuperApp has at least two pages under Configs: General (ONE page, a row of anchor icons at the top scrolling to its sections: Perms, Battery, Storage/backup, Notifications, UI with the nav mode card, Language, then the app's own Configs) and About (name, icon, version and build sha, what it does, features, source repo and licence, privacy, the backend services with their private mesh URLs, crash and debug links, a Cloud Store section and a Cloud SuperApp section, each with a button that opens that app). Both are drawn ONCE in libs:ui-nav-bars (package fleetconfigs): the shared first-row scaffold puts 'Configs ▸ General' and 'Configs ▸ About' at the end of the title dropdown and in the Clean drawer; an app drawn with Views or a WebView starts FleetConfigsActivity instead. Each app declares its sections and About text in build.json::configs_pages; nothing per app is written in Kotlin.",
-  "_doc_rules": "G0 the lib still carries the pages, the scaffold entries, the Views/WebView activity, the build-time resolver and the two fleet texts (lib.must_hold), and FleetConfigs.REQUIRED_SECTIONS equals general_required. G1 every app (a[acd]_*/build.json) that is not exempt declares configs_pages with general and about. G2 general.sections lists every general_required id once, only ids from general_required + general_optional. G3 about carries every about_declared field (what >= min_what_chars, features >= min_features non-empty, privacy >= min_privacy_chars, backends a list of {id, why} whose id is a fleet_endpoints service with a mesh_dns), and every about_derived field resolves: repo (the app folder), license (licenses/curated.json::directories[app].licence), crash (ac_cloud-c3-webserver/build.json::runtime.port), debug (the app's debug-api.json port for its application_id, or its only entry); name comes from build.json, version and package from build.json or, for a fork without android.*, the installed package at runtime. G4 the app REACHES the pages: some source of the app calls scaffold_call (the shared scaffold) or views_call (the activity); an app that does neither is named in pending with a reason, and a pending app that reaches them is stale. G5 every exempt / pending entry names a real app and has a reason of at least min_reason_chars.",
-  "general_required": ["perms", "battery", "storage", "notifications", "ui", "language"],
-  "general_optional": ["app"],
-  "about_declared": ["what", "features", "privacy", "backends"],
-  "about_derived": ["name", "repo", "license", "crash", "debug"],
-  "min_what_chars": 40,
-  "min_privacy_chars": 40,
-  "min_features": 3,
+  "_doc": "THE Configs ▸ General / Configs ▸ About rule of the fleet (#1352, v2), read by 1_cicd/src/scripts/cloud-android-configs-pages-guard.py (step of nav-shape-guard.yml, mutation-tested by 1_cicd/src/scripts/test/configs-pages-guard.test.sh) and by libs/ui-nav-bars/fleet-configs.gradle at build time (perm_why, diagnostics, origin_label). Every app except Cloud SuperApp has two pages under Configs. General is ONE page: at the top a launcher-style grid of anchors (an icon tile with the section's name under it, four per row) scrolling to its sections on the same page: Perms (libs:perms AppPermsSection with a prominent Grant all that walks every missing grant), Update (every app by default: installed version and build, Check for updates against the app's Cloud Store release, latest build, Update handed to Cloud Store, release notes), Battery, Storage/backup, Notifications, UI with the nav mode card, Language, then the app's own Configs. Every settings screen is opened through libs:perms. About is EXTENSIVE: name, icon, tagline, a long description, features, screens, a quick guide, data and privacy (privacy text, the stores from the fleet-config manifest, backups, crash/analytics libs), permissions and why (build.json::perms + perm_why), backend services with private mesh URLs, related fleet apps with Open buttons, version / build sha / build date / package, source repo, licence, origin, upstream and credits, the changelog (the commits of the app's folder), support and debug links, and the Cloud Store and Cloud SuperApp sections with Open buttons. Both are drawn ONCE in libs:ui-nav-bars (package fleetconfigs); an app drawn with Views, a WebView, Tauri or an upstream fork starts FleetConfigsActivity. Each app declares its sections and the hand-written About text in build.json::configs_pages; nothing per app is written in Kotlin.",
+  "_doc_rules": "G0 the lib still carries the pages, the grid, the Update section, the extended About, the scaffold entries, the Views/WebView activity, the build-time resolver and the two fleet texts (lib.must_hold); FleetConfigs.REQUIRED_SECTIONS equals general_required; libs:perms carries the asked-store version (perms.ask_store_version) and Grant all's walk. G1 every app (a[acd]_*/build.json) that is not exempt declares configs_pages with general and about. G2 general.sections lists every general_required id once, only ids from general_required + general_optional + general_default. G3 about carries every about_declared field and meets about_min (tagline length, description, features, screens {name, what}, guide steps, privacy, related {app, why} naming real apps, backends {id, why} on a fleet_endpoints service with a mesh_dns, credits for an app whose licences/curated.json kind is in fork_kinds), every grant in build.json::perms has a why (about.perms_why or perm_why), the v1 field `what` is gone, and every about_derived field resolves. G4 the app REACHES the pages (scaffold_call or views_call in its sources) or is named in pending with a reason; a pending app that reaches them is stale. G5 every exempt / pending entry names a real app and has a reason of at least min_reason_chars.",
+  "general_required": [
+    "perms",
+    "battery",
+    "storage",
+    "notifications",
+    "ui",
+    "language"
+  ],
+  "general_optional": [
+    "app"
+  ],
+  "general_default": [
+    "update"
+  ],
+  "about_declared": [
+    "tagline",
+    "description",
+    "features",
+    "screens",
+    "guide",
+    "privacy",
+    "backends",
+    "related"
+  ],
+  "about_derived": [
+    "name",
+    "repo",
+    "license",
+    "crash",
+    "debug"
+  ],
+  "about_min": {
+    "tagline_chars": [
+      12,
+      90
+    ],
+    "description_chars": 300,
+    "features": 5,
+    "screens": 3,
+    "guide": 3,
+    "privacy_chars": 120,
+    "related": 1,
+    "credits_chars": 40
+  },
+  "fork_kinds": [
+    "upstream-fork",
+    "patch-series",
+    "own-shell-over-gpl"
+  ],
   "min_reason_chars": 30,
   "repo_prefix": "https://github.com/diegonmarcos/cloudy-u-android/tree/main/",
   "endpoints": "ac_cloud-account/build.json",
@@ -15,26 +57,207 @@
   "licences": "licenses/curated.json",
   "scaffold_call": "NavBarTopFirstRowScaffold(",
   "views_call": "FleetConfigsActivity.intent(",
+  "origin_label": {
+    "own": "Own code of the fleet",
+    "upstream-fork": "Signed fork of an upstream open-source app",
+    "patch-series": "Upstream app with a series of fleet patches",
+    "own-shell-over-gpl": "Own shell over GPL upstream components"
+  },
+  "diagnostics": {
+    "_doc": "What each crash / analytics library linked by an app records and where it goes; About lists the ones the app links (libs:crash always, through libs:core).",
+    "libs:crash": "libs:crash: a crash report (stack trace, app version, device model) is saved on the phone and posted only to the phone's own C3 WebServer over loopback.",
+    "libs:analytics": "libs:analytics: opt-in usage events to the fleet's self-hosted Umami and Matomo; off until consent is given, and a refusal drops the queue."
+  },
+  "perm_why": {
+    "_doc": "The default reason each libs:perms catalogue grant is used, shown in About ▸ Permissions; an app overrides one in configs_pages.about.perms_why.",
+    "notifications": "Show alerts, progress and the status of background work.",
+    "fine_location": "Know the precise position for maps, tracking or location-tagged results.",
+    "coarse_location": "Know the approximate area for local results.",
+    "background_location": "Keep recording a track while the screen is off.",
+    "nearby_wifi": "Scan nearby Wi-Fi networks and devices.",
+    "bt_scan": "Find nearby Bluetooth devices.",
+    "bt_connect": "Connect to paired Bluetooth devices and headsets.",
+    "camera": "Take photos, record video or scan QR codes and documents.",
+    "microphone": "Record audio for voice input, calls or sound measurement.",
+    "activity_recognition": "Count steps and recognise walking, cycling or driving.",
+    "body_sensors": "Read heart rate and other body sensors.",
+    "exact_alarm": "Ring alarms and reminders at the exact minute.",
+    "contacts_read": "Read contacts to show names and reach people.",
+    "contacts_write": "Save and edit contacts.",
+    "calendar_read": "Read calendar events to show what is due.",
+    "phone_state": "Know whether a call is active and read the phone's call state.",
+    "sms_read": "Read SMS conversations.",
+    "media_images": "Show the photos on the phone.",
+    "media_video": "Show the videos on the phone.",
+    "media_audio": "Play and share music and audio files.",
+    "storage_read": "Open files from shared storage.",
+    "storage_write": "Save files to shared storage.",
+    "all_files": "Manage every file on shared storage (a file manager, a terminal, backups).",
+    "install_unknown": "Install fleet updates and companion APKs.",
+    "usage_access": "See which apps run and how much they are used.",
+    "battery_opt": "Keep background work alive under battery optimisation.",
+    "overlay": "Draw over other apps (floating windows, call screens).",
+    "health_connect": "Read and write health data through Health Connect.",
+    "accessibility": "Fill passwords into other apps (autofill through accessibility)."
+  },
   "lib": {
     "decl": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt",
     "must_hold": [
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "public fun FleetGeneralPage(", "why": "the General page"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "public fun FleetAboutPage(", "why": "the About page"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "FleetConfigsTags.anchor(s.id)", "why": "General's anchor row"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "\"ui\" -> NavUiConfigCard(", "why": "the nav UI card is General's UI section"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "launchApp(ctx, decl.storePkg)", "why": "About's Open Cloud Store button"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "launchApp(ctx, decl.superappPkg)", "why": "About's Open Cloud SuperApp button"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt", "needle": "public const val STORE_TEXT: String", "why": "About's Cloud Store section"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt", "needle": "public const val SUPERAPP_TEXT: String", "why": "About's Cloud SuperApp section"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsActivity.kt", "needle": "public fun intent(context: Context, page: FleetConfigsPage", "why": "the Views / WebView equivalent"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "FleetConfigsScreen(p, dark", "why": "the scaffold hosts both pages"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_GENERAL)", "why": "the title dropdown's Configs ▸ General entry"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_ABOUT)", "why": "the title dropdown's Configs ▸ About entry"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "onConfigsUi = openGeneral, onConfigsAbout = openAbout,\n                )", "why": "the first row is given both entries"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "close = close,\n            onConfigsUi = openGeneral, onConfigsAbout = openAbout,", "why": "the Clean drawer is given both entries"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavCleanDrawer.kt", "needle": "testTag(CleanDrawerTags.CONFIGS_ABOUT)", "why": "the Clean drawer's Configs ▸ About entry"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/build.gradle", "needle": "'FLEET_CONFIGS_B64'", "why": "the declaration is baked"},
-      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/fleet-configs.gradle", "needle": "configs_pages", "why": "the build-time resolver reads build.json::configs_pages"}
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "public fun FleetGeneralPage(",
+        "why": "the General page"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "public fun FleetAboutPage(",
+        "why": "the About page"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "FleetConfigsTags.anchor(s.id)",
+        "why": "General's anchor grid"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "\"ui\" -> NavUiConfigCard(",
+        "why": "the nav UI card is General's UI section"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "launchApp(ctx, decl.storePkg)",
+        "why": "About's Open Cloud Store button"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "launchApp(ctx, decl.superappPkg)",
+        "why": "About's Open Cloud SuperApp button"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt",
+        "needle": "public const val STORE_TEXT: String",
+        "why": "About's Cloud Store section"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt",
+        "needle": "public const val SUPERAPP_TEXT: String",
+        "why": "About's Cloud SuperApp section"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsActivity.kt",
+        "needle": "public fun intent(context: Context, page: FleetConfigsPage",
+        "why": "the Views / WebView equivalent"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "needle": "FleetConfigsScreen(p, dark",
+        "why": "the scaffold hosts both pages"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_GENERAL)",
+        "why": "the title dropdown's Configs ▸ General entry"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_ABOUT)",
+        "why": "the title dropdown's Configs ▸ About entry"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "needle": "onConfigsUi = openGeneral, onConfigsAbout = openAbout,\n                )",
+        "why": "the first row is given both entries"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "needle": "close = close,\n            onConfigsUi = openGeneral, onConfigsAbout = openAbout,",
+        "why": "the Clean drawer is given both entries"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavCleanDrawer.kt",
+        "needle": "testTag(CleanDrawerTags.CONFIGS_ABOUT)",
+        "why": "the Clean drawer's Configs ▸ About entry"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/build.gradle",
+        "needle": "'FLEET_CONFIGS_B64'",
+        "why": "the declaration is baked"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/fleet-configs.gradle",
+        "needle": "configs_pages",
+        "why": "the build-time resolver reads build.json::configs_pages"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "sections.chunked(COLUMNS)",
+        "why": "the anchors are a launcher-style grid"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "FleetConfigs.UPDATE_SECTION -> UpdateSection(decl, c)",
+        "why": "General's Update section"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt",
+        "needle": "FleetReleases.openStore(ctx, decl)",
+        "why": "Update hands off to Cloud Store"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt",
+        "needle": "public fun withDefaults(",
+        "why": "every app gets the Update section by default"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetReleases.kt",
+        "needle": "releases/download/${u.tag}/$asset.source",
+        "why": "Check for updates reads the Cloud Store release"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "FleetConfigsTags.about(\"changelog\")",
+        "why": "About's changelog"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "FleetConfigsTags.about(\"perms\")",
+        "why": "About's permissions and why"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "FleetConfigsTags.about(\"related\")",
+        "why": "About's related fleet apps"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetAboutPage.kt",
+        "needle": "FleetConfigsTags.about(\"guide\")",
+        "why": "About's quick guide"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/fleet-configs.gradle",
+        "needle": "about.perms =",
+        "why": "permissions derived from build.json::perms"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/fleet-configs.gradle",
+        "needle": "about.stores =",
+        "why": "data stores derived from the fleet-config manifest"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/PermsFirstRun.kt",
+        "needle": "const val ASK_STORE_VERSION = 2",
+        "why": "the asked-state version bump: every app asks all its grants afresh once"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/PermsFirstRun.kt",
+        "needle": "val ids = neverAsked(activity)",
+        "why": "on start, every never-asked grant is asked"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/AppPermsSection.kt",
+        "needle": "LaunchedEffect(resumes) { if (walking && !step()) walking = false }",
+        "why": "Grant all walks every missing grant"
+      }
     ]
   },
   "exempt": {

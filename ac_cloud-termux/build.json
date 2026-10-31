@@ -302,7 +302,7 @@
     "_doc_unit": "tests.unit.task is deliberately still UNSET: the 21 upstream JVM test classes have never run in this fork and turning them on is its own job, not a side effect of #470."
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -319,14 +319,51 @@
       ]
     },
     "about": {
-      "what": "The fleet's Linux terminal emulator and command-line environment for Android.",
+      "tagline": "The fleet's Linux terminal on Android",
+      "description": "Cloud Terminal Termux is the fleet's build of Termux: a terminal emulator and a Linux command-line environment with a package manager, sharing a store with the other fleet apps. Cloud Drive runs git and rclone through it. It is a signed fork with the fleet's update, crash and configs libraries. It exists so command-line work on the phone uses the fleet's own, updated build.",
       "features": [
         "Terminal emulator",
         "Package manager",
-        "Shared store with the other fleet apps"
+        "Shared store with the other fleet apps",
+        "Runs git and rclone for Cloud Drive",
+        "Extra keys row"
+      ],
+      "screens": [
+        {
+          "name": "Terminal",
+          "what": "The shell."
+        },
+        {
+          "name": "Sessions",
+          "what": "The session drawer."
+        },
+        {
+          "name": "Settings",
+          "what": "Appearance, keyboard and storage."
+        }
+      ],
+      "guide": [
+        "Open the app and let it bootstrap the packages.",
+        "Run termux-setup-storage to reach shared storage.",
+        "Swipe from the left for sessions."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-drive",
+          "why": "Uses this terminal for git and mounts."
+        },
+        {
+          "app": "ac_cloud-nix-on-droid",
+          "why": "The Nix terminal."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: Termux (github.com/termux/termux-app), GPL-3.0, by Fredrik Fornwall and the Termux contributors."
     }
   },
   "perms": {

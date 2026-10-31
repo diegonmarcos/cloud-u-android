@@ -2515,7 +2515,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -2532,15 +2532,58 @@
       ]
     },
     "about": {
-      "what": "Maps, navigation and a tracker: multi-stop routes, driving navigation, places and a timeline of where you have been.",
+      "tagline": "Maps, routes, navigation and where you have been",
+      "description": "Cloud Nav is the fleet's maps, navigation and tracker app: a MapLibre map, routes with several stops, a driving navigation view, place categories, explored trips and a tracker with a timeline, steps and sleep. Tracks stay on the phone. It exists to replace an ad-funded maps app with one whose location history belongs to the owner.",
       "features": [
         "Routes with several stops",
         "Driving navigation view",
         "Places and explored trips",
-        "Tracker: timeline, steps, sleep"
+        "Tracker: timeline, steps, sleep",
+        "Stop detection on the timeline"
+      ],
+      "screens": [
+        {
+          "name": "Routes",
+          "what": "Plan routes with several stops."
+        },
+        {
+          "name": "Navigation",
+          "what": "The driving view."
+        },
+        {
+          "name": "Places",
+          "what": "Browse places by category."
+        },
+        {
+          "name": "Explored",
+          "what": "Past trips."
+        },
+        {
+          "name": "Tracker",
+          "what": "Timeline, steps and sleep."
+        }
+      ],
+      "guide": [
+        "Grant Location (and Location all the time for the tracker).",
+        "Plan a route on Routes and start Navigation.",
+        "Check yesterday on Tracker."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-me",
+          "why": "Health and experiences."
+        },
+        {
+          "app": "ac_cloud-gallery",
+          "why": "Photos by place."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ]
     }
   },
   "perms": {

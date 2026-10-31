@@ -72,6 +72,7 @@ class PermsActivity : ComponentActivity() {
         val perms = entries.map { it.permission }.filter { it.isNotEmpty() }.distinct()
         if (perms.isEmpty()) return
         PermAskLog.markAsked(this, perms)
+        PermAskLog.markAskedIds(this, entries.map { it.id })
         ask.launch(perms.toTypedArray())
     }
 

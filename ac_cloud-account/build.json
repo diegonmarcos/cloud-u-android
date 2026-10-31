@@ -981,7 +981,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -998,13 +998,42 @@
       ]
     },
     "about": {
-      "what": "Turns an empty phone into the owner's phone and keeps it that way: the account, its sign-in ways, the per-device profile and the fleet secrets.",
+      "tagline": "Turns an empty phone into your phone, and keeps it so",
+      "description": "Cloud Account is the fleet's identity and setup app. It holds the owner's account and its sign-in ways, the per-device profile that is backed up to and restored from the private vault repository, the fleet secrets and tokens every other app reads through it, and the setup that turns a freshly installed phone into the owner's phone. It exists so that no app keeps its own copy of a secret, and so a new or reset phone is back to normal in minutes rather than an afternoon.",
       "features": [
         "Personal info: me, wallet, autocomplete",
         "Configs for Android, desktop and C3",
         "Data: secrets, backups, devices",
         "Connect: status, authentication providers, setup",
         "Activity log"
+      ],
+      "screens": [
+        {
+          "name": "Personal Info",
+          "what": "Me, wallet and autocomplete data."
+        },
+        {
+          "name": "Configs",
+          "what": "Android, desktop and C3 configuration."
+        },
+        {
+          "name": "Data",
+          "what": "Secrets, backups and devices."
+        },
+        {
+          "name": "Connect",
+          "what": "Status, authentication providers and setup."
+        },
+        {
+          "name": "Activity",
+          "what": "The log of what changed and when."
+        }
+      ],
+      "guide": [
+        "Sign in once on Connect; every fleet app then reads its token from here.",
+        "Use Data ▸ Backups to back up this phone's profile to the vault.",
+        "On a new phone, restore the profile from Data, then let Cloud Store install the fleet.",
+        "Check Activity when something changed and you do not know why."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -1027,6 +1056,20 @@
         {
           "id": "vault",
           "why": "password vault"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs the fleet on a restored phone."
+        },
+        {
+          "app": "ac_cloud-vault",
+          "why": "The password vault behind the account's secrets."
+        },
+        {
+          "app": "ac_cloud-browser",
+          "why": "Uses the vault's passwords for autofill."
         }
       ]
     }

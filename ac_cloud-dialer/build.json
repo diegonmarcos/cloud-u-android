@@ -228,7 +228,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -245,15 +245,59 @@
       ]
     },
     "about": {
-      "what": "The phone's dialer and messages app: calls, contacts, favourites and SMS.",
+      "tagline": "Calls, contacts and SMS in one app",
+      "description": "Cloud Dialer is the phone's dialer and messages app: a dial pad and call log, contacts and favourites, and SMS conversations, able to act as the default phone app. It is a signed fork of an open-source dialer, updated by the fleet and reporting crashes only to the phone itself. It exists so the most basic phone function runs on audited source without ads or trackers.",
       "features": [
         "Dial pad and call log",
         "Contacts and favourites",
         "SMS conversations",
-        "Default phone app support"
+        "Default phone app support",
+        "Call screen over other apps"
+      ],
+      "screens": [
+        {
+          "name": "Home",
+          "what": "Recent calls and favourites."
+        },
+        {
+          "name": "Contacts",
+          "what": "Everyone you can call."
+        },
+        {
+          "name": "Favorites",
+          "what": "Starred people."
+        },
+        {
+          "name": "Calls",
+          "what": "The full call log."
+        },
+        {
+          "name": "SMS",
+          "what": "Text conversations."
+        }
+      ],
+      "guide": [
+        "Set Cloud Dialer as the default phone app when asked.",
+        "Dial from Home or tap a favourite.",
+        "Open SMS to read and send text messages."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-contacts",
+          "why": "The people hub that opens calls here."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        },
+        {
+          "app": "ac_cloud-c3-webserver",
+          "why": "Receives this app's crash reports on the phone."
+        }
+      ],
+      "credits": "Upstream: Fossify Phone (github.com/FossifyOrg/Phone), GPL-3.0, by the Fossify contributors. The fleet build adds SMS, the fleet's update, crash and configs libraries."
     }
   },
   "perms": {

@@ -46,7 +46,8 @@ DROPDOWN = "navtop1_dropdown"
 CFG_ENTRY = {"general": "navtop1_configs_general", "about": "navtop1_configs_about"}
 FC_PAGE = {"general": "fleetcfg_general", "about": "fleetcfg_about"}
 FC_ANCHOR, FC_SECTION, FC_ABOUT, FC_BACK = "fleetcfg_anchor_", "fleetcfg_section_", "fleetcfg_about_", "fleetcfg_back"
-FC_ABOUT_FIELDS = ["header", "name", "version", "sha", "what", "features", "repo", "privacy", "backends", "debug", "store", "superapp"]
+FC_ABOUT_FIELDS = ["header", "name", "tagline", "version", "what", "features", "screens", "guide", "privacy", "perms", "backends", "related",
+                   "build", "repo", "changelog", "debug", "store", "superapp"]
 
 
 def adb(*a, timeout=90):
@@ -863,6 +864,8 @@ class Walk:
         build = json.load(open(self.a.build_json, encoding="utf-8"))
         decl = build.get("configs_pages") or {}
         sids = [x.get("id") for x in ((decl.get("general") or {}).get("sections") or [])]
+        if "update" not in sids:  # every app gets Update by default, right after Perms (FleetConfigs.withDefaults)
+            sids.insert(sids.index("perms") + 1 if "perms" in sids else 0, "update")
         for page in ("general", "about"):
             t0, fails, checks = time.time(), [], {}
             if self.bottom:
@@ -908,6 +911,20 @@ class Walk:
                             if sec is None or sec.t > self.h * 0.6:
                                 fails.append("C4 the %s anchor did not bring its section up" % i)
                             self.evidence("configs_general_%s" % i)
+                            if i == "perms":
+                                pn = dump() or []
+                                if find(pn, "perms:grant-all") is None and find(pn, "perms:all-granted") is None and find(pn, "perms:section") is None:
+                                    fails.append("C7 General's Perms section shows neither Grant all nor all granted")
+                            if i == "update":
+                                chk = find(dump() or [], "fleetcfg_update_check")
+                                if chk is None:
+                                    fails.append("C8 General's Update section has no Check for updates")
+                                else:
+                                    tap(chk)
+                                    settle(6.0)
+                                    self.evidence("configs_general_update_checked")
+                                if find(dump() or [], "fleetcfg_update_open_store") is None:
+                                    fails.append("C8 General's Update section has no Update button")
                     else:
                         seen = []
                         for f in FC_ABOUT_FIELDS:
@@ -922,7 +939,7 @@ class Walk:
                         for _ in range(8):
                             swipe(self.w // 2, int(self.h * 0.3), int(self.h * 0.8))
                             settle(0.3)
-                        for i in range(0, 4):
+                        for i in range(0, 10):
                             self.evidence("configs_about_%d" % i)
                             swipe(self.w // 2, int(self.h * 0.8), int(self.h * 0.25))
                             settle(0.8)

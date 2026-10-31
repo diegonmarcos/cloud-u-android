@@ -537,7 +537,7 @@
   },
   "apk": false,
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -554,15 +554,50 @@
       ]
     },
     "about": {
-      "what": "The phone's local web server: serves shared storage and the fleet's web UI on port 8002, and receives every app's crash reports.",
+      "tagline": "The phone's own web server and crash sink",
+      "description": "Cloud C3 WebServer runs the fleet's shared web server on the phone, in Rust and web only (a Tauri 2 app). It serves the fleet web UI on port 8002, browses shared storage under /storage/emulated/0 and nothing else, and is the local crash sink every other fleet app posts its crash reports to over loopback. It exists so crash reports never leave the phone unless the owner shares them, and so the desktop's web UI is also available on the phone, offline.",
       "features": [
         "Fleet web UI served on the phone (port 8002)",
         "Browses /storage/emulated/0 and nothing else",
         "Local crash sink for every fleet app",
-        "Runs in-process, no network needed"
+        "Runs in-process, no network needed",
+        "Crash list of every fleet app, readable in a browser"
+      ],
+      "screens": [
+        {
+          "name": "Home",
+          "what": "The fleet web UI served on port 8002."
+        },
+        {
+          "name": "Files",
+          "what": "Shared storage, read-only browsing."
+        },
+        {
+          "name": "Crashes",
+          "what": "Crash reports posted by the fleet's apps."
+        }
+      ],
+      "guide": [
+        "Open the app once so the server starts.",
+        "Visit http://127.0.0.1:8002 in Cloud Browser to use the web UI.",
+        "Open the Crashes page after an app crashed to read its report."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-browser",
+          "why": "Opens the web UI this app serves."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        },
+        {
+          "app": "ac_cloud-drive",
+          "why": "Manages the same shared storage."
+        }
+      ]
     }
   },
   "perms": {

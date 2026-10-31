@@ -41,13 +41,13 @@ mkdir -p "$BASE"
         git ls-files -- 'a[acd]_*/build.json' 'a[acd]_*/debug-api.json'
         git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
         printf '%s\n' "$DATA" ac_cloud-account/build.json ac_cloud-c3-webserver/build.json licenses/curated.json
-        find "$UIBARS" -type f -not -path "*/build/*"
+        find "$UIBARS" ab_cloud-libs-shared/libs/perms -type f -not -path "*/build/*"
     } | sort -u | while IFS= read -r f; do [ -f "$f" ] && cp --parents "$f" "$BASE"; done
 )
 stage() { rm -rf "$T"; cp -r "$BASE" "$T"; }
 
 APP=ac_cloud-mail            # on the shared scaffold, talks to the jmap service
-PEND=ac_cloud-termux         # pending (an upstream fork)
+PEND=ac_cloud-termux         # wired through FleetConfigsActivity (an upstream fork)
 APPKT="$(cd "$BASE" && grep -rl 'NavBarTopFirstRowScaffold(' "$APP" | head -1)"
 [ -n "$APPKT" ] || { echo "ERROR: no scaffold call found under $APP — the fixture moved"; exit 1; }
 DECL=$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt
@@ -93,15 +93,28 @@ done
 mutate "a General section listed twice"        "$APP/build.json" "$(J "$SEC.append({'id':'perms'})")" "G2 $APP: configs_pages.general.sections must list 'perms' exactly once"
 mutate "an unknown General section"            "$APP/build.json" "$(J "$SEC.append({'id':'wifi'})")"  "G2 $APP: configs_pages.general.sections names 'wifi'"
 green  "General with its sections reordered"   "$APP/build.json" "$(J "$SEC.reverse()")"
+green  "General placing the default Update section itself" "$APP/build.json" "$(J "$SEC.append({'id':'update'})")"
 green  "General without the optional App section" "$APP/build.json" "$(J "$SEC[:]=[x for x in $SEC if x['id']!='app']")"
-# G3 the About fields
-for f in what features privacy backends; do
+# G3 the About fields (v2: About is extensive)
+for f in tagline description features screens guide privacy backends related; do
     mutate "About without $f"                  "$APP/build.json" "$(J "del $AB['$f']")" "G3 $APP: configs_pages.about.$f is missing"
 done
-mutate "a one-word what"                        "$APP/build.json" "$(J "$AB['what']='Mail.'")"            "G3 $APP: configs_pages.about.what must say what the app does"
-mutate "two features only"                      "$APP/build.json" "$(J "$AB['features']=['a','b']")"      "G3 $APP: configs_pages.about.features must be at least 3"
-mutate "an empty feature"                       "$APP/build.json" "$(J "$AB['features'].append('  ')")"   "G3 $APP: configs_pages.about.features must be at least 3"
+mutate "the v1 field what is back"              "$APP/build.json" "$(J "$AB['what']='The mail app of the fleet, over JMAP.'")" "G3 $APP: configs_pages.about.what is the v1 field"
+mutate "a tagline too short"                    "$APP/build.json" "$(J "$AB['tagline']='Mail'")"         "G3 $APP: configs_pages.about.tagline must be"
+mutate "a tagline too long"                     "$APP/build.json" "$(J "$AB['tagline']='x'*91")"         "G3 $APP: configs_pages.about.tagline must be"
+mutate "a one-line description"                 "$APP/build.json" "$(J "$AB['description']='Mail over JMAP.'")" "G3 $APP: configs_pages.about.description must say what the app does and why"
+mutate "four features only"                     "$APP/build.json" "$(J "$AB['features']=['a','b','c','d']")" "G3 $APP: configs_pages.about.features must be at least 5"
+mutate "an empty feature"                       "$APP/build.json" "$(J "$AB['features'].append('  ')")"   "G3 $APP: configs_pages.about.features must be at least 5"
+mutate "two screens only"                       "$APP/build.json" "$(J "$AB['screens']=$AB['screens'][:2]")" "G3 $APP: configs_pages.about.screens must be at least 3"
+mutate "a screen without its line"              "$APP/build.json" "$(J "$AB['screens'][0]['what']=''")"   "G3 $APP: configs_pages.about.screens must be at least 3"
+mutate "a two-step guide"                       "$APP/build.json" "$(J "$AB['guide']=$AB['guide'][:2]")"  "G3 $APP: configs_pages.about.guide must be at least 3"
 mutate "a one-line privacy"                     "$APP/build.json" "$(J "$AB['privacy']='Private.'")"      "G3 $APP: configs_pages.about.privacy must be at least"
+mutate "no related fleet app"                   "$APP/build.json" "$(J "$AB['related']=[]")"              "G3 $APP: configs_pages.about.related must name at least 1"
+mutate "a related app that does not exist"      "$APP/build.json" "$(J "$AB['related'].append({'app':'ac_cloud-ghost','why':'x'})")" "G3 $APP: configs_pages.about.related entry"
+mutate "a related app without a why"            "$APP/build.json" "$(J "$AB['related'][0]['why']=''")"    "G3 $APP: configs_pages.about.related entry"
+mutate "a fork without credits"                 "$APP/build.json" "$(J "$AB.pop('credits',None)")"        "G3 $APP: a upstream-fork app credits its upstream"
+mutate "a grant without a why"                  "$DATA" "$(J "del d['perm_why']['notifications']")"       "G3 $APP: grant 'notifications' has no why"
+green  "a grant whose why the app overrides"    "$APP/build.json" "$(J "$AB['perms_why']={'notifications':'New mail.'}")"
 mutate "backends not a list"                    "$APP/build.json" "$(J "$AB['backends']='jmap'")"         "G3 $APP: configs_pages.about.backends must be a list"
 mutate "a backend that is no fleet service"     "$APP/build.json" "$(J "$AB['backends'].append({'id':'nope','why':'x'})")" "G3 $APP: backend 'nope' is not a service"
 mutate "a backend without a why"                "$APP/build.json" "$(J "$AB['backends'].append({'id':'jmap'})")" "G3 $APP: every configs_pages.about.backends entry needs an id and a why"
@@ -112,11 +125,15 @@ mutate "an app without a debug API port"        "$APP/debug-api.json" "$(J "d['p
 mutate "an app without a name"                  "$APP/build.json" "$(J "d.pop('display_name',None); d.pop('name',None)")" "G3 $APP: About field 'name' does not resolve"
 # G4 the app reaches the pages
 mutate "an app whose sources stop drawing the scaffold" "$APPKT" "s=s.replace('NavBarTopFirstRowScaffold(','OwnScaffold(')" "G4 $APP: no source reaches Configs"
-mutate "a pending app that is wired now"        "$PEND/build.json" "open(sys.argv[1].replace('build.json','Wired.kt'),'w').write('val i = FleetConfigsActivity.intent(ctx, FleetConfigsPage.About)'); s=s+' '" "G4 $PEND: reaches Configs ▸ General / ▸ About now"
+mutate "a pending entry for an app that is wired" "$DATA" "$(J "d['pending']['$APP']='a reason that is long enough to pass'")" "G4 $APP: reaches Configs ▸ General / ▸ About now"
+PENDKT="$(cd "$BASE" && grep -rl 'FleetConfigsActivity.intent(' "$PEND" | head -1)"
+if [ -n "$PENDKT" ]; then
+    mutate "a Views/fork app that stops starting the activity" "$PENDKT" "s=s.replace('FleetConfigsActivity.intent(','OwnSettings.intent(')" "G4 $PEND: no source reaches Configs"
+else fail "no FleetConfigsActivity.intent( under $PEND — the fixture moved"; fi
 # G5 the ledgers
 mutate "a pending entry for no app"             "$DATA" "$(J "d['pending']['ac_cloud-ghost']='a reason that is long enough to pass'")" "G5 $DATA::pending names ac_cloud-ghost"
-mutate "a pending entry without a reason"       "$DATA" "$(J "d['pending']['$PEND']='todo'")"                     "G5 $DATA::pending.$PEND needs a reason"
-mutate "an app both exempt and pending"         "$DATA" "$(J "d['exempt']['$PEND']='a reason that is long enough to pass'")" "G5 $PEND is both exempt and pending"
+mutate "a pending entry without a reason"       "$DATA" "$(J "d['pending']['$APP']='todo'")"                      "G5 $DATA::pending.$APP needs a reason"
+mutate "an app both exempt and pending"         "$DATA" "$(J "d['pending']['$APP']='a reason that is long enough to pass'; d['exempt']['$APP']='a reason that is long enough to pass'")" "G5 $APP is both exempt and pending"
 # G0 the lib
 mutate "the lib changes the required sections"  "$DECL" "s=s.replace('\"language\")','\"lang\")')" "G0 $DECL REQUIRED_SECTIONS"
 mapfile -t HOLDS < <(python3 - "$ROOT/$DATA" <<'PY'

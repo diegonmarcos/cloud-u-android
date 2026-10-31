@@ -1839,7 +1839,7 @@
     {"id": "agent-door", "name": "Browser agent door", "kind": "agent door", "trigger": "called by Cloud Search agents", "summary": "agentapi: opens a URL for the person, or reads a page text read-only (#913).", "open": "page:browser", "status": {"source": "provider_presence", "authority_suffix": "agentapi"}}
   ],
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -1856,7 +1856,8 @@
       ]
     },
     "about": {
-      "what": "A focused WebView browser: tabs that survive restarts, an address bar with search, favourites and the vault's passwords.",
+      "tagline": "A focused browser with the vault's passwords",
+      "description": "Cloud Browser is a standalone WebView browser lifted out of the SuperApp into its own app. Tabs survive restarts, the address bar searches with the engine you choose, favourites are one tap away, and passwords and autofill come from the owner's self-hosted vault instead of a third-party sync service. It exists to browse the fleet's own web pages and the open web with the same identity and without an ad-tech browser in the middle.",
       "features": [
         "Favourites and tabs that persist",
         "Address bar with search engines",
@@ -1864,11 +1865,53 @@
         "Passwords and autofill from the vault",
         "Appearance and sync settings"
       ],
+      "screens": [
+        {
+          "name": "Fav",
+          "what": "Favourite sites as a grid."
+        },
+        {
+          "name": "Tabs",
+          "what": "Open tabs, kept across restarts."
+        },
+        {
+          "name": "Browser",
+          "what": "The page itself with the address bar."
+        },
+        {
+          "name": "Search",
+          "what": "Search engines and suggestions."
+        },
+        {
+          "name": "Configs",
+          "what": "Site settings, privacy, downloads and appearance."
+        }
+      ],
+      "guide": [
+        "Type an address or a search in the bar at the top.",
+        "Long-press a page to add it to Fav.",
+        "Sign in to the vault in Configs to fill passwords.",
+        "Open Tabs to switch or close tabs."
+      ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "vault",
           "why": "passwords and autofill"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-vault",
+          "why": "Supplies passwords for autofill."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
         }
       ]
     }

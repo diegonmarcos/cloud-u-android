@@ -388,7 +388,7 @@
     "target": "contacts-radicale"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -405,14 +405,54 @@
       ]
     },
     "about": {
-      "what": "A people hub, not an address book: each person is the set of channels you can reach them on, opened in one tap.",
+      "tagline": "People as channels, one tap to reach them",
+      "description": "Cloud Contacts is a people hub rather than an address book: each person is the set of channels you can reach them on — WhatsApp, Telegram, SMS, Cloud Mail, Cloud Dialer, Matrix, Cloud Chat, LinkedIn, Instagram — and the person screen is a switchboard that opens the right app on the right conversation in one tap. It exists because most contact is no longer a phone call, and the phone's own contacts app does not know that.",
       "features": [
         "People with every channel: WhatsApp, Telegram, SMS, mail, calls, Matrix",
         "Import contacts from other sources",
-        "One tap to the right app per channel"
+        "One tap to the right app per channel",
+        "Merge duplicates across sources",
+        "Search by name or channel"
+      ],
+      "screens": [
+        {
+          "name": "People",
+          "what": "Everyone, searchable."
+        },
+        {
+          "name": "Person",
+          "what": "The channel switchboard of one person."
+        },
+        {
+          "name": "Import",
+          "what": "Bring contacts in from other sources."
+        },
+        {
+          "name": "About",
+          "what": "What the app does."
+        }
+      ],
+      "guide": [
+        "Grant Contacts so the hub can read the phone's contacts.",
+        "Open a person and tap a channel to start talking there.",
+        "Use Import to add people from other sources."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-dialer",
+          "why": "Calls and SMS."
+        },
+        {
+          "app": "ac_cloud-mail",
+          "why": "Mail to a person."
+        },
+        {
+          "app": "ac_cloud-chat",
+          "why": "Chat with a person."
+        }
+      ]
     }
   },
   "perms": {

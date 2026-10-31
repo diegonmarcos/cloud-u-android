@@ -247,7 +247,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -264,14 +264,54 @@
       ]
     },
     "about": {
-      "what": "The HardTech area's simulation app: SAP2000, MATLAB and Ansys pages, planned until the simulators repository holds them.",
+      "tagline": "Simulation tools of the HardTech area",
+      "description": "Hardtech-Sim2Real is the HardTech area's simulation app, opened from the SuperApp's Cloud ▸ Lnktree row. Its pages for SAP2000, MATLAB and Ansys are planned and shown greyed: the simulators repository holds no tool for them yet, and the app says so instead of showing an empty page. It exists so the area has its place in the fleet now and fills in as the tools arrive.",
       "features": [
         "SAP2000 (planned)",
         "MATLAB (planned)",
-        "Ansys (planned)"
+        "Ansys (planned)",
+        "Each page states plainly that it is planned",
+        "Shared fleet navigation and Configs"
+      ],
+      "screens": [
+        {
+          "name": "SAP2000",
+          "what": "Planned: structural analysis."
+        },
+        {
+          "name": "MATLAB",
+          "what": "Planned: numerical computing."
+        },
+        {
+          "name": "Ansys",
+          "what": "Planned: engineering simulation."
+        },
+        {
+          "name": "About",
+          "what": "What this app is."
+        }
+      ],
+      "guide": [
+        "Open a page to see its status.",
+        "Update from Cloud Store when a tool ships.",
+        "Use Hardtech-CAD for the models meanwhile."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "aa_cloud-superapp",
+          "why": "Opens this app from Cloud ▸ Lnktree."
+        },
+        {
+          "app": "ad_Hardtech-CAD",
+          "why": "The CAD side of the same area."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ]
     }
   },
   "perms": {

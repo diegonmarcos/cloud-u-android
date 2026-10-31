@@ -3387,7 +3387,7 @@
     }
   ],
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -3404,13 +3404,49 @@
       ]
     },
     "about": {
-      "what": "One app for searching: news, research, the owner's knowledge graph, the web, media, shopping and brokers.",
+      "tagline": "One app for searching everything",
+      "description": "Cloud Search is one app for searching: news (the fleet news service, YouTube channel feeds, Google News topics and RSS), research reports agents published, the owner's knowledge graph through semantic and GraphRAG search, engines, apps, messages and code, and media, shopping and brokers. It exists so a search starts in one place and fans out to the right sources.",
       "features": [
         "News, YouTube and RSS feeds",
         "Research reports and agents",
         "CGC semantic and GraphRAG search",
         "Engines, apps, messages and code",
         "Media, shopping and brokers"
+      ],
+      "screens": [
+        {
+          "name": "News",
+          "what": "News, YouTube and RSS feeds."
+        },
+        {
+          "name": "Research",
+          "what": "Reports and agents."
+        },
+        {
+          "name": "CGC",
+          "what": "Semantic and GraphRAG search."
+        },
+        {
+          "name": "Search",
+          "what": "Engines, apps, messages and code."
+        },
+        {
+          "name": "Media",
+          "what": "Media search."
+        },
+        {
+          "name": "Shopping",
+          "what": "Prices and products."
+        },
+        {
+          "name": "Brokers",
+          "what": "Brokers."
+        }
+      ],
+      "guide": [
+        "Type a query on Search.",
+        "Switch tabs to search the same query elsewhere.",
+        "Use CGC for questions about the owner's code and notes."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -3425,6 +3461,20 @@
         {
           "id": "cgc-pvt-mcp",
           "why": "private knowledge graph search"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-kg-store",
+          "why": "The knowledge graph."
+        },
+        {
+          "app": "ac_cloud-news",
+          "why": "Topic news."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

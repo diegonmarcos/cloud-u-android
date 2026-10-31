@@ -580,7 +580,7 @@
     "_doc_unit": "tests.unit.task is deliberately UNSET: this fork has no JVM test source set, and the engine reports that as a named coverage gap on every run. Declaring a task that runs nothing would convert an honest gap into a false green."
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -597,14 +597,51 @@
       ]
     },
     "about": {
-      "what": "A Nix-based Linux terminal on the phone, where the fleet's command-line tools run.",
+      "tagline": "Nix and a full Linux userland on the phone",
+      "description": "Cloud Terminal Nix is the fleet's build of nix-on-droid: the Nix package manager and a full Linux userland on Android, where the fleet's command-line and TUI tools run (the Watchdog dashboard is drawn here). It is a signed fork with the fleet's update, crash and configs libraries. It exists so the same declarative tooling the owner uses on servers runs on the phone.",
       "features": [
         "Nix package manager on Android",
         "Full Linux userland",
-        "Runs the fleet's TUI tools"
+        "Runs the fleet's TUI tools",
+        "Declarative environment from the fleet's flakes",
+        "Runs the fleet's TUI dashboards"
       ],
-      "privacy": "No ads and no third-party trackers. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "screens": [
+        {
+          "name": "Terminal",
+          "what": "The shell."
+        },
+        {
+          "name": "Sessions",
+          "what": "Open sessions."
+        },
+        {
+          "name": "Settings",
+          "what": "Keyboard, font and environment."
+        }
+      ],
+      "guide": [
+        "Open the app and wait for the first bootstrap.",
+        "Run nix-on-droid switch to apply the fleet's configuration.",
+        "Start a TUI tool such as the watchdog dashboard."
+      ],
+      "privacy": "No ads and no third-party trackers. It calls no fleet service of its own: packages come from the Nix caches and everything else stays on the phone. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback.",
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_c3-watchdog",
+          "why": "Shows the dashboard drawn here."
+        },
+        {
+          "app": "ac_cloud-termux",
+          "why": "The fleet's other terminal."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: Nix-on-Droid app (github.com/nix-community/nix-on-droid-app), built on Termux, GPL-3.0, by the nix-community contributors."
     }
   },
   "perms": {

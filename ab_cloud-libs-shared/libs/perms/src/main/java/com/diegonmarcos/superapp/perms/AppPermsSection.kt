@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -44,14 +48,24 @@ data class PermsStyle(
 fun AppPermsSection(tick: Int, style: PermsStyle = PermsStyle(), highlight: Set<String> = emptySet()) {
     val ctx = LocalContext.current
     var local by remember { mutableIntStateOf(0) }
+    var walking by remember { mutableStateOf(false) }
+    var walked by remember { mutableStateOf(emptySet<String>()) }
+    var resumes by remember { mutableIntStateOf(0) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { local++ }
     val activity = remember(ctx) { ctx.findActivity() }
-    val own = remember(tick, local) { AppPerms.own(ctx, activity).sortedBy { if (it.entry.id in highlight) 0 else 1 } }
-    val helpers = remember(tick, local) { AppPerms.helpers(ctx) }
+    DisposableEffect(activity) {
+        val owner = activity as? androidx.lifecycle.LifecycleOwner
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) resumes++ }
+        owner?.lifecycle?.addObserver(obs)
+        onDispose { owner?.lifecycle?.removeObserver(obs) }
+    }
+    val own = remember(tick, local, resumes) { AppPerms.own(ctx, activity).sortedBy { if (it.entry.id in highlight) 0 else 1 } }
+    val helpers = remember(tick, local, resumes) { AppPerms.helpers(ctx) }
     fun request(entries: List<PermEntry>) {
         val perms = entries.map { it.permission }.filter { it.isNotEmpty() }.distinct()
         if (perms.isEmpty()) return
         PermAskLog.markAsked(ctx, perms)
+        PermAskLog.markAskedIds(ctx, entries.map { it.id })
         ask.launch(perms.toTypedArray())
     }
     val runtimeMissing = own.filter { it.status.missing && it.entry.kind == PermKind.RUNTIME && it.status.state != PermState.PERMANENTLY_DENIED && it.entry.autoRequest }.map { it.entry }
@@ -60,18 +74,24 @@ fun AppPermsSection(tick: Int, style: PermsStyle = PermsStyle(), highlight: Set<
     val missing = runtimeMissing.size + otherMissing.size + helperMissing.size
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("perms:section")) {
         if (own.isEmpty() && helpers.isEmpty()) Text("This app needs no permission.", color = style.dim, fontSize = 13.sp)
+        // Grant all WALKS every missing grant: the runtime ones in one system dialog, then each special grant's exact settings
+        // page in turn (Android has no batch for special access), advancing on each return until none is left; an entry the
+        // user leaves denied is not opened twice in one walk.
+        fun step(): Boolean {
+            val next = when {
+                runtimeMissing.any { it.id !in walked } -> { val r = runtimeMissing.filter { it.id !in walked }; walked += r.map { it.id }; request(r); return true }
+                else -> otherMissing.firstOrNull { it.id !in walked }
+            }
+            if (next != null) { walked += next.id; PermsSettings.open(ctx, next); return true }
+            val h = helperMissing.firstOrNull { "${it.helper.pkg}:${it.entry.id}" !in walked } ?: return false
+            walked += "${h.helper.pkg}:${h.entry.id}"; AppPerms.openHelper(ctx, h); return true
+        }
+        // advance when the user comes back from the dialog or page (the host activity resumes), never on a refresh tick
+        LaunchedEffect(resumes) { if (walking && !step()) walking = false }
         if (missing > 0) Button(
-            onClick = {
-                // Grant all: every runtime ask in one system dialog, then the next settings page per tap (Android has no
-                // batch for special access: each is a separate system screen).
-                when {
-                    runtimeMissing.isNotEmpty() -> request(runtimeMissing)
-                    otherMissing.isNotEmpty() -> PermsSettings.open(ctx, otherMissing.first())
-                    else -> AppPerms.openHelper(ctx, helperMissing.first())
-                }
-            },
-            modifier = Modifier.testTag("perms:grant-all"),
-        ) { Text("Grant all ($missing missing)") }
+            onClick = { walked = emptySet(); walking = step() },
+            modifier = Modifier.fillMaxWidth().height(56.dp).testTag("perms:grant-all"),
+        ) { Text("Grant all ($missing missing)", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
         else if (own.isNotEmpty() || helpers.isNotEmpty()) Text("Everything this app needs is granted.", color = style.ok, fontSize = 13.sp,
             modifier = Modifier.testTag("perms:all-granted"))
         for (r in own) PermRowView(

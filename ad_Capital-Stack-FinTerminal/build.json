@@ -454,7 +454,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -471,12 +471,50 @@
       ]
     },
     "about": {
-      "what": "A capital-markets terminal: fixed income, equities, FX, news and portfolio dashboards from declared data sources.",
+      "tagline": "A capital-markets terminal from declared sources",
+      "description": "Capital-Stack-FinTerminal is the Capital area's capital-markets terminal on the phone. Six tabs — fixed income, equities, FX, news, portfolio management and the owner's portfolio — each draw dashboards from a declared source: the Fincept / fin_api service on the private mesh first (with Start, Stop and Restart for its container), and key-free public sources such as FRED, DBnomics, the IMF, the World Bank and GDELT as fallback. It exists so market data the owner follows is read from sources that are declared and checkable, with a visible placeholder where a source is missing.",
       "features": [
         "FI, EQ and EX market dashboards",
         "NW: market news",
         "PM and MY-PM portfolio views",
-        "Each panel from a declared source"
+        "Each panel from a declared source",
+        "Mesh first, public sources as fallback",
+        "Start, stop or restart the data container"
+      ],
+      "screens": [
+        {
+          "name": "FI",
+          "what": "Fixed-income dashboards."
+        },
+        {
+          "name": "EQ",
+          "what": "Equity dashboards."
+        },
+        {
+          "name": "EX",
+          "what": "FX dashboards."
+        },
+        {
+          "name": "NW",
+          "what": "Market news."
+        },
+        {
+          "name": "PM",
+          "what": "Portfolio management."
+        },
+        {
+          "name": "MY-PM",
+          "what": "The owner's portfolio."
+        },
+        {
+          "name": "Config",
+          "what": "Sources and the data container."
+        }
+      ],
+      "guide": [
+        "Join the private mesh so the fin_api source answers.",
+        "Open a tab; panels show where each number comes from.",
+        "Use Config to restart the data container if panels are empty."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -487,6 +525,20 @@
         {
           "id": "news",
           "why": "market news"
+        }
+      ],
+      "related": [
+        {
+          "app": "aa_cloud-superapp",
+          "why": "Opens this app from Cloud ▸ Lnktree."
+        },
+        {
+          "app": "ac_cloud-news",
+          "why": "The news source behind NW."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

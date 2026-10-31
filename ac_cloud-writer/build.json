@@ -933,7 +933,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -950,13 +950,37 @@
       ]
     },
     "about": {
-      "what": "One place for text tools: enhance, translate, check grammar and summarise, each with its own model choice.",
+      "tagline": "Enhance, translate, check and summarise text",
+      "description": "Cloud Writer is one place for text tools: Text Enhance, Translate, Grammar Check and Summary, each with its own model choice. Type or paste a text, pick a tool and get the result back in an editable box; grammar checks go to the fleet's LanguageTool and the AI tools through the AI gateway. It exists so writing help does not mean pasting text into a third-party website.",
       "features": [
         "Documents and writer",
         "Text enhancement",
         "Translation",
         "Grammar check",
         "AI routing per tool"
+      ],
+      "screens": [
+        {
+          "name": "Documents",
+          "what": "Your texts."
+        },
+        {
+          "name": "Writer",
+          "what": "The editor."
+        },
+        {
+          "name": "Tools",
+          "what": "Enhance, translate, grammar, summary."
+        },
+        {
+          "name": "Settings",
+          "what": "A model per tool."
+        }
+      ],
+      "guide": [
+        "Paste or type a text in Writer.",
+        "Pick a tool; edit the result in place.",
+        "Choose a model per tool in Settings."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -967,6 +991,20 @@
         {
           "id": "ai-gateway",
           "why": "enhance, translate and summarise"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-keyboard",
+          "why": "Enhance inside any text field."
+        },
+        {
+          "app": "ac_cloud-tools-small-llms",
+          "why": "Cheap models for simple jobs."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

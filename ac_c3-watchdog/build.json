@@ -186,7 +186,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -203,17 +203,53 @@
       ]
     },
     "about": {
-      "what": "The c3-watchdog panel on the phone: the live dashboard of what is running in the fleet and whether it is alive.",
+      "tagline": "Is everything in the fleet alive? One glance",
+      "description": "Cloud C3 Watchdog is the c3-watchdog panel on the phone: the real dashboard drawn by c3-watchdog-tui inside the Nix terminal and shown as HTML. It answers one question fast — is everything in the fleet that should be running actually alive — with container and service liveness at a glance. It exists so an outage is seen on the phone before a user reports it, and so the same dashboard the owner uses on the desktop is the one on the phone, not a second implementation.",
       "features": [
         "The real watchdog dashboard, drawn by c3-watchdog-tui",
         "Runs inside nix-on-droid, shown as HTML",
-        "Container and service liveness at a glance"
+        "Container and service liveness at a glance",
+        "Refreshes on its own while open",
+        "Same dashboard as the desktop TUI"
+      ],
+      "screens": [
+        {
+          "name": "Dashboard",
+          "what": "The live watchdog dashboard: every service and its state."
+        },
+        {
+          "name": "Containers",
+          "what": "Container liveness per VM."
+        },
+        {
+          "name": "Alerts",
+          "what": "What is down and since when."
+        }
+      ],
+      "guide": [
+        "Make sure Cloud Terminal Nix is installed: the dashboard is drawn there.",
+        "Open the app to see the live dashboard.",
+        "Tap a red row to see which service is down and since when."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "c3-infra-api",
           "why": "service and container health"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-nix-on-droid",
+          "why": "Runs c3-watchdog-tui, which draws this dashboard."
+        },
+        {
+          "app": "ac_c3-morpheus",
+          "why": "Decides what should be running."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

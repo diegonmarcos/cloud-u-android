@@ -10,7 +10,9 @@
 //   store_pkg / superapp_pkg -> android.application_id of ac_cloud-store and aa_cloud-superapp (the About's two Open buttons)
 //   version, version_code, application_id, name -> the app's own build.json (a fork without android.* gets version and package
 //   from the installed package at runtime); sha -> GITHUB_SHA (CI) or "local"
-//   about.repo, .license, .crash, .debug -> derived (see below), so build.json declares only what / features / privacy / backends
+//   about.repo, .license, .crash, .debug, .perms, .stores, .diagnostics, .origin, .upstream, .support and update -> derived (see
+//   below), so build.json declares only what a person writes: tagline, description, features, screens, guide, privacy, backends,
+//   related, credits (and perms_why overrides)
 // No process is started (some apps run with the configuration cache on, which forbids it at configuration time).
 // The rule these declarations are held to: 1_cicd/src/data/configs-pages.json, cloud-android-configs-pages-guard.py.
 import groovy.json.JsonOutput
@@ -58,18 +60,58 @@ ext.fleetConfigsB64 = { ->
     def dbgPorts = dbg.isFile() ? (slurp.parse(dbg).ports ?: [:]) : [:]
     def dbgPort = dbgPorts.get(app.android?.application_id ?: '') ?: (dbgPorts.size() == 1 ? dbgPorts.values().first() : null)
     about.debug = dbgPort ? "http://127.0.0.1:${dbgPort}/".toString() : ''
+    // #1352 v2: the rest of About, derived so build.json carries only what a person has to write.
+    def specFile = new File(repoRoot, '1_cicd/src/data/configs-pages.json')
+    def spec = specFile.isFile() ? slurp.parse(specFile) : [:]
+    def catFile = new File(repoRoot, 'ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json')
+    def catalogue = catFile.isFile() ? (slurp.parse(catFile).entries ?: []) : []
+    def permWhy = { String id -> (cp.about?.perms_why ?: [:])[id] ?: (spec.perm_why ?: [:])[id] ?: '' }
+    def permUse = { String id, String helper ->
+        def e = catalogue.find { it.id == id }
+        [id: id, label: e?.label ?: id, kind: e?.kind ?: '', why: permWhy(id), helper: helper]
+    }
+    def perms = app.perms ?: [:]
+    about.perms = (perms.needs ?: []).collect { permUse(it, '') } +
+        (perms.helpers ?: []).collectMany { h -> (h.needs ?: []).collect { permUse(it, h.label ?: h.pkg ?: '') } }
+    // data stores: the app's entry in the fleet-config manifest (libs:fleetconfig-model), the new-phone migration list
+    def fcFile = new File(repoRoot, 'ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json')
+    def fcApp = fcFile.isFile() ? (slurp.parse(fcFile).apps ?: [:]).values().find { it.module == appDir } : null
+    about.stores = (fcApp?.items ?: []).collect { [id: it.id ?: '', path: it.path ?: '', class: it['class'] ?: '', doc: it.doc ?: ''] }
+    // crash / analytics libraries the app links (its module graph), with what each sends where (configs-pages.json::diagnostics)
+    def modules = (app.modules ?: [:]).keySet()
+    about.diagnostics = (spec.diagnostics ?: [:]).findAll { k, v -> !k.startsWith('_') && (k in modules || k == 'libs:crash') }.collect { k, v -> v }
+    def cur = curated.isFile() ? (slurp.parse(curated).directories?.get(appDir) ?: [:]) : [:]
+    about.origin = (spec.origin_label ?: [:])[cur.kind ?: ''] ?: (cur.kind ?: '')
+    about.upstream = cur.upstream_module ? "${cur.upstream_module}${cur.what ? ' (' + cur.what + ')' : ''}".toString() : ''
+    about.credits = cp.about?.credits ?: ''
+    about.related = (cp.about?.related ?: []).collect { r ->
+        def b = sibling(r.app)
+        [app: r.app, name: b?.display_name ?: b?.name ?: r.app, pkg: b?.android?.application_id ?: '', why: r.why ?: '']
+    }
+    about.support = 'https://github.com/diegonmarcos/cloudy-u-android/issues'
+    ['perms_why', 'what'].each { about.remove(it) }
+    if (!about.description) about.description = cp.about?.what ?: ''
+    // Update: where Cloud Store publishes this app (the rolling release and the asset per ABI)
+    def rel = app.release ?: [:]
+    def assets = [:]
+    (rel.variants instanceof List ? rel.variants : []).each { v -> if (v.gh_asset && v.abis) assets[v.abis[0]] = v.gh_asset }
+    if (assets.isEmpty() && rel.gh_release?.asset_name) assets['*'] = rel.gh_release.asset_name
     def sha = System.getenv('GITHUB_SHA') ?: 'local'
+    def fcUtc = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.ROOT)
+    fcUtc.timeZone = TimeZone.getTimeZone('UTC')
     def out = [
         app           : appFile.parentFile.name,
         name          : app.display_name ?: app.name ?: '',
         version       : app.android?.version_name ?: '',
         version_code  : app.android?.version_code ?: 0,
         sha           : sha.take(12),
+        build_date    : fcUtc.format(new Date()),
         application_id: app.android?.application_id ?: '',
         store_pkg     : sibling('ac_cloud-store')?.android?.application_id ?: '',
         superapp_pkg  : sibling('aa_cloud-superapp')?.android?.application_id ?: '',
         general       : cp.general ?: [:],
         about         : about,
+        update        : [repo: 'diegonmarcos/cloudy-u-android', tag: rel.gh_release?.rolling_tag ?: 'latest', assets: assets],
     ]
     JsonOutput.toJson(out).getBytes('UTF-8').encodeBase64().toString()
 }

@@ -235,7 +235,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -252,15 +252,66 @@
       ]
     },
     "about": {
-      "what": "The fleet's media hub: music, videos, gallery, books, feed, movies and documentaries in one mobile-first app.",
+      "tagline": "Music, video, books and films in one hub",
+      "description": "Cloud Media Center is the fleet's media hub, in Rust and static web only (a Tauri 2 app): seven mobile-first pages — music, videos, gallery, books, feed, movies and documentaries — built from the media data of the owner's public site pinned at one commit. Every link out opens the phone's own apps. It exists to make the owner's curated media collection browsable offline on the phone.",
       "features": [
         "Music and videos",
         "Gallery and books",
         "Feed",
-        "Movies and documentaries"
+        "Movies and documentaries",
+        "Works offline: the data ships with the app"
+      ],
+      "screens": [
+        {
+          "name": "Music",
+          "what": "Albums and playlists."
+        },
+        {
+          "name": "Videos",
+          "what": "Videos and channels."
+        },
+        {
+          "name": "Gallery",
+          "what": "Images."
+        },
+        {
+          "name": "Books",
+          "what": "The reading list."
+        },
+        {
+          "name": "Feed",
+          "what": "What is new."
+        },
+        {
+          "name": "Movies",
+          "what": "Films."
+        },
+        {
+          "name": "Documentaries",
+          "what": "Documentaries."
+        }
+      ],
+      "guide": [
+        "Open a page from the bottom bar.",
+        "Tap an item to open it in the phone's player or browser.",
+        "Update the app from Cloud Store to get the newest collection."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-browser",
+          "why": "Opens the links."
+        },
+        {
+          "app": "ac_cloud-gallery",
+          "why": "The phone's own photos."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ]
     }
   },
   "perms": {

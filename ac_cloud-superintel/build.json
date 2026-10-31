@@ -406,7 +406,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -423,11 +423,37 @@
       ]
     },
     "about": {
-      "what": "The fleet's AI chat: source-grounded notebooks, a router chat and one expert persona per field.",
+      "tagline": "Notebooks, a router chat and expert personas",
+      "description": "Cloud SuperIntel is the fleet's AI chat. Notebook answers questions grounded in your sources, with citations and an explicit answer when something is not in them; SI is the router chat that picks the right model; CGCs are expert chats, one persona per field in six groups from maths to law. Requests go through the fleet's AI gateway on the private mesh. It exists to give the owner one AI app whose answers can be checked.",
       "features": [
         "Notebook: Q&A grounded in your sources, with citations",
         "SI: the router chat",
-        "CGCs: expert chats from maths to law"
+        "CGCs: expert chats from maths to law",
+        "Citations on every grounded answer",
+        "Side drawer of conversations"
+      ],
+      "screens": [
+        {
+          "name": "Notebook",
+          "what": "Q&A grounded in your sources."
+        },
+        {
+          "name": "SI",
+          "what": "The router chat."
+        },
+        {
+          "name": "CGCs",
+          "what": "Expert persona chats."
+        },
+        {
+          "name": "Settings",
+          "what": "Models and sources."
+        }
+      ],
+      "guide": [
+        "Add sources to a Notebook.",
+        "Ask; open a citation to check the answer.",
+        "Use CGCs for a specialist's view."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -438,6 +464,20 @@
         {
           "id": "cgc-pub-mcp",
           "why": "the experts' knowledge"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-tools-small-llms",
+          "why": "Cheap models for simple jobs."
+        },
+        {
+          "app": "ac_cloud-kg-store",
+          "why": "The knowledge graph."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -62,6 +63,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -82,6 +84,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -171,9 +174,11 @@ public fun FleetConfigsScreen(
 }
 
 /**
- * Configs > General: ONE page. A row of anchor icons at the top (one per declared section) scrolls to that section; the sections are
- * the app's `configs_pages.general.sections` (Perms, Battery, Storage/backup, Notifications, UI, Language, and App: the app's own
- * Configs pages). Each section reads the device's live state for THIS app and opens the system screen that changes it.
+ * Configs > General: ONE page. At the top, a grid of anchors laid out like a launcher's app grid (an icon tile with the
+ * section's name under it, four per row); a tap scrolls this same page to that section. The sections are the app's
+ * `configs_pages.general.sections` (Perms, Battery, Storage/backup, Notifications, UI, Language, App) plus Update, which every
+ * app gets by default. Each section reads the device's live state for THIS app and opens the system screen that changes it,
+ * always through libs:perms (the one place that builds a settings intent).
  */
 @Composable
 public fun FleetGeneralPage(decl: FleetConfigsDecl, dark: Boolean, c: ThemeColors, onAppConfigs: () -> Unit) {
@@ -184,36 +189,17 @@ public fun FleetGeneralPage(decl: FleetConfigsDecl, dark: Boolean, c: ThemeColor
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(1500); tick++ } }
     val sections = decl.general
-    val active = sections.lastOrNull { (tops[it.id] ?: Int.MAX_VALUE) <= scroll.value + 24 }?.id ?: sections.firstOrNull()?.id
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp).testTag(FleetConfigsTags.ANCHORS),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        sections.forEach { s ->
-            val on = s.id == active
-            val shape = RoundedCornerShape(14.dp)
-            Column(
-                Modifier.width(64.dp).clip(shape).background(if (on) c.tabSelected else c.island, shape)
-                    .clickable(role = Role.Tab) { scope.launch { scroll.animateScrollTo(tops[s.id] ?: 0) } }
-                    .semantics { selected = on; contentDescription = s.label }
-                    .padding(vertical = 8.dp).testTag(FleetConfigsTags.anchor(s.id)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(sectionIcon(s.id), contentDescription = null, tint = if (on) c.onTabSelected else c.onIsland, modifier = Modifier.size(22.dp))
-                Text(s.label, color = if (on) c.onTabSelected else c.onIsland, fontSize = 10.sp, maxLines = 1)
-            }
-        }
-    }
     Column(
         Modifier.fillMaxWidth().verticalScroll(scroll).padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(Modifier.height(2.dp))
+        AnchorGrid(sections, c) { id -> scope.launch { scroll.animateScrollTo(tops[id] ?: 0) } }
         sections.forEach { s ->
             SectionCard(s.label, sectionIcon(s.id), c, Modifier.testTag(FleetConfigsTags.section(s.id)).onGloballyPositioned { tops[s.id] = it.positionInParent().y.toInt() }) {
                 if (s.note.isNotBlank()) Body(s.note, c)
                 when (s.id) {
                     "perms" -> PermsSection(c, tick)
+                    FleetConfigs.UPDATE_SECTION -> UpdateSection(decl, c)
                     "battery" -> BatterySection(c, tick)
                     "storage" -> StorageSection(c, tick)
                     "notifications" -> NotificationsSection(c, tick)
@@ -223,72 +209,44 @@ public fun FleetGeneralPage(decl: FleetConfigsDecl, dark: Boolean, c: ThemeColor
                 }
             }
         }
-        // room so the last section can scroll to the top under its anchor
+        // room so the last section can scroll to the top under the grid
         Spacer(Modifier.height(320.dp))
     }
 }
 
-/** Configs > About: the app in full, from its declaration plus what the package manager knows. */
+/** The anchors: a launcher-style grid, [COLUMNS] tiles per row, each an icon tile with the section's name under it. */
 @Composable
-public fun FleetAboutPage(decl: FleetConfigsDecl, c: ThemeColors) {
-    val ctx = LocalContext.current
-    val a = decl.about
+private fun AnchorGrid(sections: List<GeneralSection>, c: ThemeColors, onAnchor: (String) -> Unit) {
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier.fillMaxWidth().padding(top = 6.dp).testTag(FleetConfigsTags.ANCHORS),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        val icon = remember(ctx) { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(192, 192).asImageBitmap() }.getOrNull() }
-        val label = decl.name.ifBlank { ctx.applicationInfo.loadLabel(ctx.packageManager).toString() }
-        val version = decl.version.ifBlank { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull().orEmpty() }
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp).testTag(FleetConfigsTags.about("header")), verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) Image(icon, contentDescription = label, modifier = Modifier.size(72.dp).clip(RoundedCornerShape(18.dp)))
-            Column(Modifier.padding(start = 14.dp)) {
-                Text(label, color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag(FleetConfigsTags.about("name")))
-                Text("Version $version" + if (decl.versionCode > 0) " (${decl.versionCode})" else "", color = c.inkDim, fontSize = 13.sp,
-                    modifier = Modifier.testTag(FleetConfigsTags.about("version")))
-                Text("Build ${decl.sha.ifBlank { "local" }}", color = c.inkDim, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.testTag(FleetConfigsTags.about("sha")))
-                Text(ctx.packageName, color = c.inkDim, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-            }
-        }
-        SectionCard("What it does", Icons.Filled.Info, c, Modifier.testTag(FleetConfigsTags.about("what"))) { Body(a.what, c) }
-        SectionCard("Features", Icons.Filled.Star, c, Modifier.testTag(FleetConfigsTags.about("features"))) {
-            a.features.forEach { f -> Row { Text("•  ", color = c.accent, fontSize = 13.sp); Body(f, c) } }
-        }
-        SectionCard("Source and licence", Icons.Filled.Code, c, Modifier.testTag(FleetConfigsTags.about("repo"))) {
-            Link(a.repo, c) { open(ctx, a.repo) }
-            KeyValue("Licence", FleetConfigs.licenceLabel(a.license), c)
-        }
-        SectionCard("Privacy", Icons.Filled.Lock, c, Modifier.testTag(FleetConfigsTags.about("privacy"))) { Body(a.privacy, c) }
-        SectionCard("Backend services", Icons.Filled.Cloud, c, Modifier.testTag(FleetConfigsTags.about("backends"))) {
-            if (a.backends.isEmpty()) Body("None. This app talks to no fleet service; everything it shows lives on the phone.", c)
-            a.backends.forEach { b ->
-                Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    Text(b.id + if (b.kind.isNotBlank()) "  ·  ${b.kind}" else "", color = c.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    if (b.why.isNotBlank()) Text(b.why, color = c.inkDim, fontSize = 12.sp)
-                    Text(b.mesh.ifBlank { "mesh URL not resolved in this build" }, color = c.accent, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        sections.chunked(COLUMNS).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { s ->
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) { onAnchor(s.id) }
+                            .semantics { contentDescription = s.label }.padding(vertical = 6.dp).testTag(FleetConfigsTags.anchor(s.id)),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        val tile = RoundedCornerShape(18.dp)
+                        Box(
+                            Modifier.size(56.dp).clip(tile).background(c.tabSelected, tile).border(1.dp, c.islandBorder, tile),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(sectionIcon(s.id), contentDescription = null, tint = c.onTabSelected, modifier = Modifier.size(28.dp)) }
+                        Text(
+                            s.label, Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp), color = c.ink, fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium, maxLines = 2, textAlign = TextAlign.Center, lineHeight = 14.sp,
+                        )
+                    }
                 }
+                repeat(COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
             }
-            Text("Mesh URLs answer only inside the private mesh (WireGuard); off the mesh the app falls back to the public, signed-in route.",
-                color = c.inkDim, fontSize = 11.sp)
         }
-        SectionCard("Crash and debug", Icons.Filled.BugReport, c, Modifier.testTag(FleetConfigsTags.about("debug"))) {
-            KeyValue("Crash reports", "", c)
-            Link(a.crash, c) { open(ctx, a.crash) }
-            KeyValue("Debug API", "", c)
-            Link(a.debug, c) { open(ctx, a.debug) }
-        }
-        SectionCard("Cloud Store", Icons.Filled.Storefront, c, Modifier.testTag(FleetConfigsTags.about("store"))) {
-            Body(FleetConfigs.STORE_TEXT, c)
-            ActionButton("Open Cloud Store", c, FleetConfigsTags.OPEN_STORE) { launchApp(ctx, decl.storePkg) }
-        }
-        SectionCard("Cloud SuperApp", Icons.Filled.Apps, c, Modifier.testTag(FleetConfigsTags.about("superapp"))) {
-            Body(FleetConfigs.SUPERAPP_TEXT, c)
-            ActionButton("Open Cloud SuperApp", c, FleetConfigsTags.OPEN_SUPERAPP) { launchApp(ctx, decl.superappPkg) }
-        }
-        Spacer(Modifier.height(24.dp))
     }
 }
+
+private const val COLUMNS = 4
 
 // ── sections of General ─────────────────────────────────────────────────────────────────────────────────────────
 
@@ -300,7 +258,7 @@ private fun PermsSection(c: ThemeColors, tick: Int) {
     com.diegonmarcos.superapp.perms.AppPermsSection(tick, com.diegonmarcos.superapp.perms.PermsStyle(ink = c.ink, dim = c.inkDim))
     val normal = remember(tick) { permissionRows(ctx).count { !it.dangerous } }
     if (normal > 0) Text("$normal install-time permissions granted with the app.", color = c.inkDim, fontSize = 11.sp)
-    ActionButton("Open app permissions", c, "fleetcfg_open_perms") { open(ctx, appDetails(ctx)) }
+    ActionButton("App info", c, "fleetcfg_open_perms") { com.diegonmarcos.superapp.perms.PermsPages.openAppInfo(ctx, ctx.packageName) }
 }
 
 @Composable
@@ -346,7 +304,7 @@ private fun StorageSection(c: ThemeColors, tick: Int) {
             ctx.externalCacheDir?.listFiles()?.forEach { it.deleteRecursively() }
             cleared++
         }
-        ActionButton("Storage settings", c, "fleetcfg_open_storage") { open(ctx, appDetails(ctx)) }
+        ActionButton("Storage settings", c, "fleetcfg_open_storage") { com.diegonmarcos.superapp.perms.PermsPages.openAppInfo(ctx, ctx.packageName) }
     }
 }
 
@@ -359,7 +317,7 @@ private fun NotificationsSection(c: ThemeColors, tick: Int) {
     if (channels.isEmpty()) Text("No notification channel created yet.", color = c.inkDim, fontSize = 11.sp)
     channels.forEach { ch -> StatusRow(ch.name.toString(), ch.importance != NotificationManager.IMPORTANCE_NONE, c) }
     ActionButton("Notification settings", c, "fleetcfg_open_notifications") {
-        open(ctx, Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
+        com.diegonmarcos.superapp.perms.PermsPages.open(ctx, com.diegonmarcos.superapp.perms.PermsPages.notificationsIntent(ctx.packageName))
     }
 }
 
@@ -372,124 +330,42 @@ private fun LanguageSection(c: ThemeColors, tick: Int) {
     }
     KeyValue("App language", current, c)
     ActionButton("Change language", c, "fleetcfg_open_language") {
-        open(
-            ctx,
-            if (Build.VERSION.SDK_INT >= 33) Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", ctx.packageName, null))
-            else Intent(Settings.ACTION_LOCALE_SETTINGS),
-        )
+        com.diegonmarcos.superapp.perms.PermsPages.open(ctx, com.diegonmarcos.superapp.perms.PermsPages.languageIntent(ctx.packageName))
     }
-}
+}}
 
-// ── building blocks ─────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Update: what is installed, Check for updates against the app's Cloud Store release, the latest build, Update, release notes. */
 @Composable
-private fun SectionCard(title: String, icon: ImageVector, c: ThemeColors, modifier: Modifier = Modifier, body: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier.fillMaxWidth().clip(shape).background(c.tabStrip, shape).border(1.dp, c.islandBorder, shape).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = c.accent, modifier = Modifier.size(20.dp))
-            Text(title, Modifier.padding(start = 8.dp).semantics { heading() }, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+private fun UpdateSection(decl: FleetConfigsDecl, c: ThemeColors) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var state by remember { mutableStateOf(FleetReleases.cached()) }
+    var checking by remember { mutableStateOf(false) }
+    val installed = remember(ctx) { installedVersion(ctx, decl) }
+    KeyValue("Installed", installed, c)
+    KeyValue("Build", decl.sha.ifBlank { "local" } + if (decl.buildDate.isNotBlank()) "  ·  ${decl.buildDate}" else "", c)
+    val st = state
+    when {
+        checking -> Text("Checking the Cloud Store release…", color = c.inkDim, fontSize = 12.sp, modifier = Modifier.testTag("fleetcfg_update_checking"))
+        st == null -> Text("Not checked yet.", color = c.inkDim, fontSize = 12.sp)
+        st.latestSha.isBlank() -> Text(st.error.ifBlank { "No published build found." }, color = c.inkDim, fontSize = 12.sp)
+        st.upToDate(decl.sha) -> StatusRow("Up to date: the published build is this one", true, c)
+        else -> {
+            KeyValue("Latest", st.latestSha.take(12) + if (st.latestDate.isNotBlank()) "  ·  ${st.latestDate}" else "", c)
+            StatusRow("A newer build is published", false, c)
         }
-        body()
     }
-}
-
-@Composable
-private fun Body(text: String, c: ThemeColors) {
-    Text(text.ifBlank { "Not declared." }, color = c.ink, fontSize = 13.sp, lineHeight = 18.sp)
-}
-
-@Composable
-private fun KeyValue(k: String, v: String, c: ThemeColors) {
-    Row(Modifier.fillMaxWidth()) {
-        Text(k, Modifier.weight(1f), color = c.inkDim, fontSize = 13.sp)
-        if (v.isNotEmpty()) Text(v, color = c.ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActionButton("Check for updates", c, "fleetcfg_update_check") {
+            if (!checking) { checking = true; scope.launch { state = withContext(Dispatchers.IO) { FleetReleases.load(decl, force = true) }; checking = false } }
+        }
+        ActionButton("Update", c, "fleetcfg_update_open_store") { FleetReleases.openStore(ctx, decl) }
     }
-}
-
-@Composable
-private fun StatusRow(label: String, ok: Boolean, c: ThemeColors) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(if (ok) c.accent else c.inkDim))
-        Text(label, Modifier.padding(start = 10.dp).weight(1f), color = c.ink, fontSize = 13.sp)
-        Text(if (ok) "On" else "Off", color = if (ok) c.accent else c.inkDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    if (st != null && st.notes.isNotEmpty()) {
+        Text("Release notes", color = c.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+        ReleaseNotes(st.notes.take(5), c)
     }
-}
-
-@Composable
-private fun Link(url: String, c: ThemeColors, onClick: () -> Unit) {
-    Text(url.ifBlank { "Not declared." }, Modifier.clickable(enabled = url.isNotBlank(), role = Role.Button, onClick = onClick),
-        color = c.accent, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-}
-
-@Composable
-private fun ActionButton(label: String, c: ThemeColors, tag: String, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Text(
-        label,
-        Modifier.clip(shape).background(c.tabSelected, shape).clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp).testTag(tag),
-        color = c.onTabSelected, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-    )
-}
-
-// ── device state ────────────────────────────────────────────────────────────────────────────────────────────────
-
-private data class PermRow(val label: String, val granted: Boolean, val dangerous: Boolean)
-
-private fun packageInfo(ctx: Context): PackageInfo? =
-    runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS) }.getOrNull()
-
-private fun requested(ctx: Context): List<String> = packageInfo(ctx)?.requestedPermissions?.toList().orEmpty()
-
-private fun permissionRows(ctx: Context): List<PermRow> {
-    val info = packageInfo(ctx) ?: return emptyList()
-    val names = info.requestedPermissions ?: return emptyList()
-    val flags = info.requestedPermissionsFlags
-    return names.mapIndexed { i, name ->
-        val pi = runCatching { ctx.packageManager.getPermissionInfo(name, 0) }.getOrNull()
-        @Suppress("DEPRECATION") val base = (pi?.protectionLevel ?: 0) and PermissionInfo.PROTECTION_MASK_BASE
-        val granted = flags != null && i < flags.size && (flags[i] and PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
-        val label = pi?.loadLabel(ctx.packageManager)?.toString()?.replaceFirstChar { it.uppercase() } ?: name.substringAfterLast('.')
-        PermRow(label, granted, base == PermissionInfo.PROTECTION_DANGEROUS)
-    }.distinctBy { it.label }.sortedBy { it.label }
-}
-
-private fun appDetails(ctx: Context): Intent =
-    com.diegonmarcos.superapp.perms.PermsPages.appInfoIntent(ctx.packageName)
-
-private fun open(ctx: Context, url: String) {
-    if (url.isNotBlank()) open(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-}
-
-private fun open(ctx: Context, intent: Intent) {
-    runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-}
-
-/** Opens a fleet app; when it is not installed, the fleet's release page (where Cloud Store itself installs from). */
-private fun launchApp(ctx: Context, pkg: String) {
-    val launch = if (pkg.isBlank()) null else ctx.packageManager.getLaunchIntentForPackage(pkg)
-    if (launch != null) open(ctx, launch) else open(ctx, "https://github.com/diegonmarcos/cloudy-u-android/releases/latest")
-}
-
-private fun dirSize(f: File?): Long {
-    if (f == null || !f.exists()) return 0L
-    var total = 0L
-    var seen = 0
-    f.walkTopDown().onEnter { !java.nio.file.Files.isSymbolicLink(it.toPath()) }.forEach {
-        if (it.isFile) total += it.length()
-        if (++seen > 200_000) return total
-    }
-    return total
-}
-
-private fun human(bytes: Long): String {
-    val units = listOf("B", "KB", "MB", "GB")
-    var v = bytes.toDouble()
-    var u = 0
-    while (v >= 1024 && u < units.lastIndex) { v /= 1024; u++ }
-    return if (u == 0) "$bytes B" else String.format(java.util.Locale.ROOT, "%.1f %s", v, units[u])
+    Text("Cloud Store installs the update from the signed APK CI publishes on this app's release; nothing is downloaded here.",
+        color = c.inkDim, fontSize = 11.sp)
 }

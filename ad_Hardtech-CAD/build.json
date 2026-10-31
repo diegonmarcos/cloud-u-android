@@ -247,7 +247,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -264,14 +264,54 @@
       ]
     },
     "about": {
-      "what": "The HardTech area's CAD app: mechanical and building models from the CAD repository, with SolidWorks to come.",
+      "tagline": "Mechanical and building models in your pocket",
+      "description": "Hardtech-CAD is the HardTech area's CAD app, opened from the SuperApp's Cloud ▸ Lnktree row. MCAD and BIM show the folders of the CAD and simulators repository, its address read at build time from the fleet's declarations; SolidWorks is planned and greyed. It exists so the area's models can be looked up on the phone, in the same shared navigation as every fleet app.",
       "features": [
         "MCAD models",
         "BIM models",
-        "SolidWorks (planned)"
+        "SolidWorks (planned)",
+        "Repository address read from the fleet's declarations",
+        "Shared fleet navigation and Configs"
+      ],
+      "screens": [
+        {
+          "name": "MCAD",
+          "what": "Mechanical models."
+        },
+        {
+          "name": "BIM",
+          "what": "Building models."
+        },
+        {
+          "name": "SolidWorks",
+          "what": "Planned."
+        },
+        {
+          "name": "About",
+          "what": "What this app is."
+        }
+      ],
+      "guide": [
+        "Open MCAD or BIM to browse the models.",
+        "Tap a model to open it.",
+        "SolidWorks is greyed until it ships."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "aa_cloud-superapp",
+          "why": "Opens this app from Cloud ▸ Lnktree."
+        },
+        {
+          "app": "ad_Hardtech-Sim2Real",
+          "why": "The simulation side of the same area."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ]
     }
   },
   "perms": {

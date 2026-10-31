@@ -74,6 +74,28 @@ object PermAskLog {
         val cur = sp.getStringSet(KEY, emptySet()).orEmpty().toMutableSet()
         if (cur.addAll(perms)) sp.edit().putStringSet(KEY, cur).apply()
     }
+
+    // #1352 v2 every catalogue entry (runtime, special, app-op) this app has put in front of the user at least once: the
+    // system dialog for a runtime grant, its exact settings page for a special one. PermsFirstRun asks the rest on start.
+    private const val KEY_IDS = "asked_ids"
+    fun askedIds(ctx: Context): Set<String> = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet(KEY_IDS, emptySet()).orEmpty()
+    fun markAskedIds(ctx: Context, ids: Collection<String>) {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val cur = sp.getStringSet(KEY_IDS, emptySet()).orEmpty().toMutableSet()
+        if (cur.addAll(ids)) sp.edit().putStringSet(KEY_IDS, cur).apply()
+    }
+
+    /**
+     * The asked-state is versioned: when [PermsFirstRun.ASK_STORE_VERSION] is above the stored one, everything recorded as
+     * asked is forgotten once, so the next launch asks every missing grant again. Returns true when it reset.
+     */
+    fun migrate(ctx: Context, version: Int): Boolean {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (sp.getInt(KEY_VERSION, 1) >= version) return false
+        sp.edit().remove(KEY).remove(KEY_IDS).putInt(KEY_VERSION, version).apply()
+        return true
+    }
+    private const val KEY_VERSION = "ask_store_version"
 }
 
 /** The live state of every catalogue entry on this device. */
@@ -205,6 +227,7 @@ object PermsSettings {
 
     /** true = a page opened. */
     fun open(ctx: Context, e: PermEntry, pkg: String = ctx.packageName): Boolean {
+        if (pkg == ctx.packageName) PermAskLog.markAskedIds(ctx, listOf(e.id))
         for (i in intents(ctx, e, if (pkg == ctx.packageName) Perms.vars(ctx) else emptyMap(), pkg)) {
             if (runCatching { ctx.startActivity(i) }.isSuccess) return true
         }
@@ -290,4 +313,16 @@ object PermsPages {
     fun openAppInfo(ctx: Context, pkg: String): Boolean = runCatching {
         ctx.startActivity(appInfoIntent(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }.isSuccess
+
+    /** #1352 this app's notification settings (Configs ▸ General ▸ Notifications). */
+    fun notificationsIntent(pkg: String): Intent =
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+
+    /** #1352 this app's language (per-app locale on Android 13+, the system language list before). */
+    fun languageIntent(pkg: String): Intent =
+        if (Build.VERSION.SDK_INT >= 33) Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", pkg, null))
+        else Intent(Settings.ACTION_LOCALE_SETTINGS)
+
+    /** Starts [i] from any context; false when no screen answers it. */
+    fun open(ctx: Context, i: Intent): Boolean = runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
 }

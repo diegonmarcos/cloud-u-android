@@ -9,29 +9,31 @@ import android.os.Bundle
 import android.provider.Settings
 
 /**
- * #1360 first run asks for everything missing: the first time the user opens the app from the launcher, if any
- * declared grant (its own or a helper's) is missing, the app's Perms page opens over it with every missing row
- * highlighted and Grant all on top. Once per install. Off when the app asks itself (perms.first_run "own:..."), under
+ * #1360 first run asks for everything missing; #1352 v2 makes it per grant: every catalogue entry this app declares (its
+ * own and its helpers') must have been put in front of the user at least once (PermAskLog.askedIds). On each launch from
+ * the launcher, the missing entries never asked yet open the app's Perms page with those rows highlighted and Grant all on
+ * top, and are recorded as asked. A grant added in a later version is therefore asked once on the first launch after the
+ * update. [ASK_STORE_VERSION] versions the asked-state: raising it forgets every recorded ask once, so every app asks
+ * all its missing grants again on its next launch. Off when the app asks itself (perms.first_run "own:..."), under
  * instrumentation or a test harness, and when `settings put global cloud_perms_first_run 0` (emulator walks).
  */
 object PermsFirstRun {
-    private const val PREFS = "perm_ask_tracker"  // the store libs:perms already declares in fleet-config (PermAskLog)
-    private const val KEY = "first_run_asked_v1"
+    /** 2 = #1352: every app does a fresh ask of all its permissions on the first launch after this update. */
+    const val ASK_STORE_VERSION = 2
     const val GLOBAL_OFF = "cloud_perms_first_run"
 
     fun install(app: Application) {
         if (AppPerms.decl(app).firstRun != "libs:perms") return
-        if (app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)) return
+        PermAskLog.migrate(app, ASK_STORE_VERSION)
         app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 if (activity is PermsActivity) return
                 app.unregisterActivityLifecycleCallbacks(this)
                 if (!fromLauncher(activity.intent) || suppressed(activity)) return
-                app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, true).apply()
-                val own = AppPerms.missingOwn(activity).map { it.id }
-                val helpers = AppPerms.missingHelpers(activity)
-                if (own.isEmpty() && helpers.isEmpty()) return
-                runCatching { activity.startActivity(PermsActivity.intent(activity, PermsActivity.FIRST_RUN, own + helpers.map { it.entry.id })) }
+                val ids = neverAsked(activity)
+                if (ids.isEmpty()) return
+                PermAskLog.markAskedIds(activity, ids)
+                runCatching { activity.startActivity(PermsActivity.intent(activity, PermsActivity.FIRST_RUN, ids)) }
             }
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
             override fun onActivityStarted(activity: Activity) {}
@@ -40,6 +42,12 @@ object PermsFirstRun {
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
         })
+    }
+
+    /** The catalogue ids this app declares, missing on this device and never shown to the user (own first, then helpers'). */
+    fun neverAsked(ctx: Context): List<String> {
+        val asked = PermAskLog.askedIds(ctx)
+        return (AppPerms.missingOwn(ctx).map { it.id } + AppPerms.missingHelpers(ctx).map { it.entry.id }).distinct().filter { it !in asked }
     }
 
     fun fromLauncher(i: Intent?): Boolean = i != null && i.action == Intent.ACTION_MAIN && i.hasCategory(Intent.CATEGORY_LAUNCHER)

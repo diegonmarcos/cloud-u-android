@@ -224,7 +224,7 @@
     {"from": "ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/agents/agents.json", "path": "agents", "kind": "remote gateway agent", "trigger": "on demand (a chat turn in Cloud Code Agents or Chat, or Cloud Search chat)", "summary_key": "_doc", "used_by": ["cloud-code", "cloud-search"], "open": "page:agents", "status": {"source": "none", "reason": "live state is the gateway /health over the mesh (HTTP); the SuperApp does not call it"}}
   ],
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -241,12 +241,50 @@
       ]
     },
     "about": {
-      "what": "A pocket development environment: the project backlog, an editor, the repositories, AI agents, a browser and a terminal.",
+      "tagline": "A pocket development environment",
+      "description": "Cloud Code is the fleet's own signed build of Acode, the Android code editor, with a seven-tab bottom nav over it: the project backlog, the editor, the repositories, an AI chat, agent batches, a browser and a terminal. It exists so the owner can pick up a ticket, open the repository, change code, ask an agent and check the result from the phone, using the fleet's git proxy and AI gateway.",
       "features": [
         "Backlog by status, project, priority and effort",
         "Code editor and repositories",
         "AI chat and agent batches",
-        "Built-in browser and terminal"
+        "Built-in browser and terminal",
+        "Git through the fleet's git proxy"
+      ],
+      "screens": [
+        {
+          "name": "Backlog",
+          "what": "Tickets by status, project, priority and effort."
+        },
+        {
+          "name": "Editor",
+          "what": "The Acode editor."
+        },
+        {
+          "name": "Repos",
+          "what": "The fleet's repositories."
+        },
+        {
+          "name": "AI",
+          "what": "Chat with the fleet's models."
+        },
+        {
+          "name": "Agents",
+          "what": "Batches of agent runs."
+        },
+        {
+          "name": "Browser",
+          "what": "Preview pages."
+        },
+        {
+          "name": "MyTerminal",
+          "what": "A shell."
+        }
+      ],
+      "guide": [
+        "Pick a ticket in Backlog.",
+        "Open its repository in Repos and edit in Editor.",
+        "Ask the AI or start an agent batch for bigger changes.",
+        "Run commands in MyTerminal."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -258,7 +296,22 @@
           "id": "git-proxy-api",
           "why": "repository access"
         }
-      ]
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-myterminal",
+          "why": "The terminal and file tools."
+        },
+        {
+          "app": "ac_cloud-drive",
+          "why": "Git status of the fleet's repositories."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        }
+      ],
+      "credits": "Upstream: Acode (github.com/Acode-Foundation/Acode), MIT licence, by Ajit Kumar and the Acode Foundation. Cloud Code vendors it as owned code and adds the backlog, repository, AI, agent, browser and terminal tabs."
     }
   }
 }

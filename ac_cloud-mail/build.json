@@ -894,7 +894,7 @@
   ],
   "web": {"kind": "container", "target": "cloud-webmail"},
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -911,13 +911,49 @@
       ]
     },
     "about": {
-      "what": "The owner's mail app over the self-hosted JMAP server, with news, tasks, chat and contacts beside the inbox.",
+      "tagline": "Mail on your own server, with news and tasks",
+      "description": "Cloud Mail is the owner's mail app over the self-hosted JMAP server, with the news feed, tasks, chat, video and contacts beside the inbox so the day's communication lives in one app. It is a signed fork of an open-source mail client, signed in through the fleet's identity provider. It exists so mail stays on infrastructure the owner controls, without a webmail tab or a big-tech app.",
       "features": [
         "Inbox over JMAP",
         "News feed",
         "Tasks",
         "Chat and video",
         "Contacts"
+      ],
+      "screens": [
+        {
+          "name": "Mail",
+          "what": "The inbox, grouped by sender by default."
+        },
+        {
+          "name": "News",
+          "what": "The fleet's news feed."
+        },
+        {
+          "name": "Tasks",
+          "what": "What is due."
+        },
+        {
+          "name": "Home",
+          "what": "Today at a glance."
+        },
+        {
+          "name": "Chat",
+          "what": "Messages."
+        },
+        {
+          "name": "Video",
+          "what": "Video calls."
+        },
+        {
+          "name": "Contacts",
+          "what": "People."
+        }
+      ],
+      "guide": [
+        "Sign in once through the fleet's sign-in page.",
+        "Read and reply in Mail; swipe to archive.",
+        "Check News and Tasks without leaving the app."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -929,7 +965,22 @@
           "id": "authelia",
           "why": "sign-in"
         }
-      ]
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-contacts",
+          "why": "The people hub."
+        },
+        {
+          "app": "ac_cloud-tasks",
+          "why": "The full task and calendar app."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        }
+      ],
+      "credits": "Upstream: Sterna Mail, GPL-3.0, by its open-source contributors. The fleet build adds the news, tasks, chat, video and contacts tabs and the fleet's sign-in, update, crash and configs libraries."
     }
   },
   "perms": {

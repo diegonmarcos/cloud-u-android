@@ -1480,7 +1480,7 @@
     {"id": "screenshots", "name": "Screenshot agent", "kind": "on-device worker", "trigger": "new screenshots (incremental pass by ScreenshotAgentWorker)", "summary": "OCRs and labels every screenshot on the phone with on-device ML and writes the contract in data/agent-screenshots-contract.json.", "open": "page:agents", "contract": "ac_cloud-drive/data/agent-screenshots-contract.json", "status": {"source": "provider", "authority_suffix": "agents.screenshots", "path": "state", "permission": "com.diegonmarcos.clouddrive.permission.READ_AGENT_RESULTS"}}
   ],
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -1497,13 +1497,54 @@
       ]
     },
     "about": {
-      "what": "The phone's storage app: a full file manager over shared storage and the cloud, git repositories, folder sync and mounts.",
+      "tagline": "Files, git, sync and mounts for the whole phone",
+      "description": "Cloud Drive is the phone's storage app, lifted out of the SuperApp: a full file manager over shared storage and the fleet's cloud volumes, a manager that ranks apps and data by size, git clone / pull / push and status for the fleet's repositories, Fsync backups and two-way folder sync, and mounts over rclone and FUSE. It exists so everything the phone stores, locally or in the cloud, is reachable and backed up from one place.",
       "features": [
         "Explorer: local storage and cloud volumes",
         "Manage: apps and data ranked by size",
         "Git: clone, pull, push and status of the fleet's repos",
         "Fsync backups and two-way folder sync",
         "Mounts over rclone and FUSE"
+      ],
+      "screens": [
+        {
+          "name": "Explorer",
+          "what": "Local storage and cloud volumes."
+        },
+        {
+          "name": "Manage",
+          "what": "Apps and data ranked by size."
+        },
+        {
+          "name": "Agents",
+          "what": "Agent jobs over files."
+        },
+        {
+          "name": "AI",
+          "what": "Ask about your files."
+        },
+        {
+          "name": "Home",
+          "what": "Storage at a glance."
+        },
+        {
+          "name": "Git",
+          "what": "Repositories and their status."
+        },
+        {
+          "name": "Fsync",
+          "what": "Backups and folder sync."
+        },
+        {
+          "name": "Mounts",
+          "what": "rclone and FUSE mounts."
+        }
+      ],
+      "guide": [
+        "Grant All files access so Drive can see shared storage.",
+        "Browse in Explorer; long-press for actions.",
+        "Open Git to clone or pull the fleet's repositories.",
+        "Set up a backup pair in Fsync."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -1518,6 +1559,20 @@
         {
           "id": "ai-gateway",
           "why": "the agents page"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-termux",
+          "why": "Runs git and rclone for Drive."
+        },
+        {
+          "app": "ac_cloud-code",
+          "why": "Edits the repositories Drive clones."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

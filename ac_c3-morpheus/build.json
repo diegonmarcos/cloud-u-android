@@ -155,7 +155,7 @@
     ]
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -172,18 +172,58 @@
       ]
     },
     "about": {
-      "what": "The cloud's workflow orchestrator on the phone: decides what runs across the fleet and when.",
+      "tagline": "The fleet's workflow orchestrator, in your pocket",
+      "description": "Cloud C3 Morpheus brings the cloud's workflow orchestrator to the phone. Where Watchdog keeps what is running alive and WatchTower counts what ran, Morpheus decides what runs: it lists the Dagu workflows with their run state, the probe registry that defines what healthy means for each service, the fleet control panel and the project-management board. It exists so the owner can see and steer scheduled work across the fleet without opening a laptop, over the private mesh first.",
       "features": [
         "Dagu workflow list with run state",
         "Probe registry: what healthy means per service",
         "Fleet control panel",
-        "PM board (Paca)"
+        "PM board (Paca)",
+        "Start, watch and read the logs of a workflow run"
+      ],
+      "screens": [
+        {
+          "name": "Workflows",
+          "what": "Dagu workflow list with the last run state of each."
+        },
+        {
+          "name": "Probes",
+          "what": "The probe registry: what healthy means per service."
+        },
+        {
+          "name": "Fleet",
+          "what": "The fleet control panel: services and their controls."
+        },
+        {
+          "name": "Board",
+          "what": "The PM board (Paca) of the cloud's projects."
+        }
+      ],
+      "guide": [
+        "Join the private mesh (or sign in with Cloud Account for the public route).",
+        "Open Workflows to see what is scheduled and how the last run ended.",
+        "Use Probes to check the definition of healthy before acting on an alarm.",
+        "Open the Board to see which project work is in progress."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "c3-infra-api",
           "why": "workflow, probe and fleet state"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_c3-watchdog",
+          "why": "Shows whether what Morpheus scheduled is alive."
+        },
+        {
+          "app": "ac_c3-watchtower",
+          "why": "Counts how the scheduled runs went."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }

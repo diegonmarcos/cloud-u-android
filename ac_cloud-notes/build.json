@@ -1029,7 +1029,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -1046,7 +1046,8 @@
       ]
     },
     "about": {
-      "what": "Local-first notes and whiteboards: pages, canvases, a graph of links and search, with no sync server and no telemetry.",
+      "tagline": "Local-first notes, whiteboards and a graph",
+      "description": "Cloud Notes is the fleet's own signed build of a local-first notes and whiteboard app, de-clouded: no sync server, no telemetry, no third-party AI. Pages with tags and collections, canvas boards, a graph of linked pages and search; it also opens files from shared storage. It exists so personal knowledge lives in plain files on the phone, backed up with the phone profile.",
       "features": [
         "Daily and recent pages",
         "Pages with tags and collections",
@@ -1054,13 +1055,55 @@
         "Graph of linked pages",
         "Search and ask"
       ],
+      "screens": [
+        {
+          "name": "Home",
+          "what": "Daily and recent pages."
+        },
+        {
+          "name": "Pages",
+          "what": "All pages, tags and collections."
+        },
+        {
+          "name": "Canvas",
+          "what": "Whiteboards."
+        },
+        {
+          "name": "Graph",
+          "what": "Links between pages."
+        },
+        {
+          "name": "Search",
+          "what": "Search and ask."
+        }
+      ],
+      "guide": [
+        "Write today's page from Home.",
+        "Link pages with [[double brackets]].",
+        "Open Graph to see how pages connect."
+      ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "ai-gateway",
           "why": "the Ask search"
         }
-      ]
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-drive",
+          "why": "Backs up the notes folder."
+        },
+        {
+          "app": "ac_cloud-writer",
+          "why": "Text tools for a draft."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Cloud Notes is the fleet's own app, built from an MIT-licensed open-source local-first notes project whose notice is kept in ac_cloud-notes/LICENSE. Sync, telemetry and enterprise-licensed code were removed."
     }
   },
   "perms": {

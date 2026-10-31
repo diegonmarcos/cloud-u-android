@@ -251,7 +251,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -268,15 +268,68 @@
       ]
     },
     "about": {
-      "what": "The photo and video gallery: timeline, places on a map and on-device recognition of faces, scenes and text.",
+      "tagline": "Your photos by time, place and what is in them",
+      "description": "Cloud Gallery is the photo and video gallery of the fleet, forked from an open-source MediaStore gallery. Beyond albums it has a timeline of every photo, a map of photos by place, and on-device recognition of faces, scenes, text and documents — recognition runs on the phone through the fleet's image engine, never in a cloud service. It exists so personal photos are browsed and searched without handing them to a third party.",
       "features": [
         "Screenshots, downloads and camera albums",
         "Timeline of every photo",
         "Map of photos by place",
-        "On-device faces, scenes, text and documents"
+        "On-device faces, scenes, text and documents",
+        "Screenshots and downloads as their own albums"
       ],
-      "privacy": "No ads and no third-party trackers. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "screens": [
+        {
+          "name": "Screenshots",
+          "what": "Every screenshot."
+        },
+        {
+          "name": "Downloads",
+          "what": "Images from downloads."
+        },
+        {
+          "name": "Camera",
+          "what": "The camera roll."
+        },
+        {
+          "name": "Home",
+          "what": "Albums."
+        },
+        {
+          "name": "Timeline",
+          "what": "Every photo by date."
+        },
+        {
+          "name": "Maps",
+          "what": "Photos by place."
+        },
+        {
+          "name": "Objects",
+          "what": "Faces, scenes, text and documents."
+        }
+      ],
+      "guide": [
+        "Grant Photos and Videos so the gallery can read them.",
+        "Use Timeline to scroll by date.",
+        "Open Maps to find photos by place.",
+        "Open Objects to search by what is in a photo."
+      ],
+      "privacy": "No ads and no third-party trackers. Photos never leave the phone: face, scene and text recognition run on the phone through the fleet's image engine. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback.",
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-camera",
+          "why": "Takes the photos shown here."
+        },
+        {
+          "app": "ac_cloud-drive",
+          "why": "Backs up the photo folders."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: ReFra / Gallery by IacobIonut01 (github.com/IacobIonut01/ReFra), Apache-2.0. The fleet build adds the timeline, the map and on-device recognition, plus the fleet's update, crash and configs libraries."
     }
   },
   "perms": {

@@ -99,7 +99,7 @@
     "target": "mattermost"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -116,14 +116,51 @@
       ]
     },
     "about": {
-      "what": "The fleet's chat client for the owner's own messaging server.",
+      "tagline": "Chat on the owner's own messaging server",
+      "description": "Cloud Chat is the fleet's chat client for the owner's self-hosted messaging server. It handles direct and group conversations, media and file sharing and message notifications, with the account and server address coming from the fleet instead of a public service. It exists so everyday messaging between the owner's people runs on infrastructure the owner controls, with the same updates and crash reporting as every other fleet app.",
       "features": [
         "Direct and group conversations",
         "Media and file sharing",
-        "Notifications for new messages"
+        "Notifications for new messages",
+        "Calls with microphone and Bluetooth headsets",
+        "Fleet sign-in instead of a public account"
+      ],
+      "screens": [
+        {
+          "name": "Chats",
+          "what": "Every conversation, newest first."
+        },
+        {
+          "name": "Conversation",
+          "what": "Messages, media and files."
+        },
+        {
+          "name": "Settings",
+          "what": "Account, notifications and appearance."
+        }
+      ],
+      "guide": [
+        "Sign in with the account Cloud Account provides.",
+        "Start a chat from the pencil button.",
+        "Attach a photo or file with the clip button."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-mail",
+          "why": "Mail, news and tasks beside the chat."
+        },
+        {
+          "app": "ac_cloud-contacts",
+          "why": "Opens a person's chat in one tap."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
+        }
+      ],
+      "credits": "Upstream: Mattermost Mobile (github.com/mattermost/mattermost-mobile), Apache-2.0, by Mattermost Inc. The fleet build adds the fleet's sign-in, update, crash and configs libraries; upstream authors keep their copyright."
     }
   },
   "perms": {

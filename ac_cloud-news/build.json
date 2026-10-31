@@ -288,7 +288,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -305,18 +305,61 @@
       ]
     },
     "about": {
-      "what": "A news reader over GDELT topic feeds: articles, tone over time and rolling summaries per topic.",
+      "tagline": "The world by topic, tone and trend",
+      "description": "Cloud News is the fleet's news reader over GDELT topic feeds — economy, technology, geopolitics, climate, finance, AI, energy and health — through the owner's self-hosted GDELT proxy. Each topic has its article list, tone and sentiment timelines and rolling summaries, and articles can be saved. It exists to follow the news by topic and trend instead of by a publisher's front page.",
       "features": [
         "Media and events",
         "Topic feeds: economy, technology, geopolitics, climate, AI",
         "Saved articles",
-        "Tone and sentiment timelines"
+        "Tone and sentiment timelines",
+        "Rolling topic summaries"
+      ],
+      "screens": [
+        {
+          "name": "Media",
+          "what": "Articles by outlet."
+        },
+        {
+          "name": "Events",
+          "what": "Events by topic."
+        },
+        {
+          "name": "Feed",
+          "what": "The topic feeds."
+        },
+        {
+          "name": "Saved",
+          "what": "Saved articles."
+        },
+        {
+          "name": "Configs",
+          "what": "Topics and sources."
+        }
+      ],
+      "guide": [
+        "Pick topics in Configs.",
+        "Read Feed; tap an article to open it.",
+        "Save an article to read it later."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "news",
           "why": "topic feeds and summaries (GDELT)"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-search",
+          "why": "News search over more sources."
+        },
+        {
+          "app": "ac_cloud-mail",
+          "why": "News beside the inbox."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
         }
       ]
     }

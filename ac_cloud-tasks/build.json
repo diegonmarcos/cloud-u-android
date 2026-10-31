@@ -317,7 +317,7 @@
   ],
   "web": {"kind": "container", "target": "calendar-radicale"},
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -334,17 +334,53 @@
       ]
     },
     "about": {
-      "what": "Tasks, calendar and events in one app: what is due, when it happens and who is invited.",
+      "tagline": "What is due, when it happens, who is invited",
+      "description": "Cloud Tasks (formerly Cloud Agenda) is the fleet's task, calendar and event app: task lists, a calendar with events, and invites, with the AI gateway helping to turn a sentence into a task. The package name stays the old one so installed phones update in place. It exists so the owner's schedule lives in one app backed up with the phone profile.",
       "features": [
         "Task lists",
         "Calendar with events",
-        "Invites"
+        "Invites",
+        "Reminders as notifications",
+        "Turn a sentence into a task with AI"
+      ],
+      "screens": [
+        {
+          "name": "Tasks",
+          "what": "Task lists."
+        },
+        {
+          "name": "Calendar",
+          "what": "Events by day, week and month."
+        },
+        {
+          "name": "Settings",
+          "what": "Calendars and reminders."
+        }
+      ],
+      "guide": [
+        "Add a task with the plus button.",
+        "Switch to Calendar to plan the week.",
+        "Allow notifications for reminders."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "ai-gateway",
           "why": "AI suggestions"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-me",
+          "why": "Duties and the roadmap."
+        },
+        {
+          "app": "ac_cloud-mail",
+          "why": "Tasks beside the inbox."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
         }
       ]
     }

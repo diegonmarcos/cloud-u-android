@@ -292,7 +292,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -309,12 +309,37 @@
       ]
     },
     "about": {
-      "what": "The password vault: logins, secure send and a password generator over the self-hosted Vaultwarden.",
+      "tagline": "Passwords and secure notes on your own server",
+      "description": "Cloud Vault is the fleet's password vault over the owner's self-hosted Vaultwarden: logins and secure notes, Send for sharing a secret once, a password generator and autofill into other apps. It is a signed fork of the Bitwarden client. It exists so passwords are held on infrastructure the owner controls, never on a commercial password service.",
       "features": [
         "Vault of logins and secure notes",
         "Send",
         "Password generator",
-        "Autofill"
+        "Autofill",
+        "Unlock with biometrics"
+      ],
+      "screens": [
+        {
+          "name": "Vault",
+          "what": "Logins, cards and secure notes."
+        },
+        {
+          "name": "Send",
+          "what": "Share a secret once."
+        },
+        {
+          "name": "Generator",
+          "what": "Make a strong password."
+        },
+        {
+          "name": "Settings",
+          "what": "Account, security and autofill."
+        }
+      ],
+      "guide": [
+        "Sign in to the owner's Vaultwarden server.",
+        "Turn on autofill in Settings.",
+        "Use Generator when creating an account."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
@@ -322,7 +347,22 @@
           "id": "vault",
           "why": "the self-hosted Vaultwarden"
         }
-      ]
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-account",
+          "why": "The account's secrets live here."
+        },
+        {
+          "app": "ac_cloud-browser",
+          "why": "Fills passwords from the vault."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: the Bitwarden Android client (github.com/bitwarden/android), GPL-3.0, by Bitwarden Inc. The server is Vaultwarden (AGPL-3.0). The fleet build adds its update, crash and configs libraries."
     }
   },
   "perms": {

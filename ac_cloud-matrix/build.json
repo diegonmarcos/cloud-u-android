@@ -98,7 +98,7 @@
     "target": "matrix-element"
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -115,14 +115,55 @@
       ]
     },
     "about": {
-      "what": "The fleet's Matrix client for secure, decentralised messaging.",
+      "tagline": "Encrypted Matrix messaging for the fleet",
+      "description": "Cloud Matrix is the fleet's Matrix client: end-to-end encrypted rooms, direct messages and spaces, and voice and video calls on the decentralised Matrix network, with the owner's homeserver as the default. It is a signed fork of Element X Android. It exists so secure group communication with people outside the fleet uses an open, federated protocol on the owner's own server.",
       "features": [
         "End-to-end encrypted rooms",
         "Direct messages and spaces",
-        "Voice and video calls"
+        "Voice and video calls",
+        "Spaces to group rooms",
+        "Fleet updates and crash reports on the phone"
+      ],
+      "screens": [
+        {
+          "name": "Home",
+          "what": "Rooms and direct messages."
+        },
+        {
+          "name": "Room",
+          "what": "A conversation with its timeline."
+        },
+        {
+          "name": "Spaces",
+          "what": "Groups of rooms."
+        },
+        {
+          "name": "Settings",
+          "what": "Account, security and notifications."
+        }
+      ],
+      "guide": [
+        "Sign in to the owner's homeserver.",
+        "Verify this session from another device to read encrypted history.",
+        "Start a call from the room's top bar."
       ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
-      "backends": []
+      "backends": [],
+      "related": [
+        {
+          "app": "ac_cloud-chat",
+          "why": "The fleet's other chat client."
+        },
+        {
+          "app": "ac_cloud-contacts",
+          "why": "Opens a person's Matrix room."
+        },
+        {
+          "app": "ac_cloud-store",
+          "why": "Installs and updates this app."
+        }
+      ],
+      "credits": "Upstream: Element X Android (github.com/element-hq/element-x-android) by New Vector Ltd, AGPL-3.0 or Element's commercial licence. The fleet build adds the fleet's update, crash and configs libraries."
     }
   },
   "perms": {

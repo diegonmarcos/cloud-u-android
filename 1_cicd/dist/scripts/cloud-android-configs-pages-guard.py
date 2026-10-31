@@ -8,14 +8,17 @@ DECLARATION  1_cicd/src/data/configs-pages.json (the required sections and About
              needles, the exemption (Cloud SuperApp) and the pending ledger: apps not reaching the pages yet, each
              with its reason)
 
-  G0  the lib still carries both pages, the scaffold's two entries, the Views/WebView activity, the build-time
-      resolver and the Cloud Store / Cloud SuperApp texts; FleetConfigs.REQUIRED_SECTIONS == general_required
+  G0  the lib still carries both pages, the anchor grid, the Update section, the extended About, the scaffold's two
+      entries, the Views/WebView activity, the build-time resolver, the Cloud Store / Cloud SuperApp texts and
+      libs:perms' asked-store version and Grant all walk; FleetConfigs.REQUIRED_SECTIONS == general_required
   G1  every non-exempt app declares configs_pages.general and configs_pages.about
-  G2  general.sections: every required id exactly once, nothing outside required + optional
-  G3  about: the declared fields are present and substantial (what, features, privacy, backends {id, why} on a
-      fleet_endpoints service with a mesh DNS name), and every derived field resolves at build time (name, repo,
-      licence from licenses/curated.json, crash sink port, debug API port); version and package fall back to the
-      installed package at runtime, so they are not required in build.json
+  G2  general.sections: every required id exactly once, nothing outside required + optional + default
+  G3  about meets about_min (#1352 v2, About must be extensive): tagline, a long description, features, screens
+      {name, what}, guide steps, privacy, related fleet apps {app, why}, backends {id, why} on a fleet_endpoints
+      service with a mesh DNS name, credits for a fork (licences kind in fork_kinds); every grant of build.json::perms
+      has a why (about.perms_why or perm_why); the v1 field `what` is gone; every derived field resolves at build
+      time (name, repo, licence from licenses/curated.json, crash sink port, debug API port); version and package
+      fall back to the installed package at runtime, so they are not required in build.json
   G4  the app reaches the pages (its sources call the shared scaffold or FleetConfigsActivity.intent), or it is
       named in `pending` with a reason; a pending app that reaches them is stale
   G5  every exempt / pending entry names a real app and carries a reason
@@ -115,7 +118,13 @@ def check(root):
     if os.path.isfile(ep):
         services = {s.get("id"): s for s in ((load(ep).get("fleet_endpoints") or {}).get("services") or [])}
 
-    allowed = set(spec["general_required"]) | set(spec.get("general_optional") or [])
+    allowed = set(spec["general_required"]) | set(spec.get("general_optional") or []) | set(spec.get("general_default") or [])
+    mn = spec["about_min"]
+    curated = {}
+    lp = os.path.join(root, spec["licences"])
+    if os.path.isfile(lp):
+        curated = load(lp).get("directories") or {}
+    perm_why = {k: v for k, v in (spec.get("perm_why") or {}).items() if not k.startswith("_")}
     for app in apps:
         if app in exempt:
             continue
@@ -140,13 +149,39 @@ def check(root):
         for f in spec["about_declared"]:
             if f not in about:
                 bad.append("G3 %s: configs_pages.about.%s is missing" % (app, f))
-        if len(str(about.get("what") or "").strip()) < spec["min_what_chars"]:
-            bad.append("G3 %s: configs_pages.about.what must say what the app does in at least %d characters" % (app, spec["min_what_chars"]))
+        if "what" in about:
+            bad.append("G3 %s: configs_pages.about.what is the v1 field — it is now description (long) plus tagline (short)" % app)
+        tl = len(str(about.get("tagline") or "").strip())
+        if not mn["tagline_chars"][0] <= tl <= mn["tagline_chars"][1]:
+            bad.append("G3 %s: configs_pages.about.tagline must be %d-%d characters (has %d)" % (app, mn["tagline_chars"][0], mn["tagline_chars"][1], tl))
+        if len(str(about.get("description") or "").strip()) < mn["description_chars"]:
+            bad.append("G3 %s: configs_pages.about.description must say what the app does and why in at least %d characters" % (app, mn["description_chars"]))
         feats = [x for x in (about.get("features") or []) if isinstance(x, str) and x.strip()]
-        if len(feats) < spec["min_features"] or len(feats) != len(about.get("features") or []):
-            bad.append("G3 %s: configs_pages.about.features must be at least %d non-empty strings" % (app, spec["min_features"]))
-        if len(str(about.get("privacy") or "").strip()) < spec["min_privacy_chars"]:
-            bad.append("G3 %s: configs_pages.about.privacy must be at least %d characters" % (app, spec["min_privacy_chars"]))
+        if len(feats) < mn["features"] or len(feats) != len(about.get("features") or []):
+            bad.append("G3 %s: configs_pages.about.features must be at least %d non-empty strings" % (app, mn["features"]))
+        scr = about.get("screens") or []
+        if len([x for x in scr if isinstance(x, dict) and str(x.get("name") or "").strip() and str(x.get("what") or "").strip()]) < mn["screens"] \
+                or not all(isinstance(x, dict) and str(x.get("name") or "").strip() and str(x.get("what") or "").strip() for x in scr):
+            bad.append("G3 %s: configs_pages.about.screens must be at least %d {name, what} entries, each with both" % (app, mn["screens"]))
+        guide = [x for x in (about.get("guide") or []) if isinstance(x, str) and x.strip()]
+        if len(guide) < mn["guide"]:
+            bad.append("G3 %s: configs_pages.about.guide must be at least %d steps" % (app, mn["guide"]))
+        if len(str(about.get("privacy") or "").strip()) < mn["privacy_chars"]:
+            bad.append("G3 %s: configs_pages.about.privacy must be at least %d characters" % (app, mn["privacy_chars"]))
+        rel = about.get("related") if isinstance(about.get("related"), list) else []
+        if len(rel) < mn["related"]:
+            bad.append("G3 %s: configs_pages.about.related must name at least %d fleet app it talks to" % (app, mn["related"]))
+        for r in rel:
+            if not isinstance(r, dict) or r.get("app") not in apps or not str(r.get("why") or "").strip():
+                bad.append("G3 %s: configs_pages.about.related entry %r must be {app: <a fleet app folder>, why}" % (app, r))
+        kind = (curated.get(app) or {}).get("kind") or ""
+        if kind in spec["fork_kinds"] and len(str(about.get("credits") or "").strip()) < mn["credits_chars"]:
+            bad.append("G3 %s: a %s app credits its upstream in configs_pages.about.credits (at least %d characters)" % (app, kind, mn["credits_chars"]))
+        perms = build.get("perms") or {}
+        own_why = about.get("perms_why") or {}
+        for pid in list(perms.get("needs") or []) + [n for h in (perms.get("helpers") or []) for n in (h.get("needs") or [])]:
+            if not str(own_why.get(pid) or perm_why.get(pid) or "").strip():
+                bad.append("G3 %s: grant %r has no why (configs_pages.about.perms_why or %s::perm_why)" % (app, pid, DATA))
         if not isinstance(about.get("backends"), list):
             bad.append("G3 %s: configs_pages.about.backends must be a list (empty when the app talks to no fleet service)" % app)
         else:

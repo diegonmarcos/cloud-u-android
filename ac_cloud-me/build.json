@@ -1088,7 +1088,7 @@
     }
   },
   "configs_pages": {
-    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
         {"id": "perms"},
@@ -1105,7 +1105,8 @@
       ]
     },
     "about": {
-      "what": "The personal-administration hub: health, experiences, roadmap, links, duties, paperwork and the company, for the person rather than the cloud.",
+      "tagline": "Everything the person runs, not the cloud",
+      "description": "Cloud Me is the personal-administration half of the fleet. Where Cloud SuperApp launches everything the cloud runs, Cloud Me is for everything the person runs: health (biomarkers, sleep, workouts, nutrition), experiences, the roadmap and duties, the public link tree, Buro paperwork and the company. It exists so personal records live in the owner's own backend instead of a dozen separate services.",
       "features": [
         "Health: biomarkers, sleep, workouts, nutrition",
         "Experiences: work, study, achievements",
@@ -1113,11 +1114,60 @@
         "Lnktree of public profiles",
         "Buro paperwork and LLC"
       ],
+      "screens": [
+        {
+          "name": "Health",
+          "what": "Biomarkers, sleep, workouts and nutrition."
+        },
+        {
+          "name": "Experiences",
+          "what": "Work, study and achievements."
+        },
+        {
+          "name": "RoadMap",
+          "what": "Plans by horizon."
+        },
+        {
+          "name": "Lnktree",
+          "what": "The public profiles."
+        },
+        {
+          "name": "Duties",
+          "what": "What is due."
+        },
+        {
+          "name": "Buro",
+          "what": "Paperwork and money."
+        },
+        {
+          "name": "LLC",
+          "what": "The company."
+        }
+      ],
+      "guide": [
+        "Grant Health Connect so Health can read sleep and workouts.",
+        "Use Duties for what is due this week.",
+        "Keep paperwork in Buro; it backs up with the phone profile."
+      ],
       "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
       "backends": [
         {
           "id": "cloud-me-api",
           "why": "personal data"
+        }
+      ],
+      "related": [
+        {
+          "app": "ac_cloud-tasks",
+          "why": "Tasks and calendar."
+        },
+        {
+          "app": "ac_cloud-wallet",
+          "why": "IDs and cards."
+        },
+        {
+          "app": "ac_cloud-account",
+          "why": "Signs in to the fleet and holds the tokens and secrets this app reads."
         }
       ]
     }
