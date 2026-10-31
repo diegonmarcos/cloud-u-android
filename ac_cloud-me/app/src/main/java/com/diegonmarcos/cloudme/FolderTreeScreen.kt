@@ -37,7 +37,7 @@ object FolderTreeTags {
     fun row(path: String) = "me:foldertree:row:$path"
 }
 
-/** RoadMap > Folders: the vault's folders as an expandable tree, section titles for the separators. Its own one scroller. */
+/** Tasks > RoadMaps (#1367; was RoadMap > Folders): the vault's folders as an expandable tree, section titles for the separators. Its own one scroller. */
 @Composable
 fun FolderTreeScreen(asset: String, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current

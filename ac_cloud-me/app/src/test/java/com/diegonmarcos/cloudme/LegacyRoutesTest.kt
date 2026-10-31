@@ -32,13 +32,23 @@ class LegacyRoutesTest {
         assertEquals("buro" to "assets", LegacyRoutes.resolve("house", "anything-else"))
     }
 
-    @Test fun `Tasks moved from Profile to Duties and the old Buro pages map to the new groups`() {
-        assertEquals("duties" to "tasks", LegacyRoutes.resolve("me", "tasks"))
+    @Test fun `Tasks moved from Profile to Tasks Backlogs and the old Buro pages map to the new groups`() {
+        assertEquals("tasks" to "backlogs", LegacyRoutes.resolve("me", "tasks"))
         assertEquals("buro" to "ids", LegacyRoutes.resolve("buro", "summary"))
         assertEquals("buro" to "assets", LegacyRoutes.resolve("buro", "docs"))
         assertEquals("buro" to "cashflow", LegacyRoutes.resolve("buro", "acct"))
         assertEquals("buro" to "budgeting", LegacyRoutes.resolve("buro", "budget"))
         assertEquals("llc" to "portfolio", LegacyRoutes.resolve("buro", "portfolio"))
+    }
+
+    @Test fun `#1367 RoadMap and Duties land on their Tasks subpages, every page of either`() {
+        assertEquals("tasks" to "roadmaps", LegacyRoutes.resolve("roadmap", null))
+        assertEquals("tasks" to "roadmaps", LegacyRoutes.resolve("roadmap", "folders"))
+        assertEquals("tasks" to "roadmaps", LegacyRoutes.resolve("roadmap", "anything-else"))
+        assertEquals("tasks" to "backlogs", LegacyRoutes.resolve("duties", null))
+        assertEquals("tasks" to "backlogs", LegacyRoutes.resolve("duties", "tasks"))
+        assertEquals("tasks" to "backlogs", LegacyRoutes.resolve("duties", "anything-else"))
+        assertEquals("inventory" to "food", LegacyRoutes.resolve("inventory", "food"))
     }
 
     @Test fun `current ids pass through untouched`() {

@@ -5,7 +5,7 @@ import org.json.JSONObject
 /** One folder of the notes vault; [children] are folders too (the tree never holds files). */
 data class Folder(val name: String, val path: String, val children: List<Folder>)
 
-/** A separator folder of the vault (0___, 1___, 2___) drawn as a title over the folders it owns. */
+/** A separator folder of the vault (0___, 1___) or a parent folder (#1367: 0___Inbox, 1___Workflows) drawn as a title over the folders it owns. */
 data class FolderSection(val title: String, val folders: List<Folder>)
 
 /** One drawn line: a section title, or a folder at [depth] that is [open] or not. */

@@ -6,6 +6,9 @@ import java.math.RoundingMode
 /** A derived report: a table with an optional total row. Every cell is already formatted text. */
 data class ReportTable(val title: String, val note: String, val columns: List<String>, val rows: List<List<String>>, val total: List<String>? = null)
 
+/** #1367 the header of an inventory page: how many items, their total value, and the monthly recurring cost. */
+data class LedgerSummary(val count: Int, val value: BigDecimal, val monthly: BigDecimal)
+
 /**
  * The derived reports of Buro and LLC (declared per page in `ledger.reports`). They are functions of the owner's
  * records and of [today] (`yyyy-MM-dd`), nothing else: no seed rows, no feed. With no records they return no rows,
@@ -33,6 +36,11 @@ object LedgerReports {
     private fun f(v: BigDecimal, c: String) = LedgerModel.fmt(v, c)
     private fun pct(part: BigDecimal, whole: BigDecimal) =
         if (whole.signum() == 0) "-" else part.multiply(BigDecimal(100)).divide(whole, 0, RoundingMode.HALF_UP).toPlainString() + "%"
+
+    /** #1367 Inventory header: every record of [rows] counts; [valueField] sums the item values, [monthlyField] the
+     *  recurring costs (a record with no monthly figure is not recurring). Blank or non-numeric figures count as zero. */
+    fun summary(rows: List<Rec>, valueField: String, monthlyField: String): LedgerSummary =
+        LedgerSummary(rows.size, sum(rows.map { m(it, valueField) }), sum(rows.map { m(it, monthlyField) }))
 
     /** Budgeting: each budget line's monthly limit against what the cashflow spent in [today]'s month under that category. */
     fun budgetVsActual(d: LedgerData, today: String, c: String): ReportTable {

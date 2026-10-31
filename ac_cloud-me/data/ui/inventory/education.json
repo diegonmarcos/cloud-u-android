@@ -1,0 +1,143 @@
+[
+  {
+    "kind": "note",
+    "title": "Education",
+    "body": "Courses, licences and books. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_education",
+        "title": "Education",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Course",
+              "Licence",
+              "Platform",
+              "Book"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Sportbootführerschein See + Binnen",
+            "category": "Licence",
+            "brand": "Segelschule Berlin",
+            "purchased": "2023-02-25",
+            "price": "590.00",
+            "status": "Active",
+            "note": "Required for the boat on the Havel"
+          },
+          {
+            "name": "SKS course",
+            "category": "Course",
+            "brand": "Segelschule Berlin",
+            "purchased": "2026-11-07",
+            "price": "1150.00",
+            "location": "Wannsee",
+            "status": "Active",
+            "note": "Theory starts November"
+          },
+          {
+            "name": "Coursera Plus",
+            "category": "Platform",
+            "brand": "Coursera",
+            "purchased": "2025-08-01",
+            "monthly": "33.25",
+            "status": "Active",
+            "note": "399 EUR per year"
+          },
+          {
+            "name": "Spanish C1 course",
+            "category": "Course",
+            "brand": "VHS Friedrichshain-Kreuzberg",
+            "purchased": "2026-09-08",
+            "price": "196.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Tuesdays, until December"
+          },
+          {
+            "name": "Designing Data-Intensive Applications",
+            "category": "Book",
+            "brand": "O'Reilly, 2nd ed.",
+            "purchased": "2026-03-20",
+            "price": "52.00",
+            "location": "Regal",
+            "status": "Good"
+          },
+          {
+            "name": "Kotlin in Action",
+            "category": "Book",
+            "brand": "Manning, 2nd ed.",
+            "purchased": "2024-08-11",
+            "price": "49.00",
+            "location": "Regal",
+            "status": "Good"
+          }
+        ]
+      }
+    ]
+  }
+]

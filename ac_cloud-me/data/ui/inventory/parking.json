@@ -1,0 +1,126 @@
+[
+  {
+    "kind": "note",
+    "title": "Parking",
+    "body": "Where the vehicles sleep. The records shown first are MOCK data seeded once (marked mock data): edit or remove them; they are never re-seeded."
+  },
+  {
+    "kind": "ledger",
+    "store": "inventory_user",
+    "currency": "EUR",
+    "summary": {
+      "value": "price",
+      "monthly": "monthly"
+    },
+    "ledgers": [
+      {
+        "collection": "inv_parking",
+        "title": "Parking",
+        "empty": "No items recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "Garage",
+              "Permit",
+              "Storage"
+            ]
+          },
+          {
+            "id": "brand",
+            "label": "Brand / model",
+            "type": "text"
+          },
+          {
+            "id": "purchased",
+            "label": "Purchased",
+            "type": "date"
+          },
+          {
+            "id": "price",
+            "label": "Price",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly",
+            "type": "money"
+          },
+          {
+            "id": "location",
+            "label": "Location",
+            "type": "text"
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Active",
+              "Good",
+              "Fair",
+              "Needs service",
+              "Cancelled",
+              "Sold"
+            ]
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "seed": [
+          {
+            "name": "Tiefgaragen-Stellplatz (motorcycle)",
+            "category": "Garage",
+            "brand": "Private, Simon-Dach-Str.",
+            "purchased": "2022-03-01",
+            "monthly": "55.00",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Shared with a neighbour's scooter"
+          },
+          {
+            "name": "Anwohnerparkausweis Zone 54",
+            "category": "Permit",
+            "brand": "Bezirksamt Friedrichshain-Kreuzberg",
+            "purchased": "2025-02-10",
+            "price": "20.40",
+            "location": "Berlin-Friedrichshain",
+            "status": "Active",
+            "note": "Valid 2 years, renew 2027-02"
+          },
+          {
+            "name": "Campervan Stellplatz",
+            "category": "Storage",
+            "brand": "Wohnmobilstellplatz Schönefeld",
+            "purchased": "2022-08-05",
+            "monthly": "85.00",
+            "location": "Schönefeld",
+            "status": "Active",
+            "note": "Outdoor, gated"
+          },
+          {
+            "name": "Boat winter storage",
+            "category": "Storage",
+            "brand": "Bootswerft Wannsee, Halle 2",
+            "purchased": "2025-10-20",
+            "price": "1180.00",
+            "location": "Wannsee",
+            "status": "Active",
+            "note": "Crane in/out included; Oct to Apr"
+          }
+        ]
+      }
+    ]
+  }
+]

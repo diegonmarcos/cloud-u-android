@@ -179,7 +179,7 @@ class RepoTreeTest {
         assertFalse("no section or page is labelled Profile/Profiles: $all", all.any { it == "Profile" || it == "Profiles" })
         assertEquals("lnktree" to "leafy", LegacyRoutes.resolve("me", "leafy"))
         assertEquals("lnktree" to null, LegacyRoutes.resolve("me", null))
-        assertEquals("duties" to "tasks", LegacyRoutes.resolve("me", "tasks"))
+        assertEquals("tasks" to "backlogs", LegacyRoutes.resolve("me", "tasks"))
         assertEquals("lnktree" to "lnktree-site", LegacyRoutes.resolve("me", "lnktree"))
         // the section took the name Lnktree: none of its pages may share that id (two title-menu entries, one tag)
         assertFalse("lnktree" in lnktree.getJSONArray("pages").objects().map { it.getString("id") })

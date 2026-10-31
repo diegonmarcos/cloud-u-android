@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Tester (#1144, #1150): Cloud Me's seven-section bar, the Samsung Health page tabs, the fleet top bar (hamburger,
+# Tester (#1144, #1150, #1367): Cloud Me's seven-section bar (Health, Experiences, Tasks, Lnktree, Inventory, Buro, LLC), the Samsung Health page tabs, the fleet top bar (hamburger,
 # AI, Profile, Configs), the Achieves text, the tap-only side menu (no edge-swipe), the Account launch and the removed
-# Wallet link, plus the LLC / Buro / Duties page shapes.
+# Wallet link, plus the LLC / Buro / Tasks page shapes, the Tasks redirects and the Inventory rows, seed and summary.
 # Structure and data only; the RENDERED strip, bar and top bar are measured by app/src/test/.../MeTabsTest.
 # Every check is proven red by its own mutation of a copy of the tree (the tail of this file).
 set -u
@@ -47,8 +47,8 @@ def strings(o):
         for v in o: yield from strings(v)
 
 # ---- N1 nav order
-want_ids = ["health", "experiences", "roadmap", "lnktree", "duties", "buro", "llc"]
-want_labels = ["Health", "Experiences", "RoadMap", "Lnktree", "Duties", "Buro", "LLC"]
+want_ids = ["health", "experiences", "tasks", "lnktree", "inventory", "buro", "llc"]
+want_labels = ["Health", "Experiences", "Tasks", "Lnktree", "Inventory", "Buro", "LLC"]
 if ui.get("bottom_nav") != want_ids:
     bad("nav-order", f"ui.bottom_nav is {ui.get('bottom_nav')}, wanted {want_ids}")
 if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_labels:
@@ -244,8 +244,13 @@ _fc = json.load(open(os.path.join(libs, "fleetconfig-model/src/main/assets/fleet
 _st = _fc.get("stores", {}).get("experiences_user")
 if not _st or "ac_cloud-me" not in _st.get("used_by", []) or _st.get("class") != "config":
     bad("pages", "experiences_user is not a declared config store of ac_cloud-me (the backup would miss it)")
-if [p["id"] for p in secs.get("duties", {}).get("pages", [])] != ["tasks"]:
-    bad("pages", "Duties is not the single Tasks page")
+_tb = os.path.join(app, "data/ui/tasks/backlogs.json")
+if [p["id"] for p in secs.get("tasks", {}).get("pages", [])] != ["roadmaps", "backlogs"] or \
+   (json.load(open(_tb, encoding="utf-8")) if os.path.exists(_tb) else [{}])[0].get("id") != "tasks":
+    bad("pages", "Tasks is not RoadMaps then Backlogs, Backlogs drawing the tasks view (the former Duties)")
+for _gone in ("roadmap", "duties"):
+    if _gone in secs or os.path.isdir(os.path.join(app, f"data/ui/{_gone}")):
+        bad("pages", f"the retired {_gone} section (or its data/ui folder) is back")
 if os.path.isdir(os.path.join(app, "data/ui/home")):
     bad("pages", "data/ui/home is back")
 blob_all = "".join(open(os.path.join(r, f), encoding="utf-8").read() for r, _, fs in os.walk(os.path.join(app, "data/ui")) for f in fs if f.endswith(".json"))
@@ -357,16 +362,88 @@ _wb = json.load(open(_w, encoding="utf-8")) if os.path.exists(_w) else []
 if not _wb or _wb[0].get("store") != "experiences_user" or [l["collection"] for l in _wb[0].get("ledgers", [])] != ["work_done", "work_todo"] \
    or not _wb[0]["ledgers"][0].get("builtin"):
     bad("pages", "Experiences > Work is not the Done/To do ledger seeded with the profile roles")
-_rf = os.path.join(app, "data/ui/roadmap/folders.json")
-if [p["id"] for p in secs.get("roadmap", {}).get("pages", [])] != ["folders"] or \
+_rf = os.path.join(app, "data/ui/tasks/roadmaps.json")
+if "roadmaps" not in [p["id"] for p in secs.get("tasks", {}).get("pages", [])] or \
    (json.load(open(_rf, encoding="utf-8")) if os.path.exists(_rf) else [{}])[0].get("id") != "folder_tree":
-    bad("pages", "RoadMap is not the one Folders page drawing the folder_tree")
+    bad("pages", "Tasks > RoadMaps does not draw the folder_tree")
 if '"folder_tree" -> FolderTreeScreen(' not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/SectionScreen.kt")):
     bad("pages", "SectionScreen does not draw folder_tree pages")
-for sid, pg in (("experiences/study", "cv"), ("experiences/study", "roadmap"), ("experiences", "work"), ("llc", "employed"), ("llc", "side-hustles"), ("duties", "tasks"), ("experiences/achieves", "geo")):
+for sid, pg in (("experiences/study", "cv"), ("experiences/study", "roadmap"), ("experiences", "work"), ("llc", "employed"), ("llc", "side-hustles"), ("tasks", "backlogs"), ("tasks", "roadmaps"), ("experiences/achieves", "geo")):
     f = os.path.join(app, f"data/ui/{sid}/{pg}.json")
     if not os.path.exists(f) or not json.load(open(f, encoding="utf-8")):
         bad("pages", f"data/ui/{sid}/{pg}.json is missing or empty")
+
+# ---- N9 #1367 redirects: the old RoadMap and Duties routes land on their Tasks subpages (LegacyRoutes.kt, simulated)
+lr = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LegacyRoutes.kt"))
+_mv = dict(re.findall(r'"([a-z0-9/-]+)"\s+to\s+"([a-z0-9/-]+)"', lr.split("RETIRED_SECTIONS")[0]))
+_m = re.search(r"RETIRED_SECTIONS\s*=\s*setOf\(([^)]*)\)", lr)
+_ret = set(re.findall(r'"([a-z0-9-]+)"', _m.group(1))) if _m else set()
+_ren = dict(re.findall(r'"([a-z0-9-]+)"\s+to\s+"([a-z0-9-]+)"', lr.split("RENAMED_SECTIONS", 1)[1])) if "RENAMED_SECTIONS" in lr else {}
+def resolve(s, p):
+    hit = _mv.get(f"{s}/{p or ''}".rstrip("/"))
+    fb = _mv.get(s) if hit is None and s in _ret else None
+    if hit is None and fb is None and s in _ren: return _ren[s], p
+    to = hit or fb
+    if to is None: return s, p
+    return to.split("/")[0], (to.split("/", 1)[1] if "/" in to else None)
+for (s, p), want in {("roadmap", None): ("tasks", "roadmaps"), ("roadmap", "folders"): ("tasks", "roadmaps"), ("roadmap", "anything"): ("tasks", "roadmaps"),
+                     ("duties", None): ("tasks", "backlogs"), ("duties", "tasks"): ("tasks", "backlogs"), ("duties", "anything"): ("tasks", "backlogs"),
+                     ("me", "tasks"): ("tasks", "backlogs"), ("tasks", "roadmaps"): ("tasks", "roadmaps"), ("inventory", "food"): ("inventory", "food")}.items():
+    if resolve(s, p) != want:
+        bad("redirects", f"{s}/{p or ''} resolves to {resolve(s, p)}, wanted {want}")
+for k, to in _mv.items():
+    ts, _, tp = to.partition("/")
+    if ts not in secs or (tp and tp not in [x["id"] for x in pages(secs[ts].get("pages"))]):
+        bad("redirects", f"LegacyRoutes sends {k} to {to}, which is not a declared page")
+
+# ---- N10 #1367 Inventory: three rows (City, Buro, Lifestyle with separators), ledger pages over inventory_user, mock seed, summary
+_inv = secs.get("inventory", {})
+_want_rows = {"city": ["housing", "household", "transport", "parking"],
+              "buro": ["utilities", "taxes", "insurance", "contracts", "banking", "subscriptions"],
+              "lifestyle": ["leisure", "food", "care", "clothing", "electronics", "education"]}
+if _inv.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _inv.get("groups", [])} != _want_rows \
+   or [g.get("label") for g in _inv.get("groups", [])] != ["City", "B\u00fcro", "Lifestyle"]:
+    bad("inventory", "Inventory is not the three rows City, B\u00fcro, Lifestyle with their declared pages")
+if [p["id"] for p in _inv.get("pages", [])] != [x for r in _want_rows.values() for x in r]:
+    bad("inventory", "Inventory's flat pages are not the rows' pages in row order")
+if sorted(p["id"] for p in _inv.get("pages", []) if p.get("separator_before")) != ["clothing", "education", "food"]:
+    bad("inventory", "Lifestyle does not read Leisure | Food, Care | Clothing, Electronics | Education")
+for g in _inv.get("groups", []):
+    if f'"{g.get("icon")}"' not in icons: bad("inventory", f"group {g['id']} icon is not in libs:ui-icons")
+for p in _inv.get("pages", []):
+    if f'"{p.get("icon")}"' not in icons: bad("inventory", f"page {p['id']} icon is not in libs:ui-icons")
+_ist = fc.get("stores", {}).get("inventory_user")
+if not _ist or "ac_cloud-me" not in _ist.get("used_by", []) or _ist.get("class") != "config":
+    bad("inventory", "inventory_user is not a declared config store of ac_cloud-me (the backup would miss it)")
+_ITEM = ["name", "category", "brand", "purchased", "price", "monthly", "location", "status", "note"]
+for p in _inv.get("pages", []):
+    f = os.path.join(app, f"data/ui/inventory/{p['id']}.json")
+    blks = [b for b in (json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []) if b.get("kind") == "ledger"]
+    if len(blks) != 1 or blks[0].get("store") != "inventory_user" or blks[0].get("summary") != {"value": "price", "monthly": "monthly"}:
+        bad("inventory", f"inventory/{p['id']} is not one ledger over inventory_user with the price/monthly summary"); continue
+    leds = blks[0].get("ledgers", [])
+    if len(leds) != 1 or leds[0].get("collection") != "inv_" + p["id"] or [x["id"] for x in leds[0].get("fields", [])] != _ITEM:
+        bad("inventory", f"inventory/{p['id']} is not one inv_{p['id']} collection with the item fields {_ITEM}"); continue
+    fl = {x["id"]: x for x in leds[0]["fields"]}
+    seed = leds[0].get("seed") or []
+    if not seed: bad("inventory", f"inventory/{p['id']} has no mock seed")
+    for r in seed:
+        if not r.get("name") or "id" in r or "mock" in r or set(r) - set(_ITEM):
+            bad("inventory", f"inventory/{p['id']} seed row {r.get('name')} has no name or undeclared keys (mock is stamped by LedgerSeed)")
+        for k, v in r.items():
+            ty = fl.get(k, {}).get("type")
+            if (ty == "choice" and v not in fl[k]["options"]) or (ty == "money" and not re.fullmatch(r"\d+\.\d{2}", v)) \
+               or (ty == "date" and not re.fullmatch(r"20\d\d-[01]\d-[0-3]\d", v)):
+                bad("inventory", f"inventory/{p['id']} seed row {r['name']}: {k}={v!r} is not a valid {ty}")
+lm, ls = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerModel.kt")), code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerScreen.kt"))
+if not re.search(r"LedgerSeed\.applied\(d, defs\)\.also \{ if \(it !== d\) LedgerStore\.save\(ctx, store, it\)", ls):
+    bad("inventory", "LedgerBlock does not apply and save the declared seed on load")
+if 'recs(o.optJSONArray("seed"))' not in lm or "def.collection in done" not in lm or "out.rows(def.collection).isEmpty()" not in lm:
+    bad("inventory", "LedgerSeed is not seed-once (marker) and never-overwrite (only into an empty collection)")
+if "SummaryCard(LedgerReports.summary(" not in ls:
+    bad("inventory", "LedgerBlock draws no summary header")
+if '"inventory_user"' not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/LedgerStore.kt")):
+    bad("inventory", "LedgerStore does not open inventory_user")
 
 for line in out: print(line)
 PY
@@ -380,14 +457,16 @@ only() { # <check id>: nothing but that id is red in the real tree
   local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | cut -f1 | sort -u | grep -x "$1" || true)"
   [ -z "$r" ]
 }
-for t in "nav-order|the bar reads Health, Experiences, RoadMap, Lnktree, Duties, Buro, LLC" \
+for t in "nav-order|the bar reads Health, Experiences, Tasks, Lnktree, Inventory, Buro, LLC" \
          "tab-style|page tabs show every name at rest and only the selected name when scrolled down (#1159)" \
          "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
          "achieves|Experiences is Work, Study, Personal Achieves; Personal Achieves is Geo first then Endurance, Personal Growth, Community, By 30/40/50, keeping the owner's text (B1, B2, B3, region table with its link)" \
          "no-drawer|no swipe-to-open drawer handler anywhere (shell, the lib top bar, Profile page, resources)" \
          "account|Buro > Account launches Cloud Account through extapp, Vault is gone" \
          "no-wallet|the Wallet link is gone" \
-         "pages|Health, Experiences (Work, Study, Achieves tabs), RoadMap, LLC, Buro, Duties pages are declared with their data, House and Work are gone"; do
+         "pages|Health, Experiences (Work, Study, Achieves tabs), Tasks (RoadMaps, Backlogs), LLC, Buro pages are declared with their data, House, Work, RoadMap and Duties are gone" \
+         "redirects|#1367 roadmap, roadmap/*, duties, duties/* and me/tasks land on Tasks > RoadMaps / Backlogs, every redirect target is declared" \
+         "inventory|#1367 Inventory is three rows (City, Buro, Lifestyle with | separators) of ledger pages over inventory_user, each with a valid mock seed applied once and a summary header"; do
   id="${t%%|*}"; name="${t#*|}"
   if only "$id"; then ok "$name"; else bad "$name"; check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | grep "^$id" | sed 's/^/        /'; fi
 done
@@ -417,7 +496,28 @@ mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/
 mutant no-drawer "a drag handler is back in the lib top bar" "echo 'val d = detectHorizontalDragGestures' >> ../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt"
 mutant settings "the top bar loses its inline actions" "sed -i 's/inlineActions = true/inlineActions = false/' app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"
 mutant pages "the Home section is back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'home','label':'Home','pages':[]});json.dump(d,open('build.json','w'))\""
-mutant pages "Tasks page dropped from Duties" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop() for s in d['ui']['sections'] if s['id']=='duties'];json.dump(d,open('build.json','w'))\""
+mutant pages "Backlogs dropped from Tasks" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop() for s in d['ui']['sections'] if s['id']=='tasks'];json.dump(d,open('build.json','w'))\""
+mutant pages "the Duties section comes back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'duties','label':'Duties','pages':[]});json.dump(d,open('build.json','w'))\""
+mutant nav-order "Inventory and Tasks swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[2],b[4]=b[4],b[2];json.dump(d,open('build.json','w'))\""
+mutant nav-order "Tasks relabelled RoadMap" "python3 -c \"import json;d=json.load(open('build.json'));[s.update(label='RoadMap') for s in d['ui']['sections'] if s['id']=='tasks'];json.dump(d,open('build.json','w'))\""
+mutant redirects "duties no longer redirected" "sed -i '/\"duties\" to \"tasks\/backlogs\"/d' app/src/main/java/com/diegonmarcos/cloudme/LegacyRoutes.kt"
+mutant redirects "roadmap/* pages fall through (not retired)" "sed -i 's/\"house\", \"roadmap\", \"duties\"/\"house\", \"duties\"/' app/src/main/java/com/diegonmarcos/cloudme/LegacyRoutes.kt"
+mutant redirects "roadmap sent to Backlogs" "sed -i 's#\"roadmap\" to \"tasks/roadmaps\"#\"roadmap\" to \"tasks/backlogs\"#' app/src/main/java/com/diegonmarcos/cloudme/LegacyRoutes.kt"
+mutant redirects "me/tasks still points at the retired duties" "sed -i 's#\"me/tasks\" to \"tasks/backlogs\"#\"me/tasks\" to \"duties/tasks\"#' app/src/main/java/com/diegonmarcos/cloudme/LegacyRoutes.kt"
+mutant redirects "a redirect target page is renamed away" "sed -i 's/\"id\": \"backlogs\"/\"id\": \"backlog\"/' build.json"
+mutant inventory "Lifestyle loses its Food separator" "python3 -c \"import json;d=json.load(open('build.json'));[p.pop('separator_before',None) for s in d['ui']['sections'] if s['id']=='inventory' for p in s['pages'] if p['id']=='food'];json.dump(d,open('build.json','w'))\""
+mutant inventory "Parking moves to the Buro row" "python3 -c \"import json;d=json.load(open('build.json'));[(s['groups'][0]['pages'].remove('parking'),s['groups'][1]['pages'].append('parking')) for s in d['ui']['sections'] if s['id']=='inventory'];json.dump(d,open('build.json','w'))\""
+mutant inventory "an inventory page loses its seed" "python3 -c \"import json;p='data/ui/inventory/taxes.json';d=json.load(open(p));d[1]['ledgers'][0].pop('seed');json.dump(d,open(p,'w'))\""
+mutant inventory "a seed price is not money" "sed -i '0,/\"price\": \"[0-9.]*\"/s//\"price\": \"12,50 EUR\"/' data/ui/inventory/electronics.json"
+mutant inventory "a seed status is not an option" "sed -i '0,/\"status\": \"Good\"/s//\"status\": \"Shiny\"/' data/ui/inventory/household.json"
+mutant inventory "a seed row pre-stamps mock" "python3 -c \"import json;p='data/ui/inventory/food.json';d=json.load(open(p));d[1]['ledgers'][0]['seed'][0]['mock']='1';json.dump(d,open(p,'w'))\""
+mutant inventory "an inventory page has no summary" "python3 -c \"import json;p='data/ui/inventory/care.json';d=json.load(open(p));d[1].pop('summary');json.dump(d,open(p,'w'))\""
+mutant inventory "an inventory page writes to the buro store" "sed -i 's/\"store\": \"inventory_user\"/\"store\": \"buro_user\"/' data/ui/inventory/banking.json"
+mutant inventory "inventory_user undeclared in fleet-config" "sed -i 's/\"inventory_user\"/\"inventory_gone\"/' ../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
+mutant inventory "the seed is re-applied every load (no marker)" "sed -i 's/def.collection in done/false/' app/src/main/java/com/diegonmarcos/cloudme/LedgerModel.kt"
+mutant inventory "the seed tops up a collection the owner already filled" "sed -i 's/if (out.rows(def.collection).isEmpty()) for/for/' app/src/main/java/com/diegonmarcos/cloudme/LedgerModel.kt"
+mutant inventory "the seed is applied but not saved" "sed -i 's/if (it !== d) LedgerStore.save(ctx, store, it)/Unit/' app/src/main/java/com/diegonmarcos/cloudme/LedgerScreen.kt"
+mutant inventory "the summary header is not drawn" "sed -i 's/SummaryCard(LedgerReports.summary(/Unit(LedgerReports.summary(/' app/src/main/java/com/diegonmarcos/cloudme/LedgerScreen.kt"
 mutant pages "House comes back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'house','label':'House','pages':[]});json.dump(d,open('build.json','w'))\""
 mutant pages "a Buro page leaves its group" "python3 -c \"import json;d=json.load(open('build.json'));[s['groups'][1]['pages'].pop() for s in d['ui']['sections'] if s['id']=='buro'];json.dump(d,open('build.json','w'))\""
 mutant pages "an LLC group icon is not a ui-icons name" "sed -i 's/\"icon\": \"payments\"/\"icon\": \"no_such_icon\"/' build.json"
@@ -432,9 +532,9 @@ mutant pages "a tab loses Mark undone" "sed -i 's/\"move_label\": \"Mark undone\
 mutant pages "the done date is no longer stamped" "sed -i 's/\"move_stamp\": \"date\"/\"move_stamp\": \"\"/' data/ui/experiences/achieves/community.json"
 mutant achieves "Study is a section again" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'study','label':'Study','pages':[]});json.dump(d,open('build.json','w'))\""
 mutant achieves "Work dropped from Experiences" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop(0) for s in d['ui']['sections'] if s['id']=='experiences'];json.dump(d,open('build.json','w'))\""
-mutant nav-order "RoadMap after Lnktree" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[2],b[3]=b[3],b[2];json.dump(d,open('build.json','w'))\""
+mutant nav-order "Tasks after Lnktree" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[2],b[3]=b[3],b[2];json.dump(d,open('build.json','w'))\""
 mutant pages "Work loses its seeded roles" "python3 -c \"import json;p='data/ui/experiences/work.json';d=json.load(open(p));d[0]['ledgers'][0].pop('builtin');json.dump(d,open(p,'w'))\""
-mutant pages "RoadMap page draws no tree" "sed -i 's/folder_tree/stack/' data/ui/roadmap/folders.json"
+mutant pages "RoadMaps page draws no tree" "sed -i 's/folder_tree/stack/' data/ui/tasks/roadmaps.json"
 mutant pages "Geo loses its stats" "sed -i 's/\"visited\": \"geo_done\"/\"visited\": \"nope\"/' data/ui/experiences/achieves/geo.json"
 mutant pages "migration sends records to an undeclared tab" "sed -i 's/\"default\": \"endurance\"/\"default\": \"trips\"/' build.json"
 mutant no-drawer "the drawer is back in the shell" "echo 'val d = ModalNavigationDrawer' >> app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt"
