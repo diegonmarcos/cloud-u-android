@@ -38,6 +38,8 @@ git init -q -b main "$FIX"
   && git update-ref refs/remotes/origin/main HEAD && echo x > .git/FETCH_HEAD )
 tar -C "$(dirname "$FIX")" -cf "$OUT/fixture.tar" "$NAME"
 
+# the page walk before this flow may have let the app update itself to a newer build: start clean on the APK under test
+adb uninstall "$PKG" >/dev/null 2>&1 || true
 adb install -r -g "$APK" || fail "install failed"
 adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
 act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
