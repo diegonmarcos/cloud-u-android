@@ -34,12 +34,9 @@
     <string name="files_dual_pane">Two panes</string>
     <string name="files_single_pane">One pane</string>
     <string name="files_search">Search</string>
-    <string name="files_search_hint">Search names, or names and text</string>
-    <string name="files_search_text_too">Search inside text files</string>
     <string name="files_search_none">No match for “%1$s”</string>
     <string name="files_search_none_hint">Try a shorter name, or search inside text files</string>
     <string name="files_search_truncated">Stopped at %1$d results</string>
-    <string name="files_search_match_text">text</string>
     <string name="files_places">Go to</string>
     <string name="files_places_section">Places</string>
     <string name="files_bookmarks_section">Bookmarks</string>
