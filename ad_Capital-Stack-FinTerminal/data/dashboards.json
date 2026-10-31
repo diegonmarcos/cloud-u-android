@@ -764,7 +764,7 @@
               "base": "USD",
               "symbols": "EUR,GBP,JPY,CHF,CAD,AUD,CNY,MXN,BRL,INR"
             },
-            "lookback_days": 7,
+            "lookback_days": 30,
             "primary": {
               "source": "cloud_fincept",
               "api": "/v1/fx/spot",
@@ -1684,7 +1684,7 @@
               "base": "USD",
               "symbols": "EUR,GBP,JPY,CHF,CNY"
             },
-            "lookback_days": 7,
+            "lookback_days": 30,
             "labels": {
               "EUR": "EUR per USD",
               "GBP": "GBP per USD",

@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The fleet palette, dark by default (#336); libs:ui-kit's CloudKitTheme paints from these roles (ui/AppTheme.kt). -->
-    <color name="app_background">#FF0B1416</color>
-    <color name="app_surface">#FF12222A</color>
-    <color name="app_surface_raised">#FF1B323C</color>
-    <color name="app_text">#FFE6F4F1</color>
-    <color name="app_text_secondary">#FF9DB8B5</color>
-    <color name="app_outline">#FF2A4650</color>
-    <color name="app_accent">#FF2DD4BF</color>
-    <color name="app_on_accent">#FF042F2E</color>
+    <!-- The FinTerm terminal palette (FinTerm UI spec 1.1), dark by default: libs:ui-kit's CloudKitTheme paints from the app_* roles
+         (ui/AppTheme.kt); the fin_* roles carry direction (up/down/flat), staleness (amber) and importance. Blue accent on purpose:
+         never green or teal, so it cannot read as direction. The web mirror reads the same values through the fleet token generator. -->
+    <color name="app_background">#FF0B1016</color>
+    <color name="app_surface">#FF121A23</color>
+    <color name="app_surface_raised">#FF1A2532</color>
+    <color name="app_text">#FFE6EDF3</color>
+    <color name="app_text_secondary">#FF9AA7B4</color>
+    <color name="app_outline">#FF243040</color>
+    <color name="app_accent">#FF5AA7FF</color>
+    <color name="app_on_accent">#FF0B1016</color>
+    <color name="fin_text3">#FF6E7B89</color>
+    <color name="fin_up">#FF2FD37A</color>
+    <color name="fin_down">#FFF26D6D</color>
+    <color name="fin_amber">#FFF5B740</color>
+    <color name="fin_flash_up">#FF163B2A</color>
+    <color name="fin_flash_down">#FF3F1E24</color>
+    <color name="fin_skeleton">#FF1F2A36</color>
 </resources>
