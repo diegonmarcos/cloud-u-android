@@ -2599,6 +2599,7 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-updater",
+        "lib-web-core",
         "lib-webserver",
         "lib-wifi"
       ],
@@ -2678,7 +2679,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-nav-bars",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -2704,7 +2706,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-watchdog"
+        "lib-watchdog",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -2761,7 +2764,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": []
     },
@@ -2785,7 +2789,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -2825,7 +2830,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -2933,6 +2939,7 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-nav-bars",
+        "lib-web-core",
         "lib-wifi"
       ],
       "items": [
@@ -3131,7 +3138,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3251,7 +3259,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3341,7 +3350,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3421,7 +3431,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3484,7 +3495,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-nav-bars",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3533,7 +3545,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3568,7 +3581,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-nav-bars",
-        "lib-updater"
+        "lib-updater",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -3691,7 +3705,8 @@
         "lib-perms",
         "lib-theme-background",
         "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-ui-nav-bars",
+        "lib-web-core"
       ],
       "items": [
         {
@@ -4133,7 +4148,8 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
-        "lib-ui-nav-bars"
+        "lib-ui-nav-bars",
+        "lib-web-core"
       ],
       "items": []
     },
