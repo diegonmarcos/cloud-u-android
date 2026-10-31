@@ -1483,8 +1483,8 @@
             "path": "/api/rates/all/latest.json",
             "labels": {
               "SOFR": "SOFR",
-              "EFFR": "Effective Fed funds",
-              "SOFRAI_30D": "SOFR 30-day avg"
+              "EFFR": "EFFR",
+              "SOFRAI_30D": "SOFR 30D"
             },
             "primary": {
               "source": "cloud_fincept",
