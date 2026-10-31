@@ -376,8 +376,7 @@ object Engine {
         }.sortedByDescending { it.second }
         val rows = found.map { listOf(it.first, num(it.second, 2), it.third) }
         val chart = if (panel.view == Dashboards.VIEW_BARS) found.mapIndexed { i, t -> ChartPoint(t.first, i.toDouble(), t.second) } else emptyList()
-        val cols = if (noChange) panel.columns.filterNot { it.startsWith("Chg") } else panel.columns
-        return PanelData(cols, rows, emptyList(), chart, found.maxOfOrNull { it.third }.orEmpty(), "")
+        return PanelData(panel.columns, rows, emptyList(), chart, found.maxOfOrNull { it.third }.orEmpty(), "")
     }
 
     // ------------------------------------------------------------- IMF, World Bank
