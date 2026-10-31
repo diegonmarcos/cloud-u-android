@@ -444,7 +444,7 @@ public fun NavBarTopFirstRowScaffold(
             onProfile = onAccount, onConfigs = onConfigs, close = close,
             onConfigsUi = openGeneral, onConfigsAbout = openAbout,
             // #1369 an action runs as its launch page does: the app opens <section>/<page> (a launch page creates, the strip stays).
-            onAppAction = { e -> appActionTarget(e.id)?.let { (sec, page) -> onNavigate(HierarchyEntry(page, e.label, 1, sec)) } },
+            onAppAction = { e -> appActionTarget(e.id)?.let { (sec, page) -> onNavigate(HierarchyEntry(page, e.label, 1, sec, selected = false)) } },
         )
     }
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
