@@ -6,7 +6,7 @@
 # ║ drive-banner: Cloud Drive + the engine, engine NOT granted: the        ║
 # ║   first-run prompt, ONE Git page banner, its button opens Settings,    ║
 # ║   the banner goes after the grant. Screenshots uploaded.               ║
-# ║ termux-bare-clone: cld.termux + SuperApp + Drive: the pre-#1353 job   ║
+# ║ termux-bare-clone: cld.termux + Drive (fleet IPC as root): the old job ║
 # ║   start under fish (its real stderr), then Drive bare clones 3 repos. ║
 # ║ Scripts: ab_cloud-libs-shared/libs/git-sync-engine/src/androidTest,    ║
 # ║          ac_cloud-drive/test/emulator-engine-grant.sh.                 ║
@@ -157,7 +157,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch Drive, cld.termux (+ rootfs lib) and SuperApp
+      - name: Fetch Drive and cld.termux (+ rootfs lib)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -175,7 +175,6 @@ jobs:
           fi
           gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
           gh release download latest -R "$REPO" -p Cloud-Lib-Rootfs-Termux-x86_64.apk -O apk/rootfs.apk
-          gh release download latest -R "$REPO" -p Cloud-SuperApp-x86_64.apk -O apk/superapp.apk
           ls -l apk
 
       - name: Enable KVM
@@ -194,7 +193,7 @@ jobs:
           ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: bash ac_cloud-drive/test/emulator-termux-bare-clone.sh apk/drive.apk apk/terminal.apk apk/rootfs.apk apk/superapp.apk out
+          script: bash ac_cloud-drive/test/emulator-termux-bare-clone.sh apk/drive.apk apk/terminal.apk apk/rootfs.apk out
 
       - name: Upload evidence
         if: always()
