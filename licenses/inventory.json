@@ -21,7 +21,7 @@
    "PolyForm-Noncommercial-1.0.0": 3
   },
   "maven": {
-   "Apache-2.0": 236,
+   "Apache-2.0": 237,
    "NOASSERTION": 38,
    "MIT": 25,
    "LicenseRef-Google-MLKit-Terms": 7,
@@ -7513,6 +7513,17 @@
    "licence_source": "POM 0.2.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "dialer"
+  },
+  "maven:me.jahnen.libaums:core": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-drive/app/build.gradle"
+   ],
+   "version": "0.10.0",
+   "scope": "shipped",
+   "licence": "Apache-2.0",
+   "licence_source": "POM 0.10.0",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
   },
   "maven:me.saket.telephoto:flick-android": {
    "kind": "maven",

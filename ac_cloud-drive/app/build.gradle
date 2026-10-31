@@ -733,6 +733,10 @@ dependencies {
     implementation 'org.apache.commons:commons-compress:1.27.1'
     implementation 'org.tukaani:xz:1.10'
     implementation 'com.github.junrar:junrar:7.5.5'
+    // #1375 USB-C drives Android did not mount: libaums (Apache-2.0, ~190 kB) speaks USB mass storage (SCSI over bulk
+    // endpoints) and reads FAT32 (RawUsbDrive). exFAT/NTFS drives open through the system mount only. Its own deps
+    // (androidx core/annotation, kotlin stdlib) are already in the app.
+    implementation 'me.jahnen.libaums:core:0.10.0'
     // #575 the scheduled git sync (GitSyncWorker) — the same WorkManager libs:updater
     // already schedules its own periodic check with, same version.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'

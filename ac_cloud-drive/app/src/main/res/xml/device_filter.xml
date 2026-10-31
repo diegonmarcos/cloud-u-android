@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #1375 the USB devices that put Cloud Drive in "Choose an app for the USB device": USB mass storage (class 8).
+     Android matches the class on the device or on any of its interfaces (UsbDeviceFilter), and most drives declare
+     0 on the device and 8 on the interface, so one class entry covers them all. -->
+<resources>
+    <usb-device class="8" />
+</resources>

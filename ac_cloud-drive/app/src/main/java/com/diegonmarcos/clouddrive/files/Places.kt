@@ -68,8 +68,14 @@ object Places {
         appDirs.drop(1).forEach { dir ->
             if (dir.isDirectory) out += Place("app-" + dir.absolutePath, ctx.getString(R.string.files_place_app_files, volumeLabel(ctx, dir)), "storage", Kind.PATH, Location.Local(dir.absolutePath))
         }
+        // #1375 the drives Android mounted (USB-C over OTG, SD cards), from StorageManager: their own label and size,
+        // USB first. The /storage scan stays as the fallback for a vendor whose StorageManager reports nothing.
+        val drives = com.diegonmarcos.clouddrive.usb.StorageVolumes.drives(ctx)
         if (hasAllFiles) {
-            File("/storage").listFiles()?.filter { it.isDirectory && it.name != "emulated" && it.name != "self" }?.forEach { volume ->
+            drives.forEach { d ->
+                out += Place(d.id, d.label, if (d.kind == com.diegonmarcos.clouddrive.usb.UsbVolumeModel.Kind.USB) "usb" else "sd_card", Kind.PATH, Location.Local(d.path), hint = d.sizeHint)
+            }
+            File("/storage").listFiles()?.filter { it.isDirectory && it.name != "emulated" && it.name != "self" && drives.none { d -> d.path == it.absolutePath } }?.forEach { volume ->
                 out += Place("vol-" + volume.absolutePath, volumeLabel(ctx, volume), if (volume.name.lowercase() == "usb") "usb" else "sd_card", Kind.PATH, Location.Local(volume.absolutePath))
             }
         }
@@ -77,7 +83,10 @@ object Places {
             out += Place("tree", ctx.getString(R.string.files_place_granted, prefs.treeGrantName ?: ctx.getString(R.string.files_place_sd_card)), "sd_card", Kind.TREE, null)
         }
         val hasRemovablePath = out.any { it.kind == Kind.PATH }
-        if (!hasRemovablePath) out += Place("connect", ctx.getString(R.string.files_place_connect), "usb", Kind.CONNECT, null)
+        // Without all-files access a mounted drive is offered by name: the tap asks for exactly that volume (SAF).
+        val unreached = drives.firstOrNull().takeIf { !hasAllFiles }
+        if (!hasRemovablePath) out += if (unreached != null) Place("connect", ctx.getString(R.string.usb_place_grant, unreached.label), "usb", Kind.CONNECT, null, hint = unreached.sizeHint)
+            else Place("connect", ctx.getString(R.string.files_place_connect), "usb", Kind.CONNECT, null)
         return out
     }
 

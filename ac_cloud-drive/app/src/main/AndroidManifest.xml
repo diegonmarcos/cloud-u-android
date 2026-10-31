@@ -54,6 +54,10 @@
          browser's package resolved from the constellation manifest by app/build.gradle. -->
     <uses-permission android:name="${authMissionPermission}" />
 
+    <!-- #1375 USB-C drives over OTG: USB host is used when the phone has it, never required (a phone without it still
+         installs the app; the drive features then simply do not appear). -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
     <!-- Manage ▸ Apps lists every installed app with its sizes. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
@@ -180,6 +184,42 @@
             android:exported="false"
             android:theme="@style/Theme.CloudDrive"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- #1375 "Choose an app for the USB device": a USB mass-storage drive (res/xml/device_filter.xml, class 8)
+             offers Cloud Drive next to the other file managers. The activity opens Explorer on the drive Android
+             mounted, or browses it raw over USB (libaums, FAT32) when Android did not; the USB permission goes
+             through libs:perms (PermsUsb). test/test-drive-usb-drives.sh pins every line of this block. -->
+        <activity
+            android:name=".usb.UsbDriveActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.CloudDrive">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+        </activity>
+
+        <!-- #1375 drives mounting and leaving: the media broadcasts on the file scheme (exempt from the implicit-broadcast
+             limits) and the USB detach. They refresh Explorer's places and turn the drive card to "Safe to remove". -->
+        <receiver
+            android:name=".usb.UsbVolumeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_MOUNTED" />
+                <action android:name="android.intent.action.MEDIA_EJECT" />
+                <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
+                <action android:name="android.intent.action.MEDIA_REMOVED" />
+                <action android:name="android.intent.action.MEDIA_BAD_REMOVAL" />
+                <data android:scheme="file" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Open-with and Share hand a file to another app, and a file:// URI has been illegal
              to send across that boundary since Android 7. Everything leaves through here. -->

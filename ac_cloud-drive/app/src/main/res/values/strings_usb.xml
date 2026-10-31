@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #1375 USB-C drives: the USB chooser entry, the raw drive browser (UsbDriveActivity) and the drive cards. -->
+<resources>
+    <string name="usb_open_drive">Open USB drive</string>
+    <string name="usb_looking">Looking for the USB drive…</string>
+    <string name="usb_asking">Waiting for the USB permission…</string>
+    <string name="usb_denied">USB access was not allowed. Unplug the drive and plug it in again to be asked again.</string>
+    <string name="usb_none">No USB drive is plugged in.</string>
+    <string name="usb_raw_hint">Android did not mount this drive, so Cloud Drive reads it directly over USB (FAT32).</string>
+    <string name="usb_eject">Eject</string>
+    <string name="usb_ejecting">Closing files on the drive…</string>
+    <string name="usb_safe_to_remove">Safe to remove the drive</string>
+    <string name="usb_removed">The drive was removed.</string>
+    <string name="usb_removed_unsafely">The drive was removed while it was in use. Eject it first next time.</string>
+    <string name="usb_up">Up</string>
+    <string name="usb_copy_to_phone">Copy to phone</string>
+    <string name="usb_copied">Copied to %1$s</string>
+    <string name="usb_delete">Delete</string>
+    <string name="usb_empty">This folder is empty.</string>
+    <string name="usb_failed">Could not read the drive: %1$s</string>
+    <string name="usb_close">Close</string>
+    <string name="usb_place_grant">Allow access to %1$s</string>
+    <string name="usb_raw_card">USB drive not mounted by Android</string>
+    <string name="usb_raw_card_hint">Open it directly over USB (FAT32 drives).</string>
+    <string name="usb_open">Open</string>
+    <string name="usb_eject_settings">Eject in Settings</string>
+</resources>

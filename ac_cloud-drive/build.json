@@ -1583,6 +1583,18 @@
       ]
     }
   },
+  "usb_drives": {
+    "_doc": "#1375 USB-C drives (USB mass storage over OTG). The manifest puts Cloud Drive in Android's 'Choose an app for the USB device': .usb.UsbDriveActivity answers USB_DEVICE_ATTACHED with res/xml/device_filter.xml (usb-device class 8), usb.host is an optional feature, and .usb.UsbVolumeReceiver hears the media broadcasts on the file scheme plus USB_DEVICE_DETACHED. Path 1: a drive Android mounted (StorageManager/StorageVolume) is a place in Explorer with its label and size (UsbVolumeModel, StorageVolumes) and is browsed through all-files access or a per-volume SAF grant (StorageVolume.createOpenDocumentTreeIntent); an attach opens Explorer straight on it. Path 2: a drive Android did not mount is opened raw by libaums (FAT32 only; exFAT/NTFS need the system mount) after the per-device USB permission, which is libs:perms' usb_host (PermsUsb). Detach closes every stream and shows Safe to remove. Guards: test/test-drive-usb-drives.sh (manifest, mutation-proven), UsbVolumeModelTest + .github/workflows/drive-usb-mutation.yml, test-drive-usb-volume-emulator.yml (vold virtual disk).",
+    "activity": ".usb.UsbDriveActivity",
+    "receiver": ".usb.UsbVolumeReceiver",
+    "device_filter": "res/xml/device_filter.xml",
+    "usb_class": 8,
+    "uses_feature": {"name": "android.hardware.usb.host", "required": false},
+    "media_actions": ["android.intent.action.MEDIA_MOUNTED", "android.intent.action.MEDIA_EJECT", "android.intent.action.MEDIA_UNMOUNTED", "android.intent.action.MEDIA_REMOVED", "android.intent.action.MEDIA_BAD_REMOVAL"],
+    "raw_library": {"coordinate": "me.jahnen.libaums:core:0.10.0", "licence": "Apache-2.0", "file_systems": ["FAT32"], "url": "https://github.com/magnusja/libaums"},
+    "permission": "usb_host",
+    "copy_dir": "Download/Cloud Drive USB"
+  },
   "perms": {
     "_doc": "#1360 every grant this app needs, by libs:perms catalogue id (needs), and the fleet apps that do work for it with the grants THEY must hold (helpers). The ONE declaration: generated into assets/app-perms.json (cloud-android-perms-guard.py --write), drawn by Configs > General > Perms (libs:perms AppPermsSection) with live state, Grant / Open and Grant all, asked at first run (first_run), and reported as 'Missing permission X - Grant' when an operation fails (PermsGate). perms-guard fails when code uses a gated API or another app's engine that is not declared here, or when the manifest and this list disagree.",
     "needs": [
@@ -1590,6 +1602,7 @@
       "storage_read",
       "storage_write",
       "all_files",
+      "usb_host",
       "install_unknown",
       "usage_access",
       "battery_opt"

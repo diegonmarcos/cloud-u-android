@@ -83,7 +83,11 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
     val ctx = LocalContext.current
     val snap by prefs.snapshot.collectAsState()
     val hasAccess = remember { Places.hasAllFilesAccess(ctx) }
-    val volumes = remember(snap, hasAccess) { Places.discovered(ctx, snap, hasAccess).filter { it.kind == Places.Kind.PATH } }
+    // #1375 drives mounting and leaving re-read the list; their last broadcast is the card's state.
+    val usbTick by com.diegonmarcos.clouddrive.usb.StorageVolumes.tick.collectAsState()
+    val usbStates by com.diegonmarcos.clouddrive.usb.StorageVolumes.states.collectAsState()
+    val volumes = remember(snap, hasAccess, usbTick) { Places.discovered(ctx, snap, hasAccess).filter { it.kind == Places.Kind.PATH } }
+    val rawUsb = remember(usbTick) { com.diegonmarcos.superapp.perms.PermsUsb.drives(ctx).isNotEmpty() && com.diegonmarcos.clouddrive.usb.StorageVolumes.drives(ctx).none { it.kind == com.diegonmarcos.clouddrive.usb.UsbVolumeModel.Kind.USB } }
     val classes = Declarations.volumes.classes
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -99,8 +103,24 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
             }
         }
         volumes.forEach { v ->
-            DriveCard(v.label, light = StatusLight.of(true), summary = v.location?.path, summaryMonospace = true, tag = DriveTags.VOLUMES_CARD) {
-                PillRow { Pill(stringResource(R.string.volumes_open), { v.location?.let { onOpenPath(it.path) } }, filled = true) }
+            val st = v.location?.path?.let { usbStates[it] }
+            val safe = st == com.diegonmarcos.clouddrive.usb.UsbVolumeModel.DriveState.SAFE_TO_REMOVE
+            val summary = listOfNotNull(v.location?.path, v.hint.ifBlank { null }, if (safe) stringResource(R.string.usb_safe_to_remove) else null).joinToString("  ·  ")
+            DriveCard(v.label, light = StatusLight.of(!safe), summary = summary, summaryMonospace = true, tag = DriveTags.VOLUMES_CARD) {
+                PillRow {
+                    Pill(stringResource(R.string.volumes_open), { v.location?.let { onOpenPath(it.path) } }, filled = true)
+                    // Only the system can unmount a volume: Eject opens its Storage page, and the media broadcasts turn this card to "Safe to remove".
+                    if (v.icon == "usb" && !safe) Pill(stringResource(R.string.usb_eject_settings), { com.diegonmarcos.clouddrive.usb.StorageVolumes.openEjectSettings(ctx) })
+                }
+            }
+        }
+        // A drive Android let go of is no longer a volume, so its "Safe to remove" stays as a card of its own.
+        usbStates.filter { (k, st) -> st == com.diegonmarcos.clouddrive.usb.UsbVolumeModel.DriveState.SAFE_TO_REMOVE && k.startsWith("/") && volumes.none { it.location?.path == k } }.keys.forEach { k ->
+            DriveCard(stringResource(R.string.usb_safe_to_remove), light = StatusLight.State.OFF, summary = k, summaryMonospace = true, tag = DriveTags.VOLUMES_CARD) {}
+        }
+        if (rawUsb) {
+            DriveCard(stringResource(R.string.usb_raw_card), light = StatusLight.State.UNKNOWN, summary = stringResource(R.string.usb_raw_card_hint), tag = DriveTags.VOLUMES_CARD) {
+                PillRow { Pill(stringResource(R.string.usb_open), { com.diegonmarcos.clouddrive.usb.UsbDriveActivity.open(ctx) }, filled = true) }
             }
         }
         val auth = Declarations.volumes.personalAuth

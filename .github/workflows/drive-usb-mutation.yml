@@ -1,0 +1,94 @@
+# #1375 Cloud Drive USB-C drives mutation proof: volume detection and mapping (UsbVolumeModel: which volume is a drive,
+# USB vs SD, label, size line, order, the drive to open after an attach, mass-storage class 8, the detach states) are
+# pinned by UsbVolumeModelTest. This job runs Cloud Drive's JVM suite once on the real tree (GREEN expected), then once
+# per planted mutant (RED expected, one break each). It fails if the real tree is red or any mutant stays green. Manual only.
+name: drive-usb-mutation
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "all | one of the mutant names below"
+        required: false
+        default: "all"
+permissions:
+  contents: read
+env:
+  WORK_DIR: ac_cloud-drive
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+      - name: Set up Gradle 8.10.2 (cached)
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.10.2"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
+      - name: Checkout vault (shared Android signing key, read by app/build.gradle at configuration)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me-pvt-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Install ORAS + sops (pinned)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
+      - name: Real tree GREEN, every mutant RED
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          ONLY: ${{ inputs.name }}
+        run: |
+          set -u
+          jq '.tests.unit.task = ":app:testDebugUnitTest"' "$WORK_DIR/build.json" > /tmp/b.json && mv /tmp/b.json "$WORK_DIR/build.json"
+          V=ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/usb/UsbVolumeModel.kt
+          suite() { sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR" > /tmp/suite.log 2>&1; }
+          sub() { python3 -c 'import sys; p, a, b = sys.argv[1:]; s = open(p).read(); assert a in s, "anchor missing: " + a; open(p, "w").write(s.replace(a, b, 1))' "$V" "$1" "$2"; }
+          suite || { tail -80 /tmp/suite.log; echo "::error::the real tree is RED"; exit 1; }
+          grep -q "UsbVolumeModelTest" -r ac_cloud-drive/app/build/test-results 2>/dev/null || { echo "::error::UsbVolumeModelTest did not run"; exit 1; }
+          echo "real tree: GREEN"
+          stayed=0
+          while IFS='@' read -r name a b; do
+            [ -z "$name" ] && continue
+            [ "$ONLY" != "all" ] && [ "$ONLY" != "$name" ] && continue
+            git checkout -- "$V"
+            sub "$a" "$b" || { echo "::error::$name: mutation anchor missing"; stayed=$((stayed + 1)); continue; }
+            if suite; then echo "::error::mutant stayed GREEN: $name"; stayed=$((stayed + 1)); else echo "RED (caught): $name"; fi
+          done <<'MUTANTS'
+          primary-is-drive@v.removable && !v.primary && isMounted(v)@v.removable && isMounted(v)
+          read-only-not-mounted@v.state == STATE_MOUNTED || v.state == STATE_MOUNTED_READ_ONLY@v.state == STATE_MOUNTED
+          usb-by-path@|| p.startsWith("/storage/usb")@|| false
+          label-no-uuid@.ifEmpty { v.uuid?.trim().orEmpty() }@.ifEmpty { "" }
+          free-uncapped@human(free.coerceIn(0, total))@human(free)
+          usb-not-first@if (it.kind == Kind.USB) 0 else 1@if (it.kind == Kind.USB) 1 else 0
+          no-dedupe@.distinctBy { it.path }@.distinctBy { it.uuid }
+          open-old-drive@usb.firstOrNull { it.path !in before }@usb.firstOrNull()
+          interface-class@|| interfaceClasses.any { it == USB_CLASS_MASS_STORAGE }@|| false
+          eject-safe@ACTION_MEDIA_EJECT -> DriveState.EJECTING@ACTION_MEDIA_EJECT -> DriveState.SAFE_TO_REMOVE
+          pull-is-safe@if (current == DriveState.SAFE_TO_REMOVE || current == DriveState.EJECTING) DriveState.REMOVED else DriveState.REMOVED_UNSAFELY@DriveState.REMOVED
+          detach-open-session@if (sessionClosed || current == DriveState.SAFE_TO_REMOVE) DriveState.REMOVED@if (true) DriveState.REMOVED
+          eject-keeps-streams@action == ACTION_MEDIA_EJECT || action == ACTION_MEDIA_UNMOUNTED ||@action == ACTION_MEDIA_UNMOUNTED ||
+          copy-overwrites@if (!exists(name)) return name@return name
+          dotfile-ext@name.lastIndexOf('.').takeIf { it > 0 }@name.lastIndexOf('.').takeIf { it >= 0 }
+          MUTANTS
+          git checkout -- "$V"
+          [ "$stayed" -eq 0 ] || { echo "::error::$stayed mutant(s) stayed green"; exit 1; }
+          echo "every mutant RED"

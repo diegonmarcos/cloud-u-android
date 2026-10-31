@@ -7,6 +7,10 @@
       "\"/storage/emulated/0",
       "\"/sdcard/"
     ],
+    "usb_host": [
+      "\\bUsbMassStorageDevice\\b",
+      "\\bPermsUsb\\.request\\("
+    ],
     "notifications": [
       "NotificationCompat\\.Builder\\(",
       "Notification\\.Builder\\("

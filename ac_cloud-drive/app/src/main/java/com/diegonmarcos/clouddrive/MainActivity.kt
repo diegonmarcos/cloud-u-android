@@ -94,6 +94,10 @@ class MainActivity : ComponentActivity(), DriveActions {
     private var filesController: FilesController? = null
 
     private val openTreeLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? -> persistTreeGrant(uri) }
+    /** #1375 the per-volume SAF grant (StorageVolume.createOpenDocumentTreeIntent) for a drive without all-files access. */
+    private val volumeTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r -> persistTreeGrant(r.data?.data) }
+    /** #1375 a folder to open Explorer on, handed over by UsbDriveActivity (the drive just plugged in). */
+    private val pendingOpen = mutableStateOf<String?>(null)
 
     /** The engines come back with a path to reveal in the active Files pane (#567 push 5). */
     private val engineLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -120,6 +124,7 @@ class MainActivity : ComponentActivity(), DriveActions {
             finish()
             return
         }
+        pendingOpen.value = intent?.getStringExtra(com.diegonmarcos.clouddrive.usb.UsbDriveActivity.EXTRA_OPEN_PATH)
         // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
         // repositories, cloned shallow into the store the first time it does not hold them.
         // (StoreSeedWorker.schedule guards itself and no-ops in safe mode.)
@@ -185,6 +190,12 @@ class MainActivity : ComponentActivity(), DriveActions {
      * toggle; they come back HERE with the grant. The seed's pass that ran without it is waiting
      * out a retry back-off, so it is replaced now rather than leaving the store empty meanwhile.
      */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(com.diegonmarcos.clouddrive.usb.UsbDriveActivity.EXTRA_OPEN_PATH)?.let { pendingOpen.value = it }
+    }
+
     override fun onResume() {
         super.onResume()
         val has = Places.hasAllFilesAccess(this)
@@ -241,6 +252,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
         val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }
         openInFilesHook = openPath
+        val usbOpen by pendingOpen
+        LaunchedEffect(usbOpen) { usbOpen?.let { openPath(it); pendingOpen.value = null } }
         val syncAll: () -> Unit = { gitOrNull?.let { g -> g.repos.value.filter { it.autoSync }.forEach { g.syncNow(it) } } }
 
         // #1106 the startup sequence: terminal installed -> started -> $HOME ready -> mounted -> the shell.
@@ -298,7 +311,13 @@ class MainActivity : ComponentActivity(), DriveActions {
             .onFailure { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
     }
 
-    override fun requestTreeGrant() { runCatching { openTreeLauncher.launch(null) } }
+    override fun requestTreeGrant() {
+        // #1375 a plugged-in drive without all-files access: the system's grant for exactly that volume, else the picker.
+        val drive = com.diegonmarcos.clouddrive.usb.StorageVolumes.drives(this).firstOrNull()
+        val perVolume = drive?.let { com.diegonmarcos.clouddrive.usb.StorageVolumes.grantIntent(this, it.path) }
+        if (perVolume != null && runCatching { volumeTreeLauncher.launch(perVolume) }.isSuccess) return
+        runCatching { openTreeLauncher.launch(null) }
+    }
 
     private fun persistTreeGrant(uri: Uri?) {
         if (uri == null) return

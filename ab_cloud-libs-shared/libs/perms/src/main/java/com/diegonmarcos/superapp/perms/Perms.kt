@@ -168,6 +168,7 @@ object PermStatusReader {
                     else -> bool(granted == hp.size, "$granted of ${hp.size} data types allowed")
                 }
             }
+            "usb_host" -> PermsUsb.status(ctx)   // #1375 per-device USB grant (PermsUsb)
             "manual" -> PermStatus(PermState.UNKNOWN, "Android does not expose this: check it on the page")
             else -> if (e.permission.isNotEmpty()) bool(ctx.checkSelfPermission(e.permission) == PackageManager.PERMISSION_GRANTED, "only a shell can grant it")
                     else PermStatus(PermState.UNKNOWN)
