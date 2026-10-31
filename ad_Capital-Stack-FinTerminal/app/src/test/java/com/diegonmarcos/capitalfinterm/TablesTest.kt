@@ -62,7 +62,8 @@ class TablesTest {
         assertEquals(32, data.rows.size)
         // the energy item with no direct proxy is never asked of Cboe
         val e = Fake { null }
-        load("commodities", "energy_perf", e, api = null)
+        // and when no item answers at all the panel is an error state, not a table of dashes
+        try { load("commodities", "energy_perf", e, api = null); org.junit.Assert.fail("no item answered") } catch (x: IOException) { assertTrue(x.message.orEmpty().contains("no answer")) }
         assertFalse(e.asked.toString(), e.asked.any { it.contains("HO=F") })
         assertTrue(e.asked.any { it.endsWith("/charts/historical/USO.json") })
     }

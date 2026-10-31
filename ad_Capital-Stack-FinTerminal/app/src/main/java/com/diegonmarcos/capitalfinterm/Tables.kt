@@ -28,14 +28,20 @@ object Tables {
     /** One item's answer: what came back, the source name that served it (empty: none) and why not, when nothing did. */
     data class ItemGot(val got: Got, val by: String, val why: String)
 
+    /** Nothing answered for any item: an error state (with the first reason), never a table of dashes. */
+    private fun <T : Map<String, ItemGot>> some(m: T): T {
+        if (m.values.all { it.got.isEmpty }) throw IOException(m.values.firstOrNull()?.why ?: "no data")
+        return m
+    }
+
     fun load(panel: Panel, source: Source, f: JSONObject, http: Http, today: LocalDate, c: ModelCtx): PanelData = when (panel.derive) {
-        PERFORMANCE -> performance(panel, f, Engine.eachOf(f, today, c.user).associateWith { gather(it, source, f, http, today, c) })
+        PERFORMANCE -> performance(panel, f, some(Engine.eachOf(f, today, c.user).associateWith { gather(it, source, f, http, today, c) }))
         PORTFOLIO -> {
             val proxies = f.optJSONObject("proxies") ?: JSONObject()
             val legs = c.dash?.legs.orEmpty()
-            portfolio(panel, f, legs, legs.associate { (name, _) -> name to Catalog.str(proxies, name).let { sym -> if (sym.isEmpty()) ItemGot(Got(), "", "no proxy declared") else gather(sym, source, f, http, today, c) } })
+            portfolio(panel, f, legs, some(legs.associate { (name, _) -> name to Catalog.str(proxies, name).let { sym -> if (sym.isEmpty()) ItemGot(Got(), "", "no proxy declared") else gather(sym, source, f, http, today, c) } }))
         }
-        MATRIX -> matrix(panel, f, strings(f.optJSONArray("each")).associateWith { gather(it, source, f, http, today, c) })
+        MATRIX -> matrix(panel, f, some(strings(f.optJSONArray("each")).associateWith { gather(it, source, f, http, today, c) }))
         else -> throw IOException("unknown derive ${panel.derive}")
     }
 
