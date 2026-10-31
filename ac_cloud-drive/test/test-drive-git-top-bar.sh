@@ -140,4 +140,36 @@ out=$(t4 "$BJ" "$SYNC/GitTopBar.kt" "$SYNC/GitDepthUi.kt") && pass "the top nav 
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); g=d["ui"]["sync"]["git"]["top_bar"]["groups"]; g[4]["items"]=[i for i in g[4]["items"] if i["id"]!="legend"]; json.dump(d,open(sys.argv[2],"w"))' "$BJ" "$tmp/bj4.json"
 t4 "$tmp/bj4.json" "$SYNC/GitTopBar.kt" "$SYNC/GitDepthUi.kt" >/dev/null 2>&1 && fail "T4 passed a More that lost an action (vacuous)" || pass "an action dropped from More → T4 RED"
 
+# T5 #1356 no reserved height: with ui.top_bar declared (the shell's first row clears the status bar) every section strip is
+#    drawn with underTopChrome = false (no second status-bar band above Local/Cloud, Me/Cloud); title_row false -> the
+#    strip is the Git page's first child (no Spacer, island or top padding before it).
+t5() { python3 - "$BJ" "$1" "$2" <<'PY'
+import json, os, re, sys
+bj = json.load(open(sys.argv[1])); src = sys.argv[2]; git = open(sys.argv[3]).read(); bad = []
+if bj["ui"].get("top_bar"):
+    for d, _, fs in os.walk(src):
+        for f in fs:
+            if not f.endswith(".kt"): continue
+            t = open(os.path.join(d, f)).read()
+            for m in re.finditer(r"NavBarTopSecondRow\(", t):
+                depth, i = 0, m.end() - 1
+                while True:
+                    c = t[i]; depth += c == "("; depth -= c == ")"; i += 1
+                    if depth == 0: break
+                if "underTopChrome = false" not in t[m.start():i]: bad.append("%s: a strip reserves the status-bar inset under the top bar" % f)
+g = next(x for x in bj["ui"]["sections"] if x["id"] == "git")
+if g.get("title_row") is False:
+    body = git[git.index("Column(modifier.fillMaxSize()) {", git.index("fun GitPageScreen(")):]
+    first = [l.strip() for l in body.splitlines()[1:] if l.strip() and not l.strip().startswith("//")][0]
+    if not first.startswith("NavBarTopSecondRow("): bad.append("the Git page reserves height above its strip: " + first[:80])
+print("\n".join(bad)); sys.exit(1 if bad else 0)
+PY
+}
+echo "== T5 no reserved height above the section strips =="
+out=$(t5 "$SRC" "$SYNC/SyncScreen.kt") && pass "every strip under the top bar adds no inset; the Git strip is the page's first child" || fail "T5: $out"
+mkdir -p "$tmp/src5/files"; sed 's/, underTopChrome = false)/)/' "$SRC/files/ExplorerScreen.kt" > "$tmp/src5/files/ExplorerScreen.kt"
+t5 "$tmp/src5" "$SYNC/SyncScreen.kt" >/dev/null 2>&1 && fail "T5 passed a strip that reserves the inset (vacuous)" || pass "Explorer's strip back on the inset → T5 RED"
+sed 's/^\(        \)NavBarTopSecondRow(pages = pages/\1Spacer(Modifier.height(DriveMetrics.islandHeight))\n\1NavBarTopSecondRow(pages = pages/' "$SYNC/SyncScreen.kt" > "$tmp/S5.kt"
+t5 "$SRC" "$tmp/S5.kt" >/dev/null 2>&1 && fail "T5 passed a Spacer above the Git strip (vacuous)" || pass "a Spacer above the Git strip → T5 RED"
+
 [ "$FAILURES" -eq 0 ] && { echo "test-drive-git-top-bar: all green"; exit 0; } || { echo "test-drive-git-top-bar: $FAILURES failure(s)"; exit 1; }

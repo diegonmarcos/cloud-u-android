@@ -89,7 +89,7 @@ fun ManageScreen(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (St
         if (page != null) onPageConsumed()
     }
     Column(modifier.fillMaxSize().testTag(DriveTags.MANAGE)) {
-        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.MANAGE_STRIP))
+        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.MANAGE_STRIP), underTopChrome = false)
         Box(Modifier.weight(1f).consumeWindowInsets(topIslandInsets()).testTag(DriveTags.managePage(current))) {
             when (current) {
                 "apps" -> AppsPage(prefs)

@@ -48,7 +48,7 @@ fun ExplorerScreen(
         if (page != null) onPageConsumed()
     }
     Column(modifier.fillMaxSize().testTag(DriveTags.EXPLORER)) {
-        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.EXPLORER_STRIP))
+        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.EXPLORER_STRIP), underTopChrome = false)
         // The strip already cleared the status bar; the page's own top island must not clear it twice.
         Box(Modifier.weight(1f).consumeWindowInsets(topIslandInsets()).testTag(DriveTags.explorerPage(current))) {
             when (current) {
