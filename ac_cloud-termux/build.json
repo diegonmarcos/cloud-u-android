@@ -300,5 +300,33 @@
       ]
     },
     "_doc_unit": "tests.unit.task is deliberately still UNSET: the 21 upstream JVM test classes have never run in this fork and turning them on is its own job, not a side effect of #470."
+  },
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings."
+        }
+      ]
+    },
+    "about": {
+      "what": "The fleet's Linux terminal emulator and command-line environment for Android.",
+      "features": [
+        "Terminal emulator",
+        "Package manager",
+        "Shared store with the other fleet apps"
+      ],
+      "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It calls no fleet service: its data stays on the phone.",
+      "backends": []
+    }
   }
 }

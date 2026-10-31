@@ -1837,5 +1837,40 @@
   "fleet_agents": [
     {"id": "page-agent", "name": "Browser AI agent", "kind": "in-app agent", "trigger": "on demand (AI chat on the open page)", "summary": "Reads and acts on the open page with the declared tools; every tool that changes something asks first.", "open": "page:browser", "status": {"source": "none", "reason": "the agent runs inside the open tab; Cloud Browser exposes no status for it"}},
     {"id": "agent-door", "name": "Browser agent door", "kind": "agent door", "trigger": "called by Cloud Search agents", "summary": "agentapi: opens a URL for the person, or reads a page text read-only (#913).", "open": "page:browser", "status": {"source": "provider_presence", "authority_suffix": "agentapi"}}
-  ]
+  ],
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings: General, Search, Privacy & Security, Site settings, Autocomplete, Passwords, Payment, Downloads, Appearance, Tabs, Sync & Vault, Advanced, About."
+        }
+      ]
+    },
+    "about": {
+      "what": "A focused WebView browser: tabs that survive restarts, an address bar with search, favourites and the vault's passwords.",
+      "features": [
+        "Favourites and tabs that persist",
+        "Address bar with search engines",
+        "Site settings, privacy and downloads",
+        "Passwords and autofill from the vault",
+        "Appearance and sync settings"
+      ],
+      "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. Usage analytics are opt-in and off by default; when allowed, events go only to the owner's self-hosted Umami and Matomo. It talks only to the fleet services listed below, over the private mesh first.",
+      "backends": [
+        {
+          "id": "vault",
+          "why": "passwords and autofill"
+        }
+      ]
+    }
+  }
 }

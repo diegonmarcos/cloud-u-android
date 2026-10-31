@@ -222,5 +222,43 @@
   "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
   "fleet_agents": [
     {"from": "ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/agents/agents.json", "path": "agents", "kind": "remote gateway agent", "trigger": "on demand (a chat turn in Cloud Code Agents or Chat, or Cloud Search chat)", "summary_key": "_doc", "used_by": ["cloud-code", "cloud-search"], "open": "page:agents", "status": {"source": "none", "reason": "live state is the gateway /health over the mesh (HTTP); the SuperApp does not call it"}}
-  ]
+  ],
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings."
+        }
+      ]
+    },
+    "about": {
+      "what": "A pocket development environment: the project backlog, an editor, the repositories, AI agents, a browser and a terminal.",
+      "features": [
+        "Backlog by status, project, priority and effort",
+        "Code editor and repositories",
+        "AI chat and agent batches",
+        "Built-in browser and terminal"
+      ],
+      "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
+      "backends": [
+        {
+          "id": "ai-gateway",
+          "why": "AI chat and agents"
+        },
+        {
+          "id": "git-proxy-api",
+          "why": "repository access"
+        }
+      ]
+    }
+  }
 }

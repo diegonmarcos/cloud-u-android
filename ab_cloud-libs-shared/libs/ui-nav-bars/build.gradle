@@ -8,6 +8,7 @@
 plugins {
     id 'com.android.library'
 }
+apply from: 'fleet-configs.gradle'
 if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'org.jetbrains.kotlin.android'
 }
@@ -19,10 +20,15 @@ android {
 
     defaultConfig {
         minSdk 26
+        // Configs > General and Configs > About (FleetConfigs.kt): the CONSUMING app's build.json::configs_pages, resolved here
+        // (fleet-configs.gradle) and baked as one base64 JSON. This module is compiled inside each app's own build, so the app is
+        // whichever build.json sits at or above rootDir; nothing per app is written in Kotlin.
+        buildConfigField 'String', 'FLEET_CONFIGS_B64', '"' + fleetConfigsB64() + '"'
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -59,6 +65,8 @@ dependencies {
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.core:core-ktx:1.15.0'
+    // FleetConfigsActivity: Configs > General / About for the apps drawn with Views or a WebView
+    implementation 'androidx.activity:activity-compose:1.9.3'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.activity:activity-compose:1.9.3'

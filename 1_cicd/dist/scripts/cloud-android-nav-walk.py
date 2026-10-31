@@ -42,6 +42,12 @@ ITEM, LABEL = "bottomnav_item_", "bottomnav_label_"
 ISLAND = "bottomnav_island"
 TAB = "pagetabs_tab_"
 STRIP = "pagetabs_strip"
+# Configs > General / Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json)
+DROPDOWN = "navtop1_dropdown"
+CFG_ENTRY = {"general": "navtop1_configs_general", "about": "navtop1_configs_about"}
+FC_PAGE = {"general": "fleetcfg_general", "about": "fleetcfg_about"}
+FC_ANCHOR, FC_SECTION, FC_ABOUT, FC_BACK = "fleetcfg_anchor_", "fleetcfg_section_", "fleetcfg_about_", "fleetcfg_back"
+FC_ABOUT_FIELDS = ["header", "name", "version", "sha", "what", "features", "repo", "privacy", "backends", "debug", "store", "superapp"]
 
 
 def adb(*a, timeout=90):
@@ -814,6 +820,103 @@ class Walk:
                 tap(n)
                 settle(1.2)
 
+    def find_scrolling(self, rid, frames=8):
+        """Swipe the page up until [rid] is on screen (the About cards and General's sections are one long column)."""
+        for _ in range(frames):
+            nodes = dump() or []
+            n = find(nodes, rid)
+            if n is not None and n.t < self.h * 0.9:
+                return n
+            swipe(self.w // 2, int(self.h * 0.75), int(self.h * 0.35))
+            settle(0.6)
+        return None
+
+    def visit_configs_pages(self):
+        """Configs > General and Configs > About, the two pages every app on the shared scaffold gets from libs:ui-nav-bars: opened from the
+        last two entries of the title dropdown, checked by tag (General: one anchor and one section per declared id, a tap on an anchor
+        brings its section up; About: every field card and both Open buttons) and photographed top to bottom (always, not only with --shots:
+        the owner reviews these two pages by screenshot). Back closes the page and the app stays in front."""
+        build = json.load(open(self.a.build_json, encoding="utf-8"))
+        decl = build.get("configs_pages") or {}
+        sids = [x.get("id") for x in ((decl.get("general") or {}).get("sections") or [])]
+        for page in ("general", "about"):
+            t0, fails, checks = time.time(), [], {}
+            if self.bottom:
+                self.relaunch_to(self.bottom[0])
+            nodes = self.open_dropdown()
+            entry = None
+            if nodes is None:
+                fails.append("P4 the title dropdown did not open")
+            else:
+                for _ in range(6):
+                    entry = find(nodes, CFG_ENTRY[page])
+                    if entry is not None:
+                        break
+                    box = find(nodes, DROPDOWN)
+                    if box is None:
+                        break
+                    swipe(box.cx, box.b - 30, box.t + 30, 300)
+                    settle(0.6)
+                    nodes = dump() or nodes
+                if entry is None:
+                    fails.append("C1 the dropdown has no %s entry (Configs \u25b8 %s)" % (CFG_ENTRY[page], page.capitalize()))
+                    self.back_if_dropdown()
+            if entry is not None:
+                tap(entry)
+                settle(2.0)
+                nodes = dump() or []
+                if find(nodes, FC_PAGE[page]) is None:
+                    fails.append("C2 %s did not open (no %s)" % (page, FC_PAGE[page]))
+                else:
+                    self.evidence("configs_%s_0" % page)
+                    if page == "general":
+                        missing = [i for i in sids if find(nodes, FC_ANCHOR + i) is None]
+                        checks["anchors"] = "%d/%d" % (len(sids) - len(missing), len(sids))
+                        if missing:
+                            fails.append("C3 General has no anchor for %s" % ", ".join(missing))
+                        for i in sids:
+                            a = find(dump() or [], FC_ANCHOR + i)
+                            if a is None:
+                                continue
+                            tap(a)
+                            settle(1.2)
+                            sec = find(dump() or [], FC_SECTION + i)
+                            if sec is None or sec.t > self.h * 0.6:
+                                fails.append("C4 the %s anchor did not bring its section up" % i)
+                            self.evidence("configs_general_%s" % i)
+                    else:
+                        seen = []
+                        for f in FC_ABOUT_FIELDS:
+                            if self.find_scrolling(FC_ABOUT + f) is None:
+                                fails.append("C5 About has no %s card" % f)
+                            else:
+                                seen.append(f)
+                        for btn in ("fleetcfg_open_store", "fleetcfg_open_superapp"):
+                            if self.find_scrolling(btn) is None:
+                                fails.append("C5 About has no %s button" % btn)
+                        checks["fields"] = "%d/%d" % (len(seen), len(FC_ABOUT_FIELDS))
+                        for _ in range(8):
+                            swipe(self.w // 2, int(self.h * 0.3), int(self.h * 0.8))
+                            settle(0.3)
+                        for i in range(0, 4):
+                            self.evidence("configs_about_%d" % i)
+                            swipe(self.w // 2, int(self.h * 0.8), int(self.h * 0.25))
+                            settle(0.8)
+                    back = find(dump() or [], FC_BACK)
+                    if back is not None:
+                        tap(back)
+                    else:
+                        shell("input keyevent KEYCODE_BACK")
+                    settle(1.0)
+                    if not self.foreground():
+                        fails.append("C6 closing %s left the app" % page)
+            if self.crashed():
+                fails.append("the app crashed on Configs \u25b8 %s" % page.capitalize())
+            if fails:
+                self.evidence("configs_%s_fail" % page)
+            self.results.append({"section": "configs", "page": page, "label": "Configs \u25b8 " + page.capitalize(),
+                                 "status": "FAIL" if fails else "PASS", "checks": checks, "failures": fails, "seconds": int(time.time() - t0)})
+
     def visit_section(self, sid):
         sec = self.sections.get(sid)
         if sec is None:
@@ -883,6 +986,15 @@ class Walk:
                         self.evidence("%s_driver_error" % sid)
                     except Exception:
                         pass
+                finally:
+                    signal.alarm(0)
+            if emulator_alive():
+                signal.alarm(max(SECTION_BUDGET, PAGE_BUDGET * 4))
+                try:
+                    self.visit_configs_pages()
+                except Exception as ex:  # a driver fault must show as a failed page, never as silence
+                    self.results.append({"section": "configs", "page": "-", "label": "Configs", "status": "FAIL", "checks": {},
+                                         "failures": ["driver error: %r" % ex], "seconds": 0})
                 finally:
                     signal.alarm(0)
         self.report()

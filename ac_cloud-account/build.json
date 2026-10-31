@@ -979,5 +979,56 @@
         }
       }
     }
+  },
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings: Android, Desktop, C3."
+        }
+      ]
+    },
+    "about": {
+      "what": "Turns an empty phone into the owner's phone and keeps it that way: the account, its sign-in ways, the per-device profile and the fleet secrets.",
+      "features": [
+        "Personal info: me, wallet, autocomplete",
+        "Configs for Android, desktop and C3",
+        "Data: secrets, backups, devices",
+        "Connect: status, authentication providers, setup",
+        "Activity log"
+      ],
+      "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
+      "backends": [
+        {
+          "id": "authelia",
+          "why": "single sign-on for the fleet"
+        },
+        {
+          "id": "auth-broker",
+          "why": "token exchange for the apps"
+        },
+        {
+          "id": "tokens-api",
+          "why": "per-app API tokens"
+        },
+        {
+          "id": "git-proxy-api",
+          "why": "profile backup to the private vault repo"
+        },
+        {
+          "id": "vault",
+          "why": "password vault"
+        }
+      ]
+    }
   }
 }

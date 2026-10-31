@@ -1,2 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Configs > General / Configs > About for an app whose UI is Views or a WebView (no shared Compose scaffold): the app starts
+             this with FleetConfigsActivity.intent(context, page). Not exported: only the app itself opens its own Configs pages. -->
+        <activity
+            android:name="com.diegonmarcos.superapp.fleetconfigs.FleetConfigsActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+    </application>
+</manifest>

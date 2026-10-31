@@ -184,5 +184,38 @@
         "update_tag": "latest-x86_64"
       }
     ]
+  },
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings."
+        }
+      ]
+    },
+    "about": {
+      "what": "The c3-watchdog panel on the phone: the live dashboard of what is running in the fleet and whether it is alive.",
+      "features": [
+        "The real watchdog dashboard, drawn by c3-watchdog-tui",
+        "Runs inside nix-on-droid, shown as HTML",
+        "Container and service liveness at a glance"
+      ],
+      "privacy": "No ads and no third-party trackers. A crash report is saved on the phone and sent only to the phone's own C3 WebServer over loopback; nothing leaves the device unless you share it. It talks only to the fleet services listed below, over the private mesh first.",
+      "backends": [
+        {
+          "id": "c3-infra-api",
+          "why": "service and container health"
+        }
+      ]
+    }
   }
 }

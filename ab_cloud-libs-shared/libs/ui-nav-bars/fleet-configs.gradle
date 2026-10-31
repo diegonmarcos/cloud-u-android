@@ -1,0 +1,75 @@
+// libs:ui-nav-bars: Configs > General and Configs > About, resolved at build time from the CONSUMING app's declaration.
+//
+// This module is compiled inside each app's own Gradle build, so rootDir is that app (or a directory below it, e.g. Cloud Notes'
+// packages/frontend/apps/android/App). The app's build.json is the nearest one at or above rootDir that carries `configs_pages`.
+// Read once here and baked by build.gradle as BuildConfig.FLEET_CONFIGS_B64 (base64 of one JSON object), decoded by
+// FleetConfigs.kt. Nothing per app lives in Kotlin: the General sections and the About text are the app's build.json.
+//
+// What is resolved here, so the page never types a host or a package:
+//   about.backends[].id  -> the service's MESH URL from ac_cloud-account/build.json::fleet_endpoints (as fleet-urls.gradle does)
+//   store_pkg / superapp_pkg -> android.application_id of ac_cloud-store and aa_cloud-superapp (the About's two Open buttons)
+//   version, version_code, application_id, name -> the app's own build.json (a fork without android.* gets version and package
+//   from the installed package at runtime); sha -> GITHUB_SHA (CI) or "local"
+//   about.repo, .license, .crash, .debug -> derived (see below), so build.json declares only what / features / privacy / backends
+// No process is started (some apps run with the configuration cache on, which forbids it at configuration time).
+// The rule these declarations are held to: 1_cicd/src/data/configs-pages.json, cloud-android-configs-pages-guard.py.
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+def fcAppBuildJson = { ->
+    def d = rootDir.canonicalFile
+    while (d != null) {
+        def f = new File(d, 'build.json')
+        if (f.isFile() && f.getText('UTF-8').contains('"configs_pages"')) return f
+        d = d.parentFile
+    }
+    null
+}
+
+ext.fleetConfigsB64 = { ->
+    def appFile = fcAppBuildJson()
+    if (appFile == null) return ''
+    def slurp = new JsonSlurper()
+    def app = slurp.parse(appFile)
+    def repoRoot = appFile.parentFile.parentFile
+    def sibling = { String dir ->
+        def f = new File(repoRoot, dir + '/build.json')
+        f.isFile() ? slurp.parse(f) : null
+    }
+    def services = sibling('ac_cloud-account')?.fleet_endpoints?.services ?: []
+    def cp = app.configs_pages ?: [:]
+    def about = new LinkedHashMap(cp.about ?: [:])
+    about.backends = (about.backends ?: []).collect { b ->
+        def s = services.find { it.id == b.id }
+        def mesh = (s?.mesh_dns) ? "${s.mesh_scheme ?: 'http'}://${s.mesh_dns}${s.mesh_port ? ':' + s.mesh_port : ''}${s.mesh_path ?: ''}".toString() : ''
+        [id: b.id, why: b.why ?: '', kind: s?.kind ?: '', mesh: mesh]
+    }
+    // Derived, never declared per app (one fact, one place): the source folder, its licence (licenses/curated.json), the local crash
+    // sink (libs:crash posts to the C3 WebServer on loopback, ac_cloud-c3-webserver/build.json::runtime.port) and the app's debug API
+    // (its port in the app's debug-api.json, keyed by application id).
+    def appDir = appFile.parentFile.name
+    about.repo = 'https://github.com/diegonmarcos/cloudy-u-android/tree/main/' + appDir
+    def curated = new File(repoRoot, 'licenses/curated.json')
+    about.license = curated.isFile() ? (slurp.parse(curated).directories?.get(appDir)?.licence ?: '') : ''
+    def wsPort = sibling('ac_cloud-c3-webserver')?.runtime?.port
+    about.crash = wsPort ? "http://127.0.0.1:${wsPort}/__app__/api/crashes".toString() : ''
+    def dbg = new File(appFile.parentFile, 'debug-api.json')
+    // keyed by application id; a fork whose build.json carries no android.application_id has exactly one entry, its own
+    def dbgPorts = dbg.isFile() ? (slurp.parse(dbg).ports ?: [:]) : [:]
+    def dbgPort = dbgPorts.get(app.android?.application_id ?: '') ?: (dbgPorts.size() == 1 ? dbgPorts.values().first() : null)
+    about.debug = dbgPort ? "http://127.0.0.1:${dbgPort}/".toString() : ''
+    def sha = System.getenv('GITHUB_SHA') ?: 'local'
+    def out = [
+        app           : appFile.parentFile.name,
+        name          : app.display_name ?: app.name ?: '',
+        version       : app.android?.version_name ?: '',
+        version_code  : app.android?.version_code ?: 0,
+        sha           : sha.take(12),
+        application_id: app.android?.application_id ?: '',
+        store_pkg     : sibling('ac_cloud-store')?.android?.application_id ?: '',
+        superapp_pkg  : sibling('aa_cloud-superapp')?.android?.application_id ?: '',
+        general       : cp.general ?: [:],
+        about         : about,
+    ]
+    JsonOutput.toJson(out).getBytes('UTF-8').encodeBase64().toString()
+}

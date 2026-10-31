@@ -330,7 +330,7 @@ mutate "scroll-hide loses its policy"                         "$NAVUI" "s=s.repl
 mutate "the first row gets a grey fill"                       "$TOKENS" "s=s.replace('val topRowFill: Color = Color(0x00000000)','val topRowFill: Color = Color(0xFF303030)')" "topRowFill must be a fully transparent colour"
 mutate "the Clean bottom nav loses its size token"            "$TOKENS" "s=s.replace('val cleanBarHeight: Dp = 44.dp,','')" "no longer declares the Clean size token cleanBarHeight"
 mutate "the shared Configs card is gone"                      "$CARD" "s=s.replace('fun NavUiConfigCard(','fun Gone(')" "no longer declares \`fun NavUiConfigCard(\`"
-mutate "the first row loses its Configs > UI entry"           "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt" "s=s.replace('NavUiConfigDialog(','NavGone(')" "no longer carries \`NavUiConfigDialog(\`"
+mutate "the first row loses its Configs > General page (the UI card's home)" "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt" "s=s.replace('FleetConfigsScreen(p, dark','NavGone(p, dark')" "no longer carries \`FleetConfigsScreen(p, dark\`"
 mutate "an exempt-style pending entry without a reason"       "$DATA" "$(J "d['nav_ui']['pending']['ac_cloud-old']='tbd'")" "N13 ac_cloud-old: in"
 
 # N13 must_hold: every behaviour the tests above describe is still in the lib's source (a mutation of each is red)

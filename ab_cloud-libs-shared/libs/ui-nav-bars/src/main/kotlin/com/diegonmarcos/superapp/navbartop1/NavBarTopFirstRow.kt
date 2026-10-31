@@ -81,7 +81,9 @@ import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests
-import com.diegonmarcos.superapp.navbartop2.NavUiConfigDialog
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsScreen
+import com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel
 import com.diegonmarcos.superapp.navbartop2.SubPageRequests
 import com.diegonmarcos.superapp.themebg.ThemeBackground
 import com.diegonmarcos.superapp.themebg.ThemeColors
@@ -124,8 +126,12 @@ public object TopFirstRowTags {
     public const val SEPARATOR_PAGES: String = "navtop1_sep_pages"
     public const val SEPARATOR_ACTIONS: String = "navtop1_sep_actions"
     public const val ACTIONS: String = "navtop1_actions"
-    /** The shared "Configs > UI" entry at the end of the dropdown. */
-    public const val CONFIGS_UI: String = "navtop1_configs_ui"
+    /** The shared "Configs > General" entry at the end of the dropdown (the nav UI card is a section of General). */
+    public const val CONFIGS_GENERAL: String = "navtop1_configs_general"
+    /** The shared "Configs > About" entry, after General. */
+    public const val CONFIGS_ABOUT: String = "navtop1_configs_about"
+    /** The former "Configs > UI" entry: the card moved into Configs > General, so the tag names that entry now. */
+    public const val CONFIGS_UI: String = CONFIGS_GENERAL
     public fun crumb(index: Int): String = "navtop1_crumb_$index"
     public fun entry(id: String): String = "navtop1_entry_$id"
 }
@@ -212,8 +218,10 @@ public fun NavBarTopFirstRow(
     leaf: String? = null,
     /** Non-navigation actions of the app, listed under the dropdown's second separator. */
     extra: (@Composable ColumnScope.(close: () -> Unit) -> Unit)? = null,
-    /** Non-null: the dropdown ends with the shared "Configs > UI" entry (nav mode, scroll-hide), which calls this. */
+    /** Non-null: the dropdown ends with the shared "Configs > General" entry (Perms, Battery, Storage, Notifications, UI, Language), which calls this. */
     onConfigsUi: (() -> Unit)? = null,
+    /** Non-null: a "Configs > About" entry follows General. */
+    onConfigsAbout: (() -> Unit)? = null,
 ) {
     var open by remember { mutableStateOf(false) }
     val nav = remember(appName, title, hierarchy, sections, leaf) { titleNav(appName, title, hierarchy, sections, leaf) }
@@ -294,12 +302,19 @@ public fun NavBarTopFirstRow(
                         // LazyColumn then measures instead of crashing, and the popup's scroll reaches all of it.
                         Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
                     }
+                    if (onConfigsUi != null || onConfigsAbout != null) HorizontalDivider(color = colors.islandBorder)
                     if (onConfigsUi != null) {
-                        HorizontalDivider(color = colors.islandBorder)
                         DropdownMenuItem(
-                            text = { Text(NavUiDecl.CONFIGS_UI_LABEL, color = colors.onIsland) },
+                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.General), color = colors.onIsland) },
                             onClick = { open = false; onConfigsUi() },
-                            modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_UI),
+                            modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_GENERAL),
+                        )
+                    }
+                    if (onConfigsAbout != null) {
+                        DropdownMenuItem(
+                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.About), color = colors.onIsland) },
+                            onClick = { open = false; onConfigsAbout() },
+                            modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_ABOUT),
                         )
                     }
                   }
@@ -386,12 +401,15 @@ public fun NavBarTopFirstRowScaffold(
     sections: List<NavSection> = emptyList(),
     /** A last path segment that is not a page; a page may also set it with [BreadcrumbLeaf]. */
     leaf: String? = null,
-    /** False: this app draws the Configs > UI card in its own Configs page and the first row carries no entry for it. */
-    configsUi: Boolean = true,
+    /** Kept for source compatibility: the nav UI card is now a section of Configs > General, which every app gets. */
+    @Suppress("UNUSED_PARAMETER") configsUi: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    var uiOpen by remember { mutableStateOf(false) }
-    if (uiOpen) NavUiConfigDialog(dark) { uiOpen = false }
+    // Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs): the same two pages in every app, from build.json::configs_pages.
+    var configsPage by remember { mutableStateOf<FleetConfigsPage?>(null) }
+    configsPage?.let { p -> FleetConfigsScreen(p, dark, onDismiss = { configsPage = null }, onAppConfigs = onConfigs) }
+    val openGeneral: () -> Unit = { configsPage = FleetConfigsPage.General }
+    val openAbout: () -> Unit = { configsPage = FleetConfigsPage.About }
     // Classic or Clean (NavUiMode): the user's choice in this app's Configs > UI over the app's declared default; every bar below reads the same.
     val ui = currentNavUi()
     val plan = NavUiDecl.plan(ui.mode)
@@ -413,7 +431,7 @@ public fun NavBarTopFirstRowScaffold(
             onSubPage = { e -> navigate(HierarchyEntry(e.id, e.label, e.depth + 1, here?.sectionId ?: "", selected = e.selected)) },
             onAi = { if (onAi != null) onAi() else controller.toggleAi() },
             onProfile = onAccount, onConfigs = onConfigs, close = close,
-            onConfigsUi = if (configsUi) ({ uiOpen = true }) else null,
+            onConfigsUi = openGeneral, onConfigsAbout = openAbout,
         )
     }
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
@@ -441,7 +459,7 @@ public fun NavBarTopFirstRowScaffold(
                     onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
                     appName = appName, sections = sections, leaf = leaf ?: leafState.text,
                     extra = if (slot != null) ({ close -> slot(close) }) else null,
-                    onConfigsUi = if (configsUi) ({ uiOpen = true }) else null,
+                    onConfigsUi = openGeneral, onConfigsAbout = openAbout,
                 )
             },
             content = { CompositionLocalProvider(LocalSubPageRequests provides requests, LocalBreadcrumbLeaf provides leafState, content = content) },

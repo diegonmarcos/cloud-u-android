@@ -518,5 +518,33 @@
       }
     ],
     "asserted_by": "tests/test-app-name-reaches-the-user.sh"
+  },
+  "configs_pages": {
+    "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json). general.sections: the anchors and sections of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs). about: what the app does, its features, privacy and the fleet services it talks to (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time). Name, icon, version, build sha, repo, licence, crash sink and debug API are derived, never typed here.",
+    "general": {
+      "sections": [
+        {"id": "perms"},
+        {"id": "battery"},
+        {"id": "storage"},
+        {"id": "notifications"},
+        {"id": "ui"},
+        {"id": "language"},
+        {
+          "id": "app",
+          "label": "App",
+          "note": "This app's own settings."
+        }
+      ]
+    },
+    "about": {
+      "what": "The fleet's office suite for documents, spreadsheets and presentations.",
+      "features": [
+        "Documents",
+        "Spreadsheets",
+        "Presentations"
+      ],
+      "privacy": "No ads and no third-party trackers. It calls no fleet service: its data stays on the phone.",
+      "backends": []
+    }
   }
 }

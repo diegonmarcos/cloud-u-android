@@ -200,7 +200,8 @@ class NavChromeScrollTest {
         assertEquals("row 1: the page dropdown", 1, count(CleanDrawerTags.PAGE_DROPDOWN))
         assertEquals("row 2: the icons", 1, count(CleanDrawerTags.ACTIONS))
         for (a in NavQuickAction.entries) assertEquals("icon ${a.declared}", 1, count(CleanDrawerTags.action(a)))
-        assertEquals("the Configs > UI entry", 1, count(CleanDrawerTags.CONFIGS_UI))
+        assertEquals("the Configs > General entry", 1, count(CleanDrawerTags.CONFIGS_GENERAL))
+        assertEquals("the Configs > About entry", 1, count(CleanDrawerTags.CONFIGS_ABOUT))
     }
 
     @Test fun `Classic mode keeps the second row and the labelled bottom nav, and has no hamburger`() {

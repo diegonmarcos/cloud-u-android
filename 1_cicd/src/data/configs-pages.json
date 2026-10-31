@@ -1,0 +1,62 @@
+{
+  "_doc": "THE Configs ▸ General / Configs ▸ About rule of the fleet, read by 1_cicd/src/scripts/cloud-android-configs-pages-guard.py (step of nav-shape-guard.yml, mutation-tested by 1_cicd/src/scripts/test/configs-pages-guard.test.sh). Every app except Cloud SuperApp has at least two pages under Configs: General (ONE page, a row of anchor icons at the top scrolling to its sections: Perms, Battery, Storage/backup, Notifications, UI with the nav mode card, Language, then the app's own Configs) and About (name, icon, version and build sha, what it does, features, source repo and licence, privacy, the backend services with their private mesh URLs, crash and debug links, a Cloud Store section and a Cloud SuperApp section, each with a button that opens that app). Both are drawn ONCE in libs:ui-nav-bars (package fleetconfigs): the shared first-row scaffold puts 'Configs ▸ General' and 'Configs ▸ About' at the end of the title dropdown and in the Clean drawer; an app drawn with Views or a WebView starts FleetConfigsActivity instead. Each app declares its sections and About text in build.json::configs_pages; nothing per app is written in Kotlin.",
+  "_doc_rules": "G0 the lib still carries the pages, the scaffold entries, the Views/WebView activity, the build-time resolver and the two fleet texts (lib.must_hold), and FleetConfigs.REQUIRED_SECTIONS equals general_required. G1 every app (a[acd]_*/build.json) that is not exempt declares configs_pages with general and about. G2 general.sections lists every general_required id once, only ids from general_required + general_optional. G3 about carries every about_declared field (what >= min_what_chars, features >= min_features non-empty, privacy >= min_privacy_chars, backends a list of {id, why} whose id is a fleet_endpoints service with a mesh_dns), and every about_derived field resolves: repo (the app folder), license (licenses/curated.json::directories[app].licence), crash (ac_cloud-c3-webserver/build.json::runtime.port), debug (the app's debug-api.json port for its application_id, or its only entry); name comes from build.json, version and package from build.json or, for a fork without android.*, the installed package at runtime. G4 the app REACHES the pages: some source of the app calls scaffold_call (the shared scaffold) or views_call (the activity); an app that does neither is named in pending with a reason, and a pending app that reaches them is stale. G5 every exempt / pending entry names a real app and has a reason of at least min_reason_chars.",
+  "general_required": ["perms", "battery", "storage", "notifications", "ui", "language"],
+  "general_optional": ["app"],
+  "about_declared": ["what", "features", "privacy", "backends"],
+  "about_derived": ["name", "repo", "license", "crash", "debug"],
+  "min_what_chars": 40,
+  "min_privacy_chars": 40,
+  "min_features": 3,
+  "min_reason_chars": 30,
+  "repo_prefix": "https://github.com/diegonmarcos/cloudy-u-android/tree/main/",
+  "endpoints": "ac_cloud-account/build.json",
+  "webserver": "ac_cloud-c3-webserver/build.json",
+  "licences": "licenses/curated.json",
+  "scaffold_call": "NavBarTopFirstRowScaffold(",
+  "views_call": "FleetConfigsActivity.intent(",
+  "lib": {
+    "decl": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt",
+    "must_hold": [
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "public fun FleetGeneralPage(", "why": "the General page"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "public fun FleetAboutPage(", "why": "the About page"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "FleetConfigsTags.anchor(s.id)", "why": "General's anchor row"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "\"ui\" -> NavUiConfigCard(", "why": "the nav UI card is General's UI section"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "launchApp(ctx, decl.storePkg)", "why": "About's Open Cloud Store button"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsPages.kt", "needle": "launchApp(ctx, decl.superappPkg)", "why": "About's Open Cloud SuperApp button"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt", "needle": "public const val STORE_TEXT: String", "why": "About's Cloud Store section"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigs.kt", "needle": "public const val SUPERAPP_TEXT: String", "why": "About's Cloud SuperApp section"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsActivity.kt", "needle": "public fun intent(context: Context, page: FleetConfigsPage", "why": "the Views / WebView equivalent"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "FleetConfigsScreen(p, dark", "why": "the scaffold hosts both pages"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_GENERAL)", "why": "the title dropdown's Configs ▸ General entry"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_ABOUT)", "why": "the title dropdown's Configs ▸ About entry"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "onConfigsUi = openGeneral, onConfigsAbout = openAbout,\n                )", "why": "the first row is given both entries"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt", "needle": "close = close,\n            onConfigsUi = openGeneral, onConfigsAbout = openAbout,", "why": "the Clean drawer is given both entries"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavCleanDrawer.kt", "needle": "testTag(CleanDrawerTags.CONFIGS_ABOUT)", "why": "the Clean drawer's Configs ▸ About entry"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/build.gradle", "needle": "'FLEET_CONFIGS_B64'", "why": "the declaration is baked"},
+      {"file": "ab_cloud-libs-shared/libs/ui-nav-bars/fleet-configs.gradle", "needle": "configs_pages", "why": "the build-time resolver reads build.json::configs_pages"}
+    ]
+  },
+  "exempt": {
+    "aa_cloud-superapp": "The fleet's launcher hub keeps its own special Configs (owner rule): its Configs is the fleet console, not one app's settings."
+  },
+  "pending": {
+    "_doc": "Apps that declare configs_pages (held by G1-G3) but do not reach the pages yet: they are drawn with Views, a WebView, Tauri or an upstream fork and do not link the shared scaffold. The lib's FleetConfigsActivity is their equivalent; wiring it means linking libs:ui-nav-bars into the app and starting FleetConfigsActivity.intent( from its settings menu. Delete an entry in the commit that wires the app (the guard fails a stale one).",
+    "ac_c3-morpheus": "WebView panel app without the shared Compose scaffold; needs libs:ui-nav-bars linked and a menu entry.",
+    "ac_c3-watchdog": "WebView panel (watchdog TUI transcribed to HTML); needs libs:ui-nav-bars linked and a menu entry.",
+    "ac_c3-watchtower": "WebView panel app without the shared Compose scaffold; needs libs:ui-nav-bars linked and a menu entry.",
+    "ac_cloud-c3-webserver": "Tauri 2 app (Rust and web only, no Kotlin UI); needs a native settings entry that starts the activity.",
+    "ac_cloud-camera": "Own camera shell without the shared first-row scaffold; its settings screen needs the two entries.",
+    "ac_cloud-chat": "Upstream chat fork with its own settings UI; the fork's preferences need the two entries.",
+    "ac_cloud-code": "Own Compose shell without the shared first-row scaffold; its settings need the two entries.",
+    "ac_cloud-keyboard": "An input method: its settings activity is upstream's Views preferences; needs the two entries there.",
+    "ac_cloud-matrix": "Element fork with its own settings UI; the fork's preferences need the two entries.",
+    "ac_cloud-media-center": "Tauri 2 app (Rust and static web only, no Kotlin UI); needs a native settings entry that starts the activity.",
+    "ac_cloud-myterminal": "Hub plus three upstream forks (Acode, Amaze); the hub's menu needs the two entries.",
+    "ac_cloud-nix-on-droid": "Upstream nix-on-droid fork with Views settings; the fork's preferences need the two entries.",
+    "ac_cloud-office": "Upstream office fork with its own settings UI; the fork's preferences need the two entries.",
+    "ac_cloud-termux": "Upstream Termux fork with Views preferences; the fork's settings need the two entries.",
+    "ac_cloud-vault": "Bitwarden-based fork whose Settings tab is upstream's; it needs the two entries there.",
+    "ac_cloud-wallet": "Own Compose shell without the shared first-row scaffold; its settings need the two entries."
+  }
+}

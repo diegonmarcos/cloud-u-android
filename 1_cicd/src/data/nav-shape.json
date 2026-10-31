@@ -27,7 +27,7 @@
     }
   },
   "nav_ui": {
-    "_doc": "N13 THE nav UI setting, declared once for the whole fleet (the owner asked for a Clean nav and a scroll-hide, with the choice under every app's Configs > UI). Modes: classic = the first row (breadcrumb title + AI/Profile/Configs), the second row (sub-page strip) and the labelled bottom nav; clean = a first row that is ONLY the top-left hamburger, NO second row, a compact icons-only bottom nav, and a LEFT drawer holding the page name as a dropdown (row 1, a URL bar), the AI/Profile/Settings icons (row 2) and a dropdown of the child pages (row 3). The first row is transparent in EVERY mode (NavTokens.topRowFill alpha 00). scroll-hide: a downward scroll hides ALL bars until an upward scroll reveals them. The setting is persisted per app (NavUiPrefs, the nav_ui store of the fleet manifest). An app lists `nav_ui` in build.json::ui.configs_ui; the lib draws the card (NavUiConfigCard) behind the first row's 'Configs > UI' entry, or the app draws it in its own Configs. The Kotlin file named here and this block are held equal by the guard; the web shell's generated tokens (cloudy-h-webapps-mob) carry the same sizes.",
+    "_doc": "N13 THE nav UI setting, declared once for the whole fleet (the owner asked for a Clean nav and a scroll-hide, with the choice under every app's Configs > UI). Modes: classic = the first row (breadcrumb title + AI/Profile/Configs), the second row (sub-page strip) and the labelled bottom nav; clean = a first row that is ONLY the top-left hamburger, NO second row, a compact icons-only bottom nav, and a LEFT drawer holding the page name as a dropdown (row 1, a URL bar), the AI/Profile/Settings icons (row 2) and a dropdown of the child pages (row 3). The first row is transparent in EVERY mode (NavTokens.topRowFill alpha 00). scroll-hide: a downward scroll hides ALL bars until an upward scroll reveals them. The setting is persisted per app (NavUiPrefs, the nav_ui store of the fleet manifest). An app lists `nav_ui` in build.json::ui.configs_ui; the lib draws the card (NavUiConfigCard) as the UI section of Configs > General (the first row's and the Clean drawer's 'Configs > General' entry, FleetConfigsScreen; rule 1_cicd/src/data/configs-pages.json), or the app draws it in its own Configs. The Kotlin file named here and this block are held equal by the guard; the web shell's generated tokens (cloudy-h-webapps-mob) carry the same sizes.",
     "kotlin": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
     "tokens": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavTokens.kt",
     "modes": [
@@ -53,7 +53,7 @@
     },
     "scaffold": {
       "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
-      "needle": "NavUiConfigDialog("
+      "needle": "FleetConfigsScreen(p, dark"
     },
     "card_call": "NavUiConfigCard(",
     "scaffold_call": "NavBarTopFirstRowScaffold(",

@@ -45,6 +45,8 @@ import com.diegonmarcos.superapp.bottomnav.NavQuickAction
 import com.diegonmarcos.superapp.bottomnav.NavTokens
 import com.diegonmarcos.superapp.bottomnav.NavUiDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage
+import com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel
 
 /** The Clean drawer's test tags. The hamburger keeps [TopBarTags.MENU] so an app's tests that open the drawer still do. */
 public object CleanDrawerTags {
@@ -52,7 +54,10 @@ public object CleanDrawerTags {
     public const val PAGE_DROPDOWN: String = "navclean_page"
     public const val ACTIONS: String = "navclean_actions"
     public const val SUB_DROPDOWN: String = "navclean_sub"
-    public const val CONFIGS_UI: String = "navclean_configs_ui"
+    public const val CONFIGS_GENERAL: String = "navclean_configs_general"
+    public const val CONFIGS_ABOUT: String = "navclean_configs_about"
+    /** The former "Configs > UI" entry: the card is a section of Configs > General now. */
+    public const val CONFIGS_UI: String = CONFIGS_GENERAL
     public fun pageEntry(id: String): String = "navclean_page_$id"
     public fun subEntry(id: String): String = "navclean_sub_$id"
     public fun action(a: NavQuickAction): String = "navclean_action_${a.declared}"
@@ -74,8 +79,10 @@ public fun ColumnScope.CleanDrawerContent(
     onProfile: () -> Unit,
     onConfigs: () -> Unit,
     close: () -> Unit,
-    /** Non-null: a last entry "Configs > UI" opens the nav UI card (switch back to Classic, scroll-hide). */
+    /** Non-null: an entry "Configs > General" opens the shared General page (its UI section switches back to Classic, scroll-hide). */
     onConfigsUi: (() -> Unit)? = null,
+    /** Non-null: an entry "Configs > About" follows it. */
+    onConfigsAbout: (() -> Unit)? = null,
 ) {
     val rowHeight = NavTokens().cleanDrawerRowHeight
     for (row in model.rows) when (row) {
@@ -100,9 +107,14 @@ public fun ColumnScope.CleanDrawerContent(
         )
     }
     if (onConfigsUi != null) Text(
-        NavUiDecl.CONFIGS_UI_LABEL,
+        fleetConfigsEntryLabel(FleetConfigsPage.General),
         Modifier.fillMaxWidth().heightIn(min = rowHeight).clickable(role = Role.Button) { close(); onConfigsUi() }
-            .padding(horizontal = 30.dp, vertical = 12.dp).testTag(CleanDrawerTags.CONFIGS_UI),
+            .padding(horizontal = 30.dp, vertical = 12.dp).testTag(CleanDrawerTags.CONFIGS_GENERAL),
+    )
+    if (onConfigsAbout != null) Text(
+        fleetConfigsEntryLabel(FleetConfigsPage.About),
+        Modifier.fillMaxWidth().heightIn(min = rowHeight).clickable(role = Role.Button) { close(); onConfigsAbout() }
+            .padding(horizontal = 30.dp, vertical = 12.dp).testTag(CleanDrawerTags.CONFIGS_ABOUT),
     )
 }
 
