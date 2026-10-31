@@ -137,6 +137,16 @@ fun MainSettingsScreen(
                         }
                     }
                 }
+                // #1352 the host app's entries (Cloud Keyboard: Configs ▸ General / ▸ About, the fleet's shared pages)
+                val extrasCtx = androidx.compose.ui.platform.LocalContext.current
+                helium314.keyboard.settings.KeyboardSettingsExtras.entries.forEach { extra ->
+                    Preference(
+                        name = extra.label,
+                        description = extra.description,
+                        onClick = { extra.open(extrasCtx) },
+                        icon = R.drawable.ic_settings_about
+                    ) { NextScreenIcon() }
+                }
 
                 // ── Everything below is the base keyboard menu ─────────────────────
                 PreferenceCategory("Keyboard defaults")

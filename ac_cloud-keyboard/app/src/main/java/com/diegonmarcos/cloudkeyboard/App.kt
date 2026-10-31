@@ -26,6 +26,15 @@ class App : Application(), WorkManagerConfiguration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // #1352 Configs ▸ General and ▸ About (libs:ui-nav-bars) at the top of the keyboard's Configs.
+        helium314.keyboard.settings.KeyboardSettingsExtras.entries = listOf(
+            com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.General to "Perms, update, battery, storage, notifications, language",
+            com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.About to "What this keyboard does, its data, permissions and credits",
+        ).map { (page, sub) ->
+            helium314.keyboard.settings.KeyboardSettingsExtras.Entry(com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel(page), sub) { ctx ->
+                com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.open(ctx, page)
+            }
+        }
         // Crash takeout — on any uncaught exception, drop the stack into a
         // single, predictably-named SHARED file: Download/cloud-keyboard-log-error.log
         // (MediaStore, no permission on Android 10+). Readable from Termux

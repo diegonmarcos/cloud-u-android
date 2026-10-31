@@ -190,6 +190,8 @@ dependencies {
     // Compose hosts: their supertype and the WindowInsets / ColorScheme they expose must be on this
     // module's compile classpath, though nothing here is written in Compose.
     implementation(project(":libs:bottomnav"))
+    // #1352 Configs ▸ General / ▸ About, two buttons at the top of More settings (FleetConfigsEntries.addButtons)
+    implementation(project(":libs:ui-nav-bars"))
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")

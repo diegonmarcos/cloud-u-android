@@ -61,6 +61,7 @@
     "FleetConfigsMenu(",
     "FleetConfigsButtons(",
     "FleetConfigsEntries.addTo(",
+    "FleetConfigsEntries.addButtons(",
     "FleetConfigsEntries.open("
   ],
   "origin_label": {
@@ -272,15 +273,12 @@
   "pending": {
     "_doc": "Apps that declare configs_pages (held by G1-G3) but do not reach the pages yet. Wiring means linking libs:ui-nav-bars (with bottomnav, ui-icons, theme-background, perms) and calling FleetConfigsMenu( (Compose) or FleetConfigsEntries.addTo( / FleetConfigsActivity.intent( (Views, forks) from the app's own menu. Delete an entry in the commit that wires the app (the guard fails a stale one).",
     "ac_cloud-c3-webserver": "Tauri 2 app (Rust and web only, no Kotlin UI); needs a native settings entry that starts the activity.",
-    "ac_cloud-camera": "Own camera shell without the shared first-row scaffold; its settings screen needs the two entries.",
     "ac_cloud-chat": "Upstream chat fork with its own settings UI; the fork's preferences need the two entries.",
     "ac_cloud-code": "Own Compose shell without the shared first-row scaffold; its settings need the two entries.",
-    "ac_cloud-keyboard": "An input method: its settings activity is upstream's Views preferences; needs the two entries there.",
     "ac_cloud-matrix": "Element fork with its own settings UI; the fork's preferences need the two entries.",
     "ac_cloud-media-center": "Tauri 2 app (Rust and static web only, no Kotlin UI); needs a native settings entry that starts the activity.",
     "ac_cloud-nix-on-droid": "Upstream nix-on-droid fork with Views settings; the fork's preferences need the two entries.",
     "ac_cloud-office": "Upstream office fork with its own settings UI; the fork's preferences need the two entries.",
-    "ac_cloud-termux": "Upstream Termux fork with Views preferences; the fork's settings need the two entries.",
-    "ac_cloud-vault": "Bitwarden-based fork whose Settings tab is upstream's; it needs the two entries there."
+    "ac_cloud-termux": "Upstream Termux fork with Views preferences; the fork's settings need the two entries."
   }
 }

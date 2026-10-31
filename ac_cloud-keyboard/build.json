@@ -83,7 +83,11 @@
       "type": "library",
       "_doc": "Tier 3 of the fleet autofill (a0_docs/eng-specs/autofill-3-tier.md): the Cloud Account non-secret SOT contract. libs:keyboard reads profiles and snippets through it (AUTOFILL_PROFILE_READ) for its row-2 candidates.",
       "dir": "../ab_cloud-libs-shared/libs/autofill"
-    }
+    },
+    "libs:ui-nav-bars": {"dir": "../ab_cloud-libs-shared/libs/ui-nav-bars", "type": "library", "_doc": "#1352 Configs ▸ General and ▸ About (fleetconfigs): FleetConfigsActivity, started from this app's own menu. Shared BY REFERENCE."},
+    "libs:bottomnav": {"dir": "../ab_cloud-libs-shared/libs/bottomnav", "type": "library", "_doc": "libs:ui-nav-bars' `api` dependency; listed so settings.gradle resolves the path."},
+    "libs:ui-icons": {"dir": "../ab_cloud-libs-shared/libs/ui-icons", "type": "library", "_doc": "libs:bottomnav's dependency; listed so settings.gradle resolves the path."},
+    "libs:theme-background": {"dir": "../ab_cloud-libs-shared/libs/theme-background", "type": "library", "_doc": "libs:ui-nav-bars' `api` dependency (the page background); listed so settings.gradle resolves the path."}
   },
   "keyboard_media": {
     "_doc": "Same block as aa_cloud-superapp — shared vault secret. build.sh sops-decrypts vault_secrets → TENOR_API_KEY/GIPHY_API_KEY env vars → Gradle BuildConfig → MediaRuntime.configure().",

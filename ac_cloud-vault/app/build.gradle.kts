@@ -285,6 +285,8 @@ dependencies {
     implementation(project(":libs:core"))
     // #868 fleet nav patch: the shared bottom island (see FleetNavScaffold.kt).
     implementation(project(":libs:bottomnav"))
+    // #1352 Configs ▸ General / ▸ About under the Settings rows (FleetConfigsButtons, libs:ui-nav-bars)
+    implementation(project(":libs:ui-nav-bars"))
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)

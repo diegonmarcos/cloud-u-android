@@ -89,6 +89,8 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
 
         binding = MoreSettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // #1352 Configs ▸ General / ▸ About, the fleet's shared pages (libs:ui-nav-bars)
+        com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.addButtons(binding.rootView)
 
         val showStorageSettings = this !is MoreSettingsSecure
 

@@ -48,6 +48,13 @@ project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/botto
 // #1160 the nav icon catalog libs:bottomnav draws every glyph from.
 include(":libs:ui-icons")
 project(":libs:ui-icons").projectDir = file("../ab_cloud-libs-shared/libs/ui-icons")
+// #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars, opened from More settings); its `api` deps theme-background and perms.
+include(":libs:ui-nav-bars")
+project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
+include(":libs:perms")
+project(":libs:perms").projectDir = file("../ab_cloud-libs-shared/libs/perms")
+include(":libs:theme-background")
+project(":libs:theme-background").projectDir = file("../ab_cloud-libs-shared/libs/theme-background")
 // Gradle 9 fails outright on a project directory that does not exist, and the
 // implicit ':libs' container resolves to <root>/libs which this app does not
 // have. Point it at the shared root, exactly as gallery does; the leaf

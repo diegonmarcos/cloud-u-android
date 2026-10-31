@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -53,6 +54,25 @@ public object FleetConfigsEntries {
         ID_GENERAL -> { open(context, FleetConfigsPage.General); true }
         ID_ABOUT -> { open(context, FleetConfigsPage.About); true }
         else -> false
+    }
+
+    /**
+     * For a Views settings screen with no menu: inserts the two entries as buttons ([FleetConfigsButtons] in a
+     * ComposeView) into [container] at [index] (default: first), so the app needs no Compose dependency of its own.
+     */
+    public fun addButtons(container: android.view.ViewGroup, index: Int = 0): android.view.View {
+        val v = androidx.compose.ui.platform.ComposeView(container.context).apply {
+            setContent {
+                androidx.compose.material3.MaterialTheme(
+                    colorScheme = if ((container.context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES) androidx.compose.material3.darkColorScheme() else androidx.compose.material3.lightColorScheme(),
+                ) {
+                    FleetConfigsButtons(androidx.compose.ui.Modifier.padding(horizontal = androidx.compose.ui.unit.Dp(16f), vertical = androidx.compose.ui.unit.Dp(8f)))
+                }
+            }
+        }
+        container.addView(v, index.coerceIn(0, container.childCount))
+        return v
     }
 
     public fun open(context: Context, page: FleetConfigsPage) {

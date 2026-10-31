@@ -151,6 +151,9 @@ fun SettingsScreen(
                 )
             }
             Spacer(modifier = Modifier.height(height = 16.dp))
+            // #1352 Cloud Vault: Configs ▸ General and ▸ About, the fleet's shared pages (libs:ui-nav-bars)
+            com.diegonmarcos.superapp.fleetconfigs.FleetConfigsButtons(modifier = Modifier.standardHorizontalMargin())
+            Spacer(modifier = Modifier.height(height = 16.dp))
             Spacer(modifier = Modifier.navigationBarsPadding())
         }
     }

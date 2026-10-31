@@ -39,7 +39,7 @@ mkdir -p "$BASE"
     cd "$ROOT" || exit 1
     {
         git ls-files -- 'a[acd]_*/build.json' 'a[acd]_*/debug-api.json'
-        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(|FleetConfigsMenu\(|FleetConfigsButtons\(|FleetConfigsEntries\.(addTo|open)\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
+        git grep -l -E 'NavBarTopFirstRowScaffold\(|FleetConfigsActivity\.intent\(|FleetConfigsMenu\(|FleetConfigsButtons\(|FleetConfigsEntries\.(addTo|addButtons|open)\(' -- 'a[acd]_*' ':!*/test/*' ':!*/androidTest/*'
         printf '%s\n' "$DATA" ac_cloud-account/build.json ac_cloud-c3-webserver/build.json licenses/curated.json
         find "$UIBARS" ab_cloud-libs-shared/libs/perms -type f -not -path "*/build/*"
     } | sort -u | while IFS= read -r f; do [ -f "$f" ] && cp --parents "$f" "$BASE"; done
@@ -128,7 +128,7 @@ mutate "an app whose sources stop drawing the scaffold" "$APPKT" "s=s.replace('N
 mutate "a pending entry for an app that is wired" "$DATA" "$(J "d['pending']['$APP']='a reason that is long enough to pass'")" "G4 $APP: reaches Configs ▸ General / ▸ About now"
 PENDKT="$(cd "$BASE" && grep -rlE 'FleetConfigsMenu\(|FleetConfigsEntries\.|FleetConfigsActivity\.intent\(' "$PEND" | head -1)"
 if [ -n "$PENDKT" ]; then
-    mutate "a menu-wired app that drops its Configs menu" "$PENDKT" "s=re.sub(r'FleetConfigsMenu\(|FleetConfigsEntries\.(addTo|open)\(|FleetConfigsActivity\.intent\(','OwnSettings(',s)" "G4 $PEND: no source reaches Configs"
+    mutate "a menu-wired app that drops its Configs menu" "$PENDKT" "s=re.sub(r'FleetConfigsMenu\(|FleetConfigsEntries\.(addTo|addButtons|open)\(|FleetConfigsActivity\.intent\(','OwnSettings(',s)" "G4 $PEND: no source reaches Configs"
 else fail "no Configs menu call under $PEND — the fixture moved"; fi
 # G5 the ledgers
 mutate "a pending entry for no app"             "$DATA" "$(J "d['pending']['ac_cloud-ghost']='a reason that is long enough to pass'")" "G5 $DATA::pending names ac_cloud-ghost"
