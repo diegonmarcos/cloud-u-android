@@ -29,6 +29,10 @@ on:
         description: "Apps to walk: 'all' or a comma list of directory names (ac_cloud-calc,ac_cloud-drive)"
         required: false
         default: "all"
+      shots:
+        description: "Section ids whose passing pages are photographed too, top plus scrolled frames (e.g. configs); empty = failures only"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths:
@@ -208,7 +212,7 @@ jobs:
           adb logcat -v threadtime "*:W" ActivityManager:I chromium:I WindowManager:I > walk-out/logcat-stream.txt 2>&1 &
           LOGCAT_PID=$!
           rc=0
-          python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out || rc=$?
+          python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out --shots "$SHOTS" || rc=$?
           # a dead emulator makes a bare adb call wait for the device forever (run 40679943894 sat 87 min here)
           timeout 60 adb logcat -d -v threadtime > walk-out/logcat.txt || true
           kill "$LOGCAT_PID" 2>/dev/null || true
@@ -222,6 +226,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           APP: ${{ matrix.app }}
+          SHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.shots || '' }}
         with:
           api-level: 34
           arch: x86_64

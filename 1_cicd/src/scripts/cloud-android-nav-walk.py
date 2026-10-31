@@ -233,6 +233,7 @@ class Walk:
         self.a = a
         self.pkg = a.pkg
         self.out = a.out
+        self.shots = set(x for x in (a.shots or "").split(",") if x)
         os.makedirs(os.path.join(self.out, "shots"), exist_ok=True)
         os.makedirs(os.path.join(self.out, "dumps"), exist_ok=True)
         ui = json.load(open(a.build_json, encoding="utf-8"))["ui"]
@@ -353,6 +354,19 @@ class Walk:
         adb("shell", "screencap -p /sdcard/nw.png")
         adb("pull", "/sdcard/nw.png", os.path.join(self.out, "shots", safe + ".png"))
         adb("pull", "/sdcard/nw.xml", os.path.join(self.out, "dumps", safe + ".xml"))
+
+    def page_shots(self, name, frames=4):
+        """--shots: a passing page of a listed section is photographed too (top, then one frame per swipe down the list),
+        so a reviewer sees the page as rendered, not only the failures. The chrome comes back via ensure_chrome."""
+        self.evidence("page_%s_0" % name)
+        x = self.w // 2
+        for i in range(1, frames):
+            swipe(x, int(self.h * 0.75), int(self.h * 0.3))
+            settle(1.0)
+            self.evidence("page_%s_%d" % (name, i))
+        for _ in range(frames + 1):
+            swipe(x, int(self.h * 0.3), int(self.h * 0.8))
+            settle(0.4)
 
     def open_dropdown(self):
         """Open the first row's title dropdown. A host whose title is an input (Cloud Browser) opens it from the chevron."""
@@ -783,6 +797,8 @@ class Walk:
         checks["alive"] = "FAIL" if (crashed or died) else "ok"
         if fails:
             self.evidence(name)
+        elif section in self.shots:
+            self.page_shots(name)
         self.results.append({"section": section, "page": pid, "label": label, "status": "FAIL" if fails else "PASS",
                              "checks": checks, "failures": fails, "seconds": round(time.time() - t0, 1)})
         print("%s %-34s %s" % ("FAIL" if fails else "ok  ", name, "; ".join(fails) or checks), flush=True)
@@ -892,4 +908,5 @@ if __name__ == "__main__":
     p.add_argument("--build-json", required=True)
     p.add_argument("--pkg", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--shots", default="", help="comma list of section ids whose passing pages are photographed too")
     Walk(p.parse_args()).run()
