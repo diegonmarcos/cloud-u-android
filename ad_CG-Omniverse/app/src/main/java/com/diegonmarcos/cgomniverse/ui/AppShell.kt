@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cgomniverse.Decl
+import com.diegonmarcos.cgomniverse.Launch
 import com.diegonmarcos.cgomniverse.R
 import com.diegonmarcos.cgomniverse.World
 import com.diegonmarcos.superapp.bottomnav.islandEntries
@@ -69,13 +71,17 @@ object Tags {
  * Store or Galaxy is drawn full screen over the shell ([WorldView]) and stays Galaxy's loaded world after it is closed.
  */
 @Composable
-fun AppShell() {
+fun AppShell(startSection: String? = null, startWorld: String? = null) {
     val nav = Decl.nav
-    var section by rememberSaveable { mutableStateOf(nav.default()?.id ?: Decl.SECTION_ABOUT) }
+    val start = remember {
+        Launch.resolve(startSection, startWorld, nav.sections.map { it.id }.toSet(), Decl.worlds.map { it.id }.toSet(),
+            nav.default()?.id ?: Decl.SECTION_ABOUT)
+    }
+    var section by rememberSaveable { mutableStateOf(start.section) }
     val sec = nav.section(section)
     // the world Galaxy has loaded (kept while the user browses the other pages) and whether it fills the screen now
-    var worldId by rememberSaveable { mutableStateOf<String?>(null) }
-    var inWorld by rememberSaveable { mutableStateOf(false) }
+    var worldId by rememberSaveable { mutableStateOf(start.worldId) }
+    var inWorld by rememberSaveable { mutableStateOf(start.worldId != null) }
     val world = worldId?.let { id -> Decl.worlds.firstOrNull { it.id == id } }
     val enter: (World) -> Unit = { w -> worldId = w.id; section = Decl.SECTION_GALAXY; inWorld = true }
     Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {

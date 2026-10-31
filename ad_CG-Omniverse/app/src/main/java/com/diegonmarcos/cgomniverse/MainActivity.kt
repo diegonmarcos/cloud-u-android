@@ -12,6 +12,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
-        setContent { AppTheme { AppShell() } }
+        // the start page and world, read once from the launching intent (Launch); state restores take over after that
+        val section = intent?.getStringExtra(Launch.EXTRA_SECTION)
+        val world = intent?.getStringExtra(Launch.EXTRA_WORLD)
+        setContent { AppTheme { AppShell(startSection = section, startWorld = world) } }
     }
 }
