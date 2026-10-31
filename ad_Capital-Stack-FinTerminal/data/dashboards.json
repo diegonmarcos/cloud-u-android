@@ -653,7 +653,7 @@
             "labels": {
               "_SPX": "S&P 500",
               "_NDX": "Nasdaq-100",
-              "_DJX": "Dow Jones (1/100)",
+              "_DJX": "DJX (Dow/100)",
               "_RUT": "Russell 2000",
               "_VIX": "VIX"
             },
@@ -674,51 +674,6 @@
             "As of"
           ],
           "tape": true
-        },
-        {
-          "id": "us",
-          "title": "Index levels (FRED)",
-          "source": "fred",
-          "view": "bars",
-          "derive": "level_change",
-          "fetch": {
-            "provider": "fred_series",
-            "lookback_days": 21,
-            "series": [
-              {
-                "id": "SP500",
-                "label": "S&P 500"
-              },
-              {
-                "id": "NASDAQCOM",
-                "label": "Nasdaq Composite"
-              },
-              {
-                "id": "DJIA",
-                "label": "Dow Jones"
-              },
-              {
-                "id": "NIKKEI225",
-                "label": "Nikkei 225"
-              },
-              {
-                "id": "VIXCLS",
-                "label": "VIX"
-              }
-            ],
-            "primary": {
-              "source": "cloud_fincept",
-              "topic": "econ:fred:{id}"
-            }
-          },
-          "columns": [
-            "Index",
-            "Level",
-            "1d %",
-            "Date"
-          ],
-          "chart_value": "change_pct",
-          "unit": "%"
         },
         {
           "id": "world",
@@ -959,12 +914,12 @@
             "path": "/api/rates/all/latest.json",
             "labels": {
               "SOFR": "SOFR",
-              "EFFR": "Effective Fed funds",
-              "OBFR": "Overnight bank funding",
-              "TGCR": "Tri-party general collateral",
-              "BGCR": "Broad general collateral",
-              "SOFRAI_30D": "SOFR 30-day average",
-              "SOFRAI_90D": "SOFR 90-day average",
+              "EFFR": "EFFR",
+              "OBFR": "OBFR",
+              "TGCR": "TGCR",
+              "BGCR": "BGCR",
+              "SOFRAI_30D": "SOFR 30d avg",
+              "SOFRAI_90D": "SOFR 90d avg",
               "SOFRAI_180D": "SOFR 180-day average"
             },
             "primary": {
@@ -1002,21 +957,21 @@
               },
               {
                 "id": "EFFR",
-                "label": "Effective Fed funds",
+                "label": "EFFR",
                 "dbnomics": "FED/H15/RIFSPFF_N.B"
               },
               {
                 "id": "OBFR",
-                "label": "Overnight bank funding"
+                "label": "OBFR"
               },
               {
                 "id": "IORB",
-                "label": "Interest on reserve balances",
+                "label": "IORB",
                 "dbnomics": "FED/PRATES_PRATES_POLICY_RATES/RESBM_N.D"
               },
               {
                 "id": "DPRIME",
-                "label": "Bank prime loan",
+                "label": "Prime",
                 "dbnomics": "FED/H15/RIFSPBLP_N.B"
               }
             ],
@@ -1525,7 +1480,7 @@
             "labels": {
               "_SPX": "S&P 500",
               "_NDX": "Nasdaq-100",
-              "_DJX": "Dow Jones (1/100)",
+              "_DJX": "DJX (Dow/100)",
               "_RUT": "Russell 2000",
               "_VIX": "VIX"
             },
@@ -1695,7 +1650,7 @@
             "series": [
               {
                 "id": "BAMLC0A0CM",
-                "label": "US investment grade"
+                "label": "US IG OAS"
               },
               {
                 "id": "BAMLH0A0HYM2",
@@ -1707,7 +1662,7 @@
               },
               {
                 "id": "BAMLHE00EHYIOAS",
-                "label": "Euro high yield"
+                "label": "Euro HY OAS"
               }
             ],
             "primary": {
@@ -1798,10 +1753,10 @@
               "LNS14000000"
             ],
             "labels": {
-              "CUUR0000SA0": "US CPI (index, NSA)",
-              "CUUR0000SA0L1E": "US core CPI (index, NSA)",
-              "CES0000000001": "Nonfarm payrolls (thousands)",
-              "LNS14000000": "Unemployment rate %"
+              "CUUR0000SA0": "US CPI",
+              "CUUR0000SA0L1E": "US core CPI",
+              "CES0000000001": "Payrolls (k)",
+              "LNS14000000": "Unemployment %"
             },
             "primary": {
               "source": "cloud_fincept",
@@ -2317,15 +2272,15 @@
             "series": [
               {
                 "id": "DCOILWTICO",
-                "label": "WTI crude $/bbl"
+                "label": "WTI $/bbl"
               },
               {
                 "id": "DCOILBRENTEU",
-                "label": "Brent crude $/bbl"
+                "label": "Brent $/bbl"
               },
               {
                 "id": "DHHNGSP",
-                "label": "Henry Hub gas $/MMBtu"
+                "label": "HH gas $/MMBtu"
               }
             ],
             "primary": {
@@ -2434,10 +2389,10 @@
               "LNS14000000"
             ],
             "labels": {
-              "CUUR0000SA0": "US CPI (index, NSA)",
-              "CUUR0000SA0L1E": "US core CPI (index, NSA)",
-              "CES0000000001": "Nonfarm payrolls (thousands)",
-              "LNS14000000": "Unemployment rate %"
+              "CUUR0000SA0": "US CPI",
+              "CUUR0000SA0L1E": "US core CPI",
+              "CES0000000001": "Payrolls (k)",
+              "LNS14000000": "Unemployment %"
             },
             "primary": {
               "source": "cloud_fincept",

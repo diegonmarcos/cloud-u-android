@@ -24,16 +24,16 @@ import com.diegonmarcos.capitalfinterm.FinLogic
 
 /**
  * Heatmap tile (spec 2.7, tag fin:heat:<symbol>): 64dp min, 6dp radius, fill interpolated down -> surfaceRaised -> up by change %
- * (clamped at +-scale %), 85 % alpha; canvas ink on the saturated tiles, text ink on the mid range. Stale: desaturated to 50 %.
+ * (clamped at +-scale %), 85 % alpha; text ink, blend capped at FinLogic.HEAT_MAX_BLEND. Stale: desaturated to 50 %.
  */
 @Composable
 fun FinHeatTile(q: FinQuote, scale: Double, stale: Boolean, showLast: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalFinPalette.current
     val h = FinLogic.heat(q.pctValue, scale)
     val target = if (h >= 0) p.up else p.down
-    var fill = lerp(p.surfaceRaised, target, kotlin.math.abs(h)).copy(alpha = 0.85f)
+    var fill = lerp(p.surfaceRaised, target, FinLogic.HEAT_MAX_BLEND * kotlin.math.abs(h)).copy(alpha = 0.85f)
     if (stale) fill = lerp(fill, p.surfaceRaised, 0.5f)
-    val ink = if (FinLogic.heatInkDark(q.pctValue)) p.canvas else p.text
+    val ink = p.text
     Column(
         modifier.height(64.dp).clip(RoundedCornerShape(6.dp)).background(fill).clickable(onClick = onClick).padding(8.dp).testTag("fin:heat:${q.symbol}"),
         verticalArrangement = Arrangement.SpaceBetween,

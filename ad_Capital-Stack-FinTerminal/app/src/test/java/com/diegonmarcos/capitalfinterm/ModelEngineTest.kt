@@ -144,6 +144,18 @@ class ModelEngineTest {
         assertEquals(listOf("http://mesh-base/v1/quotes?symbols=NVDA%2CTSLA"), c.asked)
     }
 
+    /** Quotes rows: the absolute change in the instrument's decimals (2 for an index), the % with 2; a feed with no previous
+     *  value at all (NY Fed latest) drops the Chg columns instead of drawing dashes. */
+    @Test fun quotesFormatTheChangeAndDropChangeColumnsWithoutAPrevious() {
+        val cboe = Fake { u -> if (u.endsWith("/quotes/_DJX.json")) """{"data":{"symbol":"^DJX","current_price":517.7,"price_change":-5.73,"prev_day_close":517.7,"last_trade_time":"2026-10-30T16:47:53"}}""" else null }
+        val eq = load("world_equity_indices", "cboe", cboe)
+        assertEquals(listOf("DJX (Dow/100)", "517.70", "-5.73", "-1.09", "2026-10-30 16:47"), eq.rows.single())
+        val nyfed = Fake { u -> if (u.contains("/api/rates/all/latest.json")) """{"refRates":[{"effectiveDate":"2026-10-30","type":"SOFR","percentRate":3.94}]}""" else null }
+        val f = load("market_monitor", "funding", nyfed)
+        assertEquals(listOf("Name", "Last", "As of"), f.columns)
+        assertEquals(3, f.rows.single().size)
+    }
+
     @Test fun eventAlertsFlagTheNextDayAtTheRuleLevel() {
         val http = Fake { u -> if (u.endsWith("/ff_calendar_thisweek.json")) ff else if (u.startsWith("asset:")) cb else null }
         val d = load("watchlist", "events", http, user = UserLists(alerts = listOf(Alerts.rule("events >= 3")!!)), now = "2026-10-30T12:00Z")
