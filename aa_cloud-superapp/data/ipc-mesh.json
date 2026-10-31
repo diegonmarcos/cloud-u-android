@@ -966,6 +966,51 @@
     "callers": []
    }
   ],
+  "perms": [
+   {
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+    "level": "signature",
+    "source": "libs:perms/src/main/AndroidManifest.xml",
+    "component": ".PermsStateProvider",
+    "id": "provider:<pkg>.perms",
+    "kind": "provider",
+    "name": "PermsStateProvider",
+    "authority": "<pkg>.perms",
+    "callers": [
+     "aa_cloud-superapp",
+     "account",
+     "browser",
+     "c3",
+     "calc",
+     "capital-stack-finterminal",
+     "cg-omniverse",
+     "contacts",
+     "dialer",
+     "drive",
+     "gallery",
+     "hardtech-cad",
+     "hardtech-sim2real",
+     "keyboard",
+     "keyboard-engines",
+     "kg-store",
+     "lib-rootfs-nixdroid",
+     "lib-rootfs-termux",
+     "mail",
+     "me",
+     "nav",
+     "news",
+     "nix-on-droid",
+     "notes",
+     "search",
+     "store",
+     "superintel",
+     "tasks",
+     "termux",
+     "tools-small-llms",
+     "writer"
+    ]
+   }
+  ],
   "rclone-engine": [
    {
     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
@@ -1045,6 +1090,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -1309,6 +1355,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -1374,7 +1421,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -1483,7 +1531,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -1497,7 +1546,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -1822,7 +1872,8 @@
     "contacts",
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -1836,7 +1887,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -1867,6 +1919,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -1938,6 +1991,16 @@
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
      "source": "ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/disk/DiskDebugApi.kt",
+     "callers": []
+    },
+    {
+     "id": "op:git/bare",
+     "kind": "op",
+     "name": "git/bare",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/debugapi/DriveDebugApi.kt",
      "callers": []
     },
     {
@@ -2042,7 +2105,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2074,7 +2138,8 @@
     "core",
     "devtools",
     "fleetconfig-model",
-    "keyboard"
+    "keyboard",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2099,7 +2164,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2113,7 +2179,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2193,7 +2260,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2246,7 +2314,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2331,7 +2400,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2346,6 +2416,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -2455,7 +2526,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2483,7 +2555,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2610,6 +2683,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -2641,7 +2715,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2655,7 +2730,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2683,6 +2759,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -2828,7 +2905,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2919,7 +2997,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2964,7 +3043,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2978,7 +3058,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2992,7 +3073,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -3006,7 +3088,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -3030,7 +3113,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -3323,6 +3407,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
@@ -3433,6 +3518,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "shizuku-adb-debug-tools"
    ],
    "endpoints": [
