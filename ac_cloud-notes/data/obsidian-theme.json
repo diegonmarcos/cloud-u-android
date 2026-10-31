@@ -200,10 +200,14 @@
     "background-tint-warning": {
       "light": "orange@0.1",
       "dark": "orange@0.12"
+    },
+    "accent-tint": {
+      "light": "accent@0.1",
+      "dark": "accent@0.15"
     }
   },
   "affine": {
-    "_doc": "AFFiNE variable (without the leading --) -> Obsidian semantic name. Both the v1 (--affine-*) and v2 (--affine-v2-*) names the app paints with.",
+    "_doc": "AFFiNE variable (affine-* name) -> Obsidian semantic name. The fork's components read the same variables under the cloud-notes-* prefix (affine-* are aliases of them), so the generator writes every entry under both prefixes.",
     "affine-background-primary-color": "background-primary",
     "affine-background-secondary-color": "background-secondary",
     "affine-background-tertiary-color": "background-primary-alt",
@@ -255,7 +259,24 @@
     "affine-v2-backlinks-blockBackgroundColor": "background-primary-alt",
     "affine-v2-backlinks-blockBorder": "background-modifier-border",
     "affine-v2-backlinks-blockHover": "background-modifier-hover",
-    "affine-background-warning-color": "background-tint-warning"
+    "affine-background-warning-color": "background-tint-warning",
+    "affine-link-color": "text-accent",
+    "affine-v2-button-actionActive": "interactive-accent",
+    "affine-v2-tab-divider-indicator": "interactive-accent",
+    "affine-v2-toggle-background": "interactive-accent",
+    "affine-v2-radio-active-chekced": "interactive-accent",
+    "affine-v2-loading-foreground": "interactive-accent",
+    "affine-v2-table-indicator-activated": "interactive-accent",
+    "affine-v2-table-focusBorder": "interactive-accent",
+    "affine-v2-table-focusBackground": "accent-tint",
+    "affine-v2-database-focusBackground": "accent-tint",
+    "affine-v2-edgeless-selection-selectionMarqueeBorder": "interactive-accent",
+    "affine-v2-edgeless-selection-selectionMarqueeBackground": "accent-tint",
+    "affine-v2-edgeless-frame-border-active": "interactive-accent",
+    "affine-v2-edgeless-group-border-active": "interactive-accent",
+    "affine-v2-readwise-quoteDivider": "interactive-accent",
+    "affine-v2-block-footnote-numberBgHover": "accent-tint",
+    "affine-v2-button-templateLabelBackground": "accent-tint"
   },
   "typography": {
     "font-interface": "ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Inter, \"Helvetica Neue\", Arial, sans-serif",

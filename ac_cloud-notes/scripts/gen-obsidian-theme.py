@@ -95,9 +95,11 @@ def gen_css(t):
             for k, v in d['affine_typography'].items():
                 if not k.startswith('_'):
                     out.append('  --%s: var(--%s);' % (k, v))
+                    out.append('  --cloud-notes-%s: var(--%s);' % (k[len('affine-'):], v))
         for k, v in d['affine'].items():
             if not k.startswith('_'):
                 out.append('  --%s: var(--%s);' % (k, v))
+                out.append('  --cloud-notes-%s: var(--%s);' % (k[len('affine-'):], v))
         out.append('}')
     out.append('body {\n  font-family: var(--font-interface);\n  background: var(--background-primary);\n  color: var(--text-normal);\n}')
     out.append('::selection {\n  background: var(--text-selection);\n}')

@@ -54,6 +54,7 @@ AFFINE = {
     'affine-v2-layer-insideBorder-border': 'background-modifier-border', 'affine-background-primary-color': 'background-primary',
     'affine-text-primary-color': 'text-normal', 'affine-primary-color': 'interactive-accent', 'affine-border-color': 'background-modifier-border',
     'affine-font-family': 'font-interface', 'affine-v2-layer-background-mobile-primary': 'background-primary',
+    'affine-v2-tab-divider-indicator': 'interactive-accent', 'affine-brand-color': 'interactive-accent',
 }
 
 def blocks(css):
@@ -98,8 +99,9 @@ def chk_T_affine_mapping(p):
     for mode in ('light', 'dark'):
         mv = {**b.get('light', {}), **b.get(mode, {})}
         for a, o in AFFINE.items():
-            if mv.get(a, '').strip() != 'var(--%s)' % o:
-                print('    %s --%s is %r, want var(--%s)' % (mode, a, mv.get(a), o)); return False
+            for name in (a, 'cloud-notes-' + a[len('affine-'):]):  # the fork's components read the cloud-notes-* names
+                if mv.get(name, '').strip() != 'var(--%s)' % o:
+                    print('    %s --%s is %r, want var(--%s)' % (mode, name, mv.get(name), o)); return False
     return True
 
 def chk_T_sheet_loaded_last(p):
@@ -169,7 +171,8 @@ CHECKS = [
     ('T2 Obsidian reference values, light and dark', chk_T_reference_values,
      [('css', '--background-primary: #1c1c1c;', '--background-primary: #1e1f22;'), ('css', '--text-normal: #222222;', '--text-normal: #000000;')]),
     ('T3 AFFiNE variables point at Obsidian names', chk_T_affine_mapping,
-     [('css', '--affine-v2-text-primary: var(--text-normal);', '--affine-v2-text-primary: var(--text-muted);')]),
+     [('css', '--affine-v2-text-primary: var(--text-normal);', '--affine-v2-text-primary: var(--text-muted);'),
+      ('css', '--cloud-notes-v2-button-primary: var(--interactive-accent);', '--cloud-notes-v2-button-primary: #1e96eb;')]),
     ('T4 the Obsidian sheet loads after AFFiNE\'s', chk_T_sheet_loaded_last, [('index', "import './obsidian.gen.css';\n", '')]),
     ('T5 native tokens carry Obsidian colours', chk_T_native_tokens, [('kt', 'val interactiveAccent = Color(0xFF8A5CF5)', 'val interactiveAccent = Color(0xFF1E96FC)')]),
     ('T6 the old native palette is removed', chk_T_old_palette_gone, [('colors', 'val LocalCloudNotesColors', 'object CloudNotesColorTokens {}\nval LocalCloudNotesColors')]),

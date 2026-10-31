@@ -39,6 +39,7 @@ object ObsidianTokens {
         val backgroundTintError = Color(0x1AE93147)
         val backgroundTintSuccess = Color(0x1A08B94E)
         val backgroundTintWarning = Color(0x1AEC7500)
+        val accentTint = Color(0x1A8A5CF5)
     }
     object Dark {
         val backgroundPrimary = Color(0xFF1C1C1C)
@@ -74,6 +75,7 @@ object ObsidianTokens {
         val backgroundTintError = Color(0x1FFB464C)
         val backgroundTintSuccess = Color(0x1F44CF6E)
         val backgroundTintWarning = Color(0x1FE9973F)
+        val accentTint = Color(0x268A5CF5)
     }
     const val FONT_TEXT_SIZE_SP = 16
     const val FONT_UI_SMALL_SP = 13
