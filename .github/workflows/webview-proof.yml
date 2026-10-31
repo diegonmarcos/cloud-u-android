@@ -89,27 +89,19 @@ jobs:
               sh("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "-p", pkg); time.sleep(wait)
           pkgs = [l.split()[0] for l in open("apk/packages.txt") if l.strip()]
           def find(*keys): return next((p for p in pkgs if any(k in p for k in keys)), None)
-          if (p := find("cgomniverse")):
-              launch(p); shot("omniverse-01-avatar-webgl")
-              tap("Galaxy"); time.sleep(2)
-              tap("Food for Fish", scroll=12); shot("omniverse-02-foodforfish-mobile", 30); texts("omniverse-02-foodforfish-mobile")
-              tap("Desktop mode"); shot("omniverse-03-foodforfish-desktop", 35); texts("omniverse-03-foodforfish-desktop")
-              sh("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(3)
-              launch(p, 15); tap("Galaxy"); time.sleep(2)
-              tap("WebGL Fluid Simulation", scroll=12); shot("omniverse-04-webgl-world", 25)
-          if (p := find("cloudbrowser")):
-              view(p, "https://foodforfish.org/"); shot("browser-01-foodforfish")
-              view(p, "https://webgpureport.org/"); shot("browser-02-webgpureport"); texts("browser-02-webgpureport")
-          if (p := find("superapp")):
-              launch(p); shot("superapp-01-open")
-              tap("WebApps"); shot("superapp-02-webapps", 15)
-              tap("Linktree"); shot("superapp-03-linktree", 15)
-          if (p := find("cloudnotes", "notes")):
-              launch(p, 35); shot("notes-01-editor-webview")
-          if (p := find("sterna", "cloudmail", "mail")):
-              launch(p); shot("mail-01-open")
+          # light screens first: a GPU-heavy page can wedge the software-GPU emulator, so the heaviest step is last
           if (p := find("clouddrive", "drive")):
-              launch(p); shot("drive-01-open")
+              launch(p); shot("drive-01-open"); sh("shell", "am", "force-stop", p)
+          if (p := find("superapp")):
+              launch(p); shot("superapp-01-open"); tap("WebApps"); shot("superapp-02-webapps", 15); tap("Linktree"); shot("superapp-03-linktree", 15); sh("shell", "am", "force-stop", p)
+          if (p := find("cloudbrowser")):
+              view(p, "https://webgpureport.org/"); shot("browser-01-webgpureport"); texts("browser-01-webgpureport")
+              view(p, "https://foodforfish.org/", 25); shot("browser-02-foodforfish"); sh("shell", "am", "force-stop", p)
+          if (p := find("cgomniverse")):
+              launch(p); shot("omniverse-01-avatar")
+              tap("Galaxy"); time.sleep(2); shot("omniverse-02-galaxy")
+              tap("Food for Fish", scroll=12); shot("omniverse-03-foodforfish-mobile", 20); texts("omniverse-03-foodforfish-mobile")
+              tap("Desktop mode"); shot("omniverse-04-foodforfish-desktop", 25); texts("omniverse-04-foodforfish-desktop")
           PY
           cat > walk.sh <<'EOF2'
           set -u
