@@ -17,7 +17,7 @@ object GeneralDecl {
     data class Anchor(val id: String, val label: String, val icon: String)
 
     /** One settings screen to try: a `component` ("pkg/cls") or an `action`, with the package as data / extra. */
-    data class IntentSpec(val component: String, val action: String, val packageUri: Boolean, val extraPackage: Boolean)
+    data class IntentSpec(val component: String, val action: String, val packageUri: Boolean, val extraPackage: Boolean, /** #1358 the package the screen is for (`{name}` resolved); blank = this app. */ val target: String = "")
 
     data class PermEntry(
         val id: String,
@@ -73,7 +73,7 @@ object GeneralDecl {
                 id = p.str("id"), label = p.str("label"), why = p.str("why"), permissions = p.strings("permissions"),
                 check = p.str("check"), grant = p.str("grant").ifBlank { "none" },
                 intents = objects(p["intents"]).map { i ->
-                    IntentSpec(i.str("component"), i.str("action"), (i["package_uri"] as? JsonPrimitive)?.booleanOrNull ?: false, (i["extra_package"] as? JsonPrimitive)?.booleanOrNull ?: false)
+                    IntentSpec(i.str("component"), i.str("action"), (i["package_uri"] as? JsonPrimitive)?.booleanOrNull ?: false, (i["extra_package"] as? JsonPrimitive)?.booleanOrNull ?: false, i.str("target"))
                 },
                 appop = p.str("appop"), minSdk = (p["min_sdk"] as? JsonPrimitive)?.intOrNull, maxSdk = (p["max_sdk"] as? JsonPrimitive)?.intOrNull,
                 oem = p.str("oem"), requiresPackage = p.str("requires_package"),

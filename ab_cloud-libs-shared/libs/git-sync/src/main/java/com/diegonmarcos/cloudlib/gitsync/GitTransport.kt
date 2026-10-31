@@ -20,6 +20,8 @@ interface GitTransport {
         /** Throws [java.io.IOException] when the engine cannot be reached. */
         fun git(request: JSONObject): JSONObject
         fun chunk(request: JSONObject): JSONObject
+        /** The engine's `info` ({version, files_access}): whether it holds All files access. A transport without it answers ok:false. */
+        fun info(): JSONObject = JSONObject().put("ok", false).put("error", "this transport has no info")
         override fun close()
     }
 }

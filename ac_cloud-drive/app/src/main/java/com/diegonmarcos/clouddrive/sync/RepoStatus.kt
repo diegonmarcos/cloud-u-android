@@ -51,12 +51,14 @@ object RepoStatus {
     fun light(kind: Kind): StatusLight.State = kind.light
 
     /** Why a status probe failed, in classes a sentence can be chosen for. */
-    enum class ErrorKind { TIMEOUT, NOT_A_REPOSITORY, PERMISSION, AUTH, ENGINE, OTHER }
+    /** #1358 [FILES_ACCESS] = the git engine lacks its own All files access (EngineGrant): checked before ENGINE, whose words the engine's sentence also contains. */
+    enum class ErrorKind { TIMEOUT, NOT_A_REPOSITORY, FILES_ACCESS, PERMISSION, AUTH, ENGINE, OTHER }
 
     fun errorKind(reason: String?): ErrorKind {
         val r = reason.orEmpty().lowercase()
         return when {
             r.startsWith("timeout") || "timed out" in r -> ErrorKind.TIMEOUT
+            "all files access" in r -> ErrorKind.FILES_ACCESS
             "not a git" in r || "repository not found" in r || "no such repository" in r || "invalid git" in r -> ErrorKind.NOT_A_REPOSITORY
             "permission" in r || "eacces" in r || "read-only" in r -> ErrorKind.PERMISSION
             "401" in r || "403" in r || "not authorized" in r || "auth" in r -> ErrorKind.AUTH

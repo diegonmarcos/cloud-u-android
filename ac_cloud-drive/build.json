@@ -377,6 +377,33 @@
           ]
         },
         {
+          "id": "engine_all_files",
+          "label": "All files access for the git sync engine",
+          "why": "Git on repositories in shared storage (the vaults) runs in the git sync engine app, a separate uid: it needs its OWN All files access, Cloud Drive's grant does not cover it. Repositories in the store run in cld.termux and do not need it. The engine reports its grant itself.",
+          "permissions": [
+            "android.permission.MANAGE_EXTERNAL_STORAGE"
+          ],
+          "min_sdk": 30,
+          "requires_package": "{gitEnginePackage}",
+          "check": "engine_all_files",
+          "grant": "settings",
+          "intents": [
+            {
+              "action": "android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION",
+              "package_uri": true,
+              "target": "{gitEnginePackage}"
+            },
+            {
+              "action": "android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"
+            },
+            {
+              "action": "android.settings.APPLICATION_DETAILS_SETTINGS",
+              "package_uri": true,
+              "target": "{gitEnginePackage}"
+            }
+          ]
+        },
+        {
           "id": "termux_run_command",
           "label": "Run commands in cld.termux",
           "why": "Git sync store route: git runs inside the terminal app through its RunCommandService when the shared uid is not in effect (Sync > Git).",

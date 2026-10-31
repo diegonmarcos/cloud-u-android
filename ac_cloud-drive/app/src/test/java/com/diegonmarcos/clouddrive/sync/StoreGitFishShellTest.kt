@@ -113,9 +113,10 @@ class StoreGitFishShellTest {
         assertEquals(0, run("git -C ${q(a.absolutePath)} rev-parse --git-dir >/dev/null 2>&1").exit)
     }
 
-    @Test fun reportIsOneBlockPerRepoWithReasonAndTail() {
+    @Test fun reportIsOneLinePerRepoWithTheRealReason() {
+        // #1358 one line per repository: status, the literal name, the summary and git's own fatal line (not its progress).
         val msg = BulkDepth.withTail("bare clone in cld.termux failed (exit 128)", "Cloning into bare repository 'x'...\nfatal: repository not found\n")
         val run = BulkDepth.Run("clone_all_bare", "clone_bare", 1, 1, failed = mapOf("cloud-me-pvt-___" to msg), ended = true)
-        assertEquals(listOf("failed  cloud-me-pvt-___\n    bare clone in cld.termux failed (exit 128)\n    Cloning into bare repository 'x'...\n    fatal: repository not found"), run.lines())
+        assertEquals(listOf("failed  cloud-me-pvt-___  bare clone in cld.termux failed (exit 128): fatal: repository not found"), run.lines())
     }
 }

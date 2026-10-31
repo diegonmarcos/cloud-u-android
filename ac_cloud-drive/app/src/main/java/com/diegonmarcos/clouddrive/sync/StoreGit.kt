@@ -25,6 +25,10 @@ object StoreGit {
 
     private fun q(s: String): String = StoreShell.q(s)
 
+    /** #1358 a failed script's summary carries the REAL reason (git's fatal / error line, or "git printed nothing"), not the exit code alone. */
+    private fun failed(what: String, r: com.diegonmarcos.cloudlib.sharedstore.StoreExec.Result): String =
+        BulkDepth.withTail("$what failed (exit ${r.exit})", r.out + "\n" + r.err)
+
     /** `git <args>` with the token (if any) as an http.extraHeader, read from stdin. */
     internal fun authed(args: String): String =
         "T=\"\$(cat)\"; if [ -n \"\$T\" ]; then " +
@@ -42,18 +46,18 @@ object StoreGit {
 
     fun clone(ctx: Context, url: String, dir: File, token: String, depth: Int? = null): GitOpResult {
         val r = shell(ctx).job(cloneScript(url, guest(ctx, dir), depth), stdin = token)
-        return GitOpResult(r.ok, if (r.ok) "cloned into ${dir.name} (in cld.termux)" else "clone in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+        return GitOpResult(r.ok, if (r.ok) "cloned into ${dir.name} (in cld.termux)" else failed("clone in cld.termux", r), (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
     fun sync(ctx: Context, dir: File, message: String, name: String, email: String, rebase: Boolean, token: String): GitOpResult {
         val r = shell(ctx).job(syncScript(guest(ctx, dir), message, name, email, rebase), stdin = token)
-        return GitOpResult(r.ok, if (r.ok) "synced (in cld.termux)" else "sync in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+        return GitOpResult(r.ok, if (r.ok) "synced (in cld.termux)" else failed("sync in cld.termux", r), (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
     /** #1282 a bare mirror at [guestDir] (BareClones.path in guest form); [depth] 0 = full history. Never touches a working clone. */
     fun bareClone(ctx: Context, url: String, guestDir: String, token: String, depth: Int): GitOpResult {
         val r = shell(ctx).job("set -e; mkdir -p \"\$(dirname ${q(guestDir)})\"; " + authed(BareClones.cloneArgs(url, guestDir, depth) { q(it) }), stdin = token)
-        return GitOpResult(r.ok, if (r.ok) "bare mirror at $guestDir" else "bare clone in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+        return GitOpResult(r.ok, if (r.ok) "bare mirror at $guestDir" else failed("bare clone in cld.termux", r), (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
     /** #1282 / #1314 update of an existing mirror (the one-bare rule: no second clone): at [depth] > 0 a depth fetch that also shrinks a full or deeper mirror (BareClones.updateScript), else `remote update --prune`. The summary names the bytes freed. */
@@ -61,7 +65,7 @@ object StoreGit {
         val r = shell(ctx).job(BareClones.updateScript(guestDir, depth, { q(it) }, ::authed), stdin = token)
         val o = BareClones.parseUpdate(r.out)
         val note = if (o.shrunk) ", shrunk to depth $depth, freed ${StalePackCleaner.humanBytes(o.freedBytes)}" else ""
-        return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir$note" else "bare update in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+        return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir$note" else failed("bare update in cld.termux", r), (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
     /** #1313 the stale temp pack pass inside cld.termux (StalePackCleaner.script); null when the guest could not run it. */

@@ -1447,6 +1447,7 @@ internal fun statusErrorText(kind: RepoStatus.ErrorKind?, detail: String?): Stri
     return when (kind) {
         RepoStatus.ErrorKind.TIMEOUT -> stringResource(R.string.repo_err_timeout, d)
         RepoStatus.ErrorKind.NOT_A_REPOSITORY -> stringResource(R.string.repo_err_not_repo, d)
+        RepoStatus.ErrorKind.FILES_ACCESS -> stringResource(R.string.repo_err_files_access, androidx.compose.ui.platform.LocalContext.current.let { remember(it) { EngineGrant.label(it) } }, d)
         RepoStatus.ErrorKind.PERMISSION -> stringResource(R.string.repo_err_permission, d)
         RepoStatus.ErrorKind.AUTH -> stringResource(R.string.repo_err_auth, d)
         RepoStatus.ErrorKind.ENGINE -> stringResource(R.string.repo_err_engine, d)

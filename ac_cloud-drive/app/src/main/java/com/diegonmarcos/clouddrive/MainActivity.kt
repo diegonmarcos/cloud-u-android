@@ -208,6 +208,8 @@ class MainActivity : ComponentActivity(), DriveActions {
             lifecycle.addObserver(observer)
             onDispose { lifecycle.removeObserver(observer) }
         }
+        // #1358 the first-run prompt's second grant, right after this app's own: the git engine's All files access (once; never stacked on ours).
+        if (hasAccess) com.diegonmarcos.clouddrive.sync.EngineGrantPrompt()
         val saved = rememberSaveable { mutableStateOf("") }
         val files = remember {
             val snap = prefs.snapshot.value

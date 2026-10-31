@@ -27,6 +27,8 @@ android {
         minSdk 26
         // The JGit this engine runs, so the engine can state it without opening a repository.
         buildConfigField 'String', 'JGIT_VERSION', '"7.8.0"'
+        // #1358 the on-device proof (EngineSharedStorageTest): run by test-engine-grant-emulator.yml after an appops grant.
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     buildFeatures {
@@ -86,6 +88,8 @@ dependencies {
     // on a phone. The nop binding makes that explicit instead of accidental.
     implementation 'org.slf4j:slf4j-nop:2.0.16'
 
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     testImplementation 'junit:junit:4.13.2'
     // The real org.json: android.jar's copy is a stub that throws on the JVM.
     testImplementation 'org.json:json:20240303'

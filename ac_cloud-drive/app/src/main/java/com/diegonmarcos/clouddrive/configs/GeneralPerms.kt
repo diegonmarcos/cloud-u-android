@@ -1,5 +1,7 @@
 package com.diegonmarcos.clouddrive.configs
 
+import com.diegonmarcos.clouddrive.sync.EngineGrant
+import com.diegonmarcos.clouddrive.sync.rememberEngineGrant
 import android.app.AppOpsManager
 import android.content.ComponentName
 import android.content.Context
@@ -56,7 +58,7 @@ import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
  */
 object GeneralPerms {
     /** The `{name}` placeholders the declaration may use, the same ones the manifest takes from the fleet manifest. */
-    fun vars(): Map<String, String> = mapOf("terminalPackage" to StoreAccess.ownerPackage(), "authMissionPermission" to BuildConfig.AUTH_MISSION_PERMISSION)
+    fun vars(): Map<String, String> = mapOf("terminalPackage" to StoreAccess.ownerPackage(), "authMissionPermission" to BuildConfig.AUTH_MISSION_PERMISSION, "gitEnginePackage" to EngineGrant.PACKAGE)
 
     private fun names(e: GeneralDecl.PermEntry) = e.permissions.map { GeneralDecl.resolve(it, vars()) }
     private fun held(ctx: Context, p: String) = ctx.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
@@ -68,6 +70,8 @@ object GeneralPerms {
         // All-files access is a special access from Android 11; below it the declared legacy permissions are the grant.
         "all_files" -> if (Build.VERSION.SDK_INT >= 30) Environment.isExternalStorageManager()
                        else names(e).filter { it != android.Manifest.permission.MANAGE_EXTERNAL_STORAGE }.all { held(ctx, it) }
+        // #1358 the git engine's OWN grant: only the engine can read it (EngineGrant asks its info call on IO); null until it answered.
+        "engine_all_files" -> when (EngineGrant.state.value) { EngineGrant.Grant.GRANTED -> true; EngineGrant.Grant.MISSING -> false; else -> null }
         "battery_opt" -> (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(ctx.packageName)
         "install_unknown" -> ctx.packageManager.canRequestPackageInstalls()
         "appop" -> (ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager).let {
@@ -90,8 +94,9 @@ object GeneralPerms {
             s.action.isNotBlank() -> Intent(s.action)
             else -> return null
         }
-        if (s.packageUri) i.data = Uri.parse("package:" + ctx.packageName)
-        if (s.extraPackage) i.putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+        val pkg = GeneralDecl.resolve(s.target, vars()).ifBlank { ctx.packageName }
+        if (s.packageUri) i.data = Uri.parse("package:$pkg")
+        if (s.extraPackage) i.putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
         return i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
@@ -130,8 +135,9 @@ fun GeneralPermsSection(perms: List<GeneralDecl.PermEntry>) {
         if (!ok) pending?.let { GeneralPerms.open(ctx, it) }
         tick++
     }
+    val engineGrant = rememberEngineGrant()
     perms.forEach { e ->
-        val st = remember(tick, e.id) { GeneralPerms.status(ctx, e) }
+        val st = remember(tick, e.id, engineGrant) { GeneralPerms.status(ctx, e) }
         val light = when (st) { GeneralDecl.Status.GRANTED -> StatusLight.State.ON; GeneralDecl.Status.DENIED -> StatusLight.State.OFF; else -> null }
         val badge = when (st) {
             GeneralDecl.Status.NOT_APPLICABLE -> stringResource(R.string.perms_status_na)

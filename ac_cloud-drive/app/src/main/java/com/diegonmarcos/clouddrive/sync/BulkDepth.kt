@@ -82,20 +82,30 @@ object BulkDepth {
         /** The outcome line of one repository, or null when this run did not touch it. */
         fun outcomeOf(name: String): String? = ok[name]?.let { "ok: $it" } ?: skipped[name]?.let { "skipped: $it" } ?: failed[name]?.let { "failed: $it" }
         /**
-         * The report, skipped and failed first (what needs the owner), then ok: ONE block per repository, never one wrapped
-         * sentence. Line 1 is the status and the repository name alone (literal text, never Markdown: `cloudy-___` stays
-         * `cloudy-___`), then the reason, then the git output tail, each indented on its own line.
+         * The report, skipped and failed first (what needs the owner), then ok: #1358 ONE LINE PER REPOSITORY, `<status>  <name>  <reason>`.
+         * The name is literal text, never Markdown (`_git-repos-master` and `cloudy-___` stay as they are), and the reason is the
+         * real one ([withTail] picks git's own fatal / error line). The full git output stays in Activity Logs.
          */
         fun lines(): List<String> = skipped.map { block("skipped", it.key, it.value) } + failed.map { block("failed", it.key, it.value) } + ok.map { block("ok", it.key, it.value) }
     }
 
-    /** One report block: `<status> <name>`, then every non-blank line of [msg] (reason first, then the git output tail) indented. */
+    /** #1358 One report line: `<status>  <name>  <msg>`, every line of [msg] folded onto it with " | " (one line per repository, always). */
     fun block(status: String, name: String, msg: String): String =
-        (listOf("$status  $name") + msg.lines().map { it.trimEnd() }.filter { it.isNotBlank() }.map { "    " + it.trim() }).joinToString("\n")
+        (listOf("$status  $name") + msg.lines().map { it.trim() }.filter { it.isNotBlank() }.let { if (it.isEmpty()) emptyList() else listOf(it.joinToString(" | ")) }).joinToString("  ")
 
-    /** A failed git job's report message: the [summary] (with its exit code), then the last [n] lines of what git printed. */
+    /** The words of a line that says WHY a git job failed (git's fatal / error, a shell's refusal), not its progress. */
+    private val WHY = Regex("(?i)^(fatal|error|mkdir|sh|git|cat|cd|chmod)\\b.*:|denied|not found|cannot|could not|unable|no such|refused|read-only|no space|not a git|timed out|outlived|not reachable|all files access")
+
+    /** #1358 The real reason in [details]: the last line that says why (see [WHY]), else the last line; null when git printed nothing. */
+    fun reasonOf(details: String): String? {
+        val ls = details.lines().map { it.trim() }.filter { it.isNotBlank() }
+        return ls.lastOrNull { WHY.containsMatchIn(it) } ?: ls.lastOrNull()
+    }
+
+    /** #1358 A failed git job's ONE-LINE message: the [summary] (with its exit code), then the real reason from what git printed. */
+    @Suppress("UNUSED_PARAMETER")
     fun withTail(summary: String, details: String, n: Int = 6): String {
-        val tail = details.lines().map { it.trimEnd() }.filter { it.isNotBlank() }.takeLast(n)
-        return if (tail.isEmpty()) "$summary\n(git printed nothing)" else summary + "\n" + tail.joinToString("\n")
+        val why = reasonOf(details) ?: return if ("git printed nothing" in summary) summary else "$summary: git printed nothing"
+        return if (why in summary) summary else "$summary: $why"
     }
 }

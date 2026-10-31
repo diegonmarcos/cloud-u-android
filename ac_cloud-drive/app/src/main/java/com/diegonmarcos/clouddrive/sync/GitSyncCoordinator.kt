@@ -44,7 +44,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     /** #1315 the ONE executor of every git and folder job (sync/jobs): bounded, locked per path, exclusive, cancellable, accounted. */
     val jobs: GitJobs = GitJobs(scope)
 
-    init { engineContext = ctx.applicationContext }
+    init {
+        engineContext = ctx.applicationContext
+        // #1358 know the git engine's All files access before the first row is probed.
+        scope.launch(Dispatchers.IO) { runCatching { EngineGrant.probe(ctx.applicationContext) } }
+    }
 
     /**
      * #669 THE ONE PLACE A REPOSITORY'S AUTH IS ASSEMBLED for this coordinator's
@@ -1363,6 +1367,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
          * Throws, with the exact path, when neither can read the clone: the row then ends in ERROR with that message.
          */
         fun probeLight(dir: File): GitStatusReader.Probe {
+            // #1358 a clone in shared storage is the git engine's to run: without its own All files access every verb fails, so the row says that first.
+            if (EngineGrant.blocks(dir.absolutePath)) error(EngineGrant.REASON + " (" + dir.absolutePath + ")")
             if (File(dir, ".git").isDirectory) return RepoCheap.lightProbe(dir) { _ ->
                 GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e -> e.log(max = Declarations.sync.git.status.logWindow).map { it.sha } }
             }

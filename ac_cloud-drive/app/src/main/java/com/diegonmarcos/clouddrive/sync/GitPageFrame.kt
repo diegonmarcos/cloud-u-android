@@ -34,7 +34,8 @@ fun GitPageFrame(refreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier 
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).testTag(DriveTags.SYNC_GIT_LIST),
             state = state,
             contentPadding = PaddingValues(bottom = DriveMetrics.sectionInset),
-            content = content,
+            // #1358 the git engine's missing All files access is said ONCE, above every row (EngineGrantBanner draws nothing otherwise).
+            content = { item(key = EngineGrant.TAG_BANNER) { EngineGrantBanner() }; content() },
         )
     }
 }

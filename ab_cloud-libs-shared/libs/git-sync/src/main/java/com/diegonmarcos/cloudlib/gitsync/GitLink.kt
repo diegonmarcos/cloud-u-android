@@ -72,6 +72,7 @@ class GitLink(context: Context) : GitTransport {
         return object : GitTransport.Session {
             override fun git(request: JSONObject) = ask("git", request)
             override fun chunk(request: JSONObject) = ask("chunk", request)
+            override fun info() = ask("info", JSONObject())
             override fun close() = conn.release(ctx)
 
             private fun ask(method: String, request: JSONObject): JSONObject {
