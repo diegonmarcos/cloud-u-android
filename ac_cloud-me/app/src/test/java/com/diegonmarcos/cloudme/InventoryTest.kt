@@ -33,7 +33,7 @@ class InventoryTest {
         assertEquals(setOf("inv_food", "inv_electronics"), d.rows(LedgerSeed.MARK).map { it["collection"] }.toSet())
     }
 
-    @Test fun `a second load changes nothing (catches: no marker, seed re-applied every load)`() {
+    @Test fun `a second load changes nothing - catches a missing marker that re-applies the seed every load`() {
         val once = LedgerSeed.applied(LedgerData(), listOf(food))
         assertSame(once, LedgerSeed.applied(once, listOf(food)))
         assertEquals("survives the JSON round trip", 2, LedgerSeed.applied(LedgerData.fromJson(once.toJson()), listOf(food)).rows("inv_food").size)
@@ -45,7 +45,7 @@ class InventoryTest {
         assertTrue(LedgerSeed.applied(d, listOf(food)).rows("inv_food").isEmpty())
     }
 
-    @Test fun `an edit is kept and loses the mock stamp (catches: the seed overwriting user edits)`() {
+    @Test fun `an edit is kept and loses the mock stamp - catches the seed overwriting user edits`() {
         var d = LedgerSeed.applied(LedgerData(), listOf(food))
         val id = d.rows("inv_food").first()["id"]!!
         d = d.replaced("inv_food", id, LedgerModel.clean(food, mapOf("name" to "REWE", "monthly" to "300", LedgerSeed.MOCK to "1")))
