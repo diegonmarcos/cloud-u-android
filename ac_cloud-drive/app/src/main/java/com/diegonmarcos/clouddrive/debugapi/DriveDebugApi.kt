@@ -104,6 +104,7 @@ object DriveDebugApi {
                 AppDebugServer.Op("status", "force=1 (optional: re-read even fresh entries)", "#850 the ONE status reader's per-repo result (clean / ahead N / behind N / dirty / not cloned / error(reason)) with read_at and took_ms; bounded by the declared timeout"),
                 AppDebugServer.Op("pull", "force=1 (force pull = fetch + reset) & name=<repo, optional — blank = every clone>", "#850 the page's own pullAll on the one credential path; waits for every per-repo outcome (summaries only, never a credential)"),
                 AppDebugServer.Op("clone", "name=<repo>&url=<clone url, optional — blank resolves it from the fleet listing the way the page does>", "clone through the page's own path (GitSyncCoordinator.cloneInto) and wait for the real outcome"),
+                AppDebugServer.Op("bare", "url=<public clone url, comma-separated>&depth=<default 1>", "#1358 the Mirror all (bare) item path (StoreGit.bareClone in cld.termux at BareClones.path), one report line per repository with git's real error"),
             ),
         ) { op, query -> gitRoute(app, op, query) }
 
@@ -141,6 +142,7 @@ object DriveDebugApi {
         "clone" -> cloneJson(ctx, query)
         "status" -> statusJson(ctx, query)
         "pull" -> pullJson(ctx, query)
+        "bare" -> bareJson(ctx, query)
         else -> null
     }
 
@@ -346,6 +348,29 @@ object DriveDebugApi {
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
+
+    /** #1358 the bare clone of clone_all_bare, item by item, with no token (public URLs): the exit code and git's own stderr. */
+    private fun bareJson(ctx: Context, query: Map<String, String>): String {
+        val urls = query["url"].orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        if (urls.isEmpty()) return errJson("bare needs ?url=<clone url>[,<clone url>…]")
+        val depth = query["depth"]?.toIntOrNull() ?: 1
+        val route = com.diegonmarcos.clouddrive.sync.store.StoreRoute.of(ctx)
+        if (!route.viaTermux) return errJson("the store is not reached through cld.termux (mode ${route.mode})")
+        val gitGuest = route.guest(SharedStore.gitRoot().absolutePath) ?: return errJson("the store git folder has no guest path")
+        val canonical: (String) -> String = { com.diegonmarcos.clouddrive.Declarations.repoSot.canonical(it) }
+        val lines = urls.map { url ->
+            val name = url.trimEnd('/').substringAfterLast('/').removeSuffix(".git")
+            val dest = com.diegonmarcos.clouddrive.sync.BareClones.path(gitGuest, com.diegonmarcos.clouddrive.Declarations.sync.git.bareRoot, url, name, canonical)
+                ?: return@map Triple(false, name, "no safe bare path")
+            val r = com.diegonmarcos.clouddrive.sync.StoreGit.bareClone(ctx, url, dest, "", depth)
+            Triple(r.ok, name, if (r.ok) r.summary else com.diegonmarcos.clouddrive.sync.BulkDepth.withTail(r.summary, r.details))
+        }
+        return buildString {
+            append("""{"ok":${lines.all { it.first }},"results":[""")
+            lines.forEachIndexed { i, (ok, name, msg) -> if (i > 0) append(','); append("""{"name":"${esc(name)}","ok":$ok,"report":"${esc(msg)}"}""") }
+            append("]}")
+        }
+    }
 
     private fun errJson(why: String): String = """{"ok":false,"why":"${esc(why)}"}"""
 

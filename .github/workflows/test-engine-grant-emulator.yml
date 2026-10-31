@@ -6,6 +6,8 @@
 # ║ drive-banner: Cloud Drive + the engine, engine NOT granted: the        ║
 # ║   first-run prompt, ONE Git page banner, its button opens Settings,    ║
 # ║   the banner goes after the grant. Screenshots uploaded.               ║
+# ║ termux-bare-clone: cld.termux + SuperApp + Drive: the pre-#1353 job   ║
+# ║   start under fish (its real stderr), then Drive bare clones 3 repos. ║
 # ║ Scripts: ab_cloud-libs-shared/libs/git-sync-engine/src/androidTest,    ║
 # ║          ac_cloud-drive/test/emulator-engine-grant.sh.                 ║
 # ╚═══════════════════════════════════════════════════════════════════════╝
@@ -145,5 +147,59 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: drive-engine-grant-evidence
+          path: out/
+          if-no-files-found: warn
+
+  termux-bare-clone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Drive, cld.termux (+ rootfs lib) and SuperApp
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/dl-$name"; done
+            find apk -name '*.apk' -path '*dl-*' | head -1 | xargs -I{} cp {} apk/drive.apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk
+          fi
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          gh release download latest -R "$REPO" -p Cloud-Lib-Rootfs-Termux-x86_64.apk -O apk/rootfs.apk
+          gh release download latest -R "$REPO" -p Cloud-SuperApp-x86_64.apk -O apk/superapp.apk
+          ls -l apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Boot emulator + the pre-#1353 job start (expected to fail) + Drive's bare clone of three public repos
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disk-size: 8000M
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash ac_cloud-drive/test/emulator-termux-bare-clone.sh apk/drive.apk apk/terminal.apk apk/rootfs.apk apk/superapp.apk out
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-bare-clone-evidence
           path: out/
           if-no-files-found: warn
