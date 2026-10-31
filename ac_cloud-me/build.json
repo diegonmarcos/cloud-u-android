@@ -1192,6 +1192,8 @@
     "portal_slug": "cloud-me",
     "entry": "index.html",
     "tester": "test-me-web.sh",
+    "_doc_inputs": "#1367 files of this app the page bakes in: the nav is build.json::ui (me-nav.json), so the wasm ship watches and hashes build.json and a nav edit regenerates the web mirror.",
+    "inputs": ["build.json"],
     "size_budget_mb": 20
   },
   "tests": {
