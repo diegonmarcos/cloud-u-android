@@ -740,7 +740,7 @@ private fun ExplorerSearchBar(query: String, onQuery: (String) -> Unit, decl: De
     Column(Modifier.fillMaxWidth().testTag(DriveTags.FILES_SEARCH_BAR)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             com.diegonmarcos.clouddrive.sync.GitSearchField(query, onQuery, decl.placeholder, Modifier.weight(1f).height(decl.heightDp.dp), tag = DriveTags.FILES_SEARCH_FIELD)
-            IconButton(onClick = onClose, Modifier.size(decl.heightDp.dp).testTag(DriveTags.FILES_SEARCH_CLOSE)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.chrome_cancel)) }
+            IconButton(onClick = onClose, Modifier.size(DriveMetrics.tap).testTag(DriveTags.FILES_SEARCH_CLOSE)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.chrome_cancel)) }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.FILES_SEARCH_SCOPES), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             decl.scopes.forEach { sc ->

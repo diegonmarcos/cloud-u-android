@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -200,12 +199,12 @@ internal fun GitSearchField(query: String, onQuery: (String) -> Unit, placeholde
 
 /** #1356 the compact search field's sizes (KitSearchBar's scale, 40dp tall). */
 internal object GitSearchMetrics {
-    val height = 40.dp
-    val icon = 16.dp
-    val inset = 10.dp
-    val gap = 6.dp
-    val corner = 8.dp
-    val rule = 1.dp
+    val height = DriveMetrics.rowHeight
+    val icon = DriveMetrics.icon
+    val inset = DriveMetrics.pad + DriveMetrics.tight
+    val gap = DriveMetrics.gapWide
+    val corner = DriveMetrics.pad
+    val rule = DriveMetrics.hairline
 }
 
 /** The quick-filter rail: every option declared `quick`, with its live count; a tap selects it (or its filter's default when already on). */
