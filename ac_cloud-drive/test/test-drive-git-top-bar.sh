@@ -88,7 +88,7 @@ t1 "$BJ" "$PAGE" >/dev/null && t2 "$PAGE" >/dev/null && f1 "$BJ" "$SYNC/RepoFilt
 #    (nor the terminal action it carried); the search is GitSearchField at ui.sync.git.top_bar.search_height_dp (40), never an
 #    OutlinedTextField; Home ▸ Apps carries the Termux tile (fleet termux) that replaced the row's terminal icon.
 t3() { python3 - "$BJ" "$1" "$2" "$APP/data/drive-apps.json" <<'PY'
-import json, re, sys
+import json, os, re, sys
 bj = json.load(open(sys.argv[1])); screen = open(sys.argv[2]).read(); bar = open(sys.argv[3]).read(); apps = json.load(open(sys.argv[4]))["apps"]
 git = next(s for s in bj["ui"]["sections"] if s["id"] == "git"); h = bj["ui"]["sync"]["git"]["top_bar"].get("search_height_dp")
 m = re.search(r'fun GitPageScreen\((.*?)\n}\n', screen, re.S); body = m.group(1) if m else ""
@@ -97,7 +97,8 @@ if git.get("title_row") is not False: bad.append("ui.sections[git].title_row is 
 if not body: bad.append("GitPageScreen not found")
 if "ToolbarIsland(" in body or "TerminalIslandAction(" in body: bad.append("GitPageScreen still draws a title row / terminal icon")
 if h != 40: bad.append("search_height_dp is %r, want 40" % h)
-if not re.search(r'val height = %s\.dp' % h, bar): bad.append("GitSearchMetrics.height differs from search_height_dp")
+chrome = open(os.path.join(os.path.dirname(sys.argv[1]), "app/src/main/java/com/diegonmarcos/clouddrive/ui/Chrome.kt")).read()
+if "val height = DriveMetrics.rowHeight" not in bar or not re.search(r'val rowHeight = %s\.dp' % h, chrome): bad.append("GitSearchMetrics.height is not DriveMetrics.rowHeight = search_height_dp")
 if "OutlinedTextField" in bar or "GitSearchField(query" not in bar: bad.append("the Git search is not the compact GitSearchField")
 if "Icons.Filled.Search" not in bar or "Icons.Filled.Close" not in bar: bad.append("no inline magnifier or clear (x)")
 if not any(a.get("fleet") == "termux" and a.get("label") == "Termux" for a in apps): bad.append("no Termux tile (fleet termux) on Home ▸ Apps")

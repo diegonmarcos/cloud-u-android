@@ -203,6 +203,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val sortColumn = sortState.first
     val sortAscending = sortState.second
     val filterSel by coordinator.filterSelection.collectAsState()
+    // #1356 the page's state outlives the page: read back from the activity-scoped store, written on every change below.
+    val memoryStore = LocalGitPageMemory.current
+    val memoryKey = GitPageMemoryStore.keyOf(view, part)
+    val memory = remember(memoryKey) { memoryStore.get(memoryKey) }
     val lastCommits by coordinator.lastCommits.collectAsState()
     // #1254 the declared depth command in flight or last finished; #1255 the unlisted git folders.
     val depthRun by coordinator.depthRun.collectAsState()
@@ -212,14 +216,20 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var depthConfirm by remember { mutableStateOf<Declarations.GitDepthActionDecl?>(null) }
     var showDepthReport by remember { mutableStateOf(false) }
     val tableScroll = rememberScrollState()
-    var settingsFor by remember { mutableStateOf<ManagedRepo?>(null) }
+    // #1356 the repo id whose settings sheet is open ("" = none), resolved against the live list when drawn.
+    var settingsFor by remember { mutableStateOf(memory.settingsFor) }
     // #1238 the row whose full-screen status window is open (TableEntry.key; "" = none).
-    var statusFor by remember { mutableStateOf("") }
+    var statusFor by remember { mutableStateOf(memory.statusFor) }
     // #1258 Activity Logs (was History): a top button opens it as its own view.
-    var showActivity by remember { mutableStateOf(false) }
+    var showActivity by remember { mutableStateOf(memory.showActivity) }
     // #1356 which Logs tab opens: Logs in the top nav -> the first declared tab (repos); the job line -> app.
-    var logsTab by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf("") }
+    var logsTab by remember { mutableStateOf(memory.logsTab) }
+    var expanded by remember { mutableStateOf(memory.expanded) }
+    // #1356 the open sheet's sub-menu, and the repo it belongs to.
+    var panelRepo by remember { mutableStateOf(memory.panelRepo) }
+    var panel by remember { mutableStateOf(memory.panel) }
+    // A closed sheet forgets its sub-menu: the next repo opens on its actions.
+    LaunchedEffect(expanded) { if (expanded.isEmpty()) { panelRepo = ""; panel = "" } }
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
     // #646 what the DECLARED credential chain is about to do, and afterwards what it did.
@@ -288,8 +298,18 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // A clone folder under an OLD name (cloud-infra) is the same repository as its renamed row (cloudy-t-infra): keyed by the current name, never listed twice.
     val clonedByName = repos.associateBy { Declarations.repoSot.canonical(File(it.path).name) }
     // #1315 the declared top bar's own state: the search, the Filters sheet, the legend, a confirmation in flight, the executor's jobs.
-    var query by remember { mutableStateOf("") }
-    var showFilters by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf(memory.query) }
+    var showFilters by remember { mutableStateOf(memory.showFilters) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(memory.scrollIndex, memory.scrollOffset)
+    LaunchedEffect(memoryKey) {
+        androidx.compose.runtime.snapshotFlow {
+            GitPageMemory(
+                expanded = expanded, panelRepo = panelRepo, panel = panel, settingsFor = settingsFor, statusFor = statusFor,
+                showActivity = showActivity, logsTab = logsTab, query = query, showFilters = showFilters,
+                scrollIndex = listState.firstVisibleItemIndex, scrollOffset = listState.firstVisibleItemScrollOffset,
+            )
+        }.collect { memoryStore.put(memoryKey, it) }
+    }
     var showLegend by remember { mutableStateOf(false) }
     var topConfirm by remember { mutableStateOf<Declarations.GitTopItemDecl?>(null) }
     val jobsState by coordinator.jobs.jobs.collectAsState()
@@ -887,6 +907,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     GitPageFrame(
+        state = listState,
         refreshing = refreshingRemote,
         onRefresh = { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.scanUnlisted(); coordinator.refreshLastCommits() },
         modifier = modifier,
@@ -1087,7 +1108,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     running = running[e.cloned.id], glance = GitSyncCoordinator.glanceFor(e.cloned, glances), fmt = fmt,
                     coordinator = coordinator, actions = actions,
                     repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
-                    cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = e.cloned }, onClose = { expanded = "" },
+                    initialPanel = if (panelRepo == e.cloned.id) panel else "", onPanel = { id -> panelRepo = e.cloned.id; panel = id },
+                    cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = e.cloned.id }, onClose = { expanded = "" },
                     row = e.row, isPrivate = e.isPrivate, nextRunMinutes = nextRunMinutes,
                     repoint = { from, to -> prefs?.let { p -> LocalRepoRefs.repoint(ctx.applicationContext, p, from, to).let { r -> ctx.getString(R.string.parentless_refs, r.repos, r.jobs, r.bookmarks) } }.orEmpty() },
                 )
@@ -1095,7 +1117,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
         }
     }
-    settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
+    repos.firstOrNull { settingsFor.isNotEmpty() && it.id == settingsFor }?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = "" }) }
     // #1258 ACTIVITY LOGS: the one sync / operation history, opened from the top button, full screen.
     // #1356 LOGS (Repos | App): App is the Activity Logs view that used to open from More.
     if (showActivity) GitLogsWindow(page.topBar.logs, logsTab, coordinator, events, fmt, onClose = { showActivity = false })
@@ -1479,6 +1501,9 @@ private fun GitRepoOpsBox(
     onSettings: () -> Unit,
     onClose: () -> Unit,
     row: RepoTableRow,
+    /** #1356 the sub-menu this sheet reopens on, and where a change of sub-menu is reported (the page keeps it across navigation). */
+    initialPanel: String = "",
+    onPanel: (String) -> Unit = {},
     isPrivate: Boolean?,
     /** #1289 minutes until the periodic worker next ticks (null = not known); Configs-AutoSync's next-run line. */
     nextRunMinutes: Long? = null,
@@ -1487,7 +1512,8 @@ private fun GitRepoOpsBox(
 ) {
     val ctx = LocalContext.current
     val off = colorResource(R.color.status_light_off)
-    var panel by remember(repo.id) { mutableStateOf("") }
+    var panel by remember(repo.id) { mutableStateOf(initialPanel) }
+    LaunchedEffect(repo.id, panel) { onPanel(panel) }
     // #1289 Workflow: the working tree read when a Workflow panel opens, the per-file choices, the confirms.
     var tree by remember(repo.id) { mutableStateOf<Result<com.diegonmarcos.cloudlib.gitsync.GitStatusSnapshot>?>(null) }
     var choices by remember(repo.id) { mutableStateOf<Map<String, RepoWorkflow.Choice>>(emptyMap()) }

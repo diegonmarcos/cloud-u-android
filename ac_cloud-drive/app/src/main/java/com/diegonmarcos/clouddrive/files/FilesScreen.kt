@@ -520,7 +520,14 @@ private fun EntryList(
     id: PaneId, pane: PaneState, rows: List<TreeRow>, controller: FilesController, thumbnails: Boolean,
     onOpenEntry: (FileOps.Entry) -> Unit, onMenu: (FileOps.Entry, EntryAction) -> Unit, onActivate: () -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    // #1356 the list position per pane and folder outlives a bottom-nav switch (and process death): the activity-scoped page store.
+    val memoryStore = com.diegonmarcos.clouddrive.sync.LocalGitPageMemory.current
+    val scrollKey = "explorer/$id/${pane.tabs.getOrNull(pane.activeTab)?.location}"
+    val listState = remember(scrollKey) { memoryStore.get(scrollKey).let { androidx.compose.foundation.lazy.LazyListState(it.scrollIndex, it.scrollOffset) } }
+    LaunchedEffect(scrollKey) {
+        androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (i, o) -> memoryStore.put(scrollKey, com.diegonmarcos.clouddrive.sync.GitPageMemory(scrollIndex = i, scrollOffset = o)) }
+    }
     val selecting = pane.selecting
     val keyAt: (Offset) -> String? = { pos ->
         listState.layoutInfo.visibleItemsInfo.firstOrNull { pos.y.toInt() in it.offset until (it.offset + it.size) }?.key as? String

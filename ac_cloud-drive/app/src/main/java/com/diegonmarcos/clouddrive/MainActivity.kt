@@ -12,6 +12,9 @@ import android.provider.Settings
 import android.webkit.MimeTypeMap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import com.diegonmarcos.clouddrive.sync.LocalGitPageMemory
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -80,6 +83,7 @@ import androidx.compose.ui.platform.LocalContext
  * builds an Intent.
  */
 class MainActivity : ComponentActivity(), DriveActions {
+    private val gitPage: com.diegonmarcos.clouddrive.sync.GitPageViewModel by viewModels()
     /** #1289 the shell's openPath, set by the composition; [openInFiles] reveals a folder through it. */
     private var openInFilesHook: ((String) -> Unit)? = null
     override fun openInFiles(path: String) { openInFilesHook?.invoke(path) }
@@ -161,7 +165,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         guarded("engines") {
             EngineActivity.declareFromBuild(this)
         }
-        setContent { DriveTheme { Root(); DataMigration.Dialog() } }
+        // #1356 the Git page's state is activity-scoped (survives a bottom-nav switch) and saved with the activity (survives process death).
+        setContent { CompositionLocalProvider(LocalGitPageMemory provides gitPage.store) { DriveTheme { Root(); DataMigration.Dialog() } } }
         guarded("Updater", optional = true) {
             Updater.start(this)
         }

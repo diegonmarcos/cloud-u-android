@@ -213,6 +213,14 @@ jobs:
           LOGCAT_PID=$!
           rc=0
           python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out --shots "$SHOTS" || rc=$?
+          # an app's own flows on the same APK (a state that has to survive navigation, a multi-step journey): every
+          # $APP/test/emulator-walk-*.sh <apk> <outdir>, screenshots under walk-out/flows/<name>/shots; a red flow fails the walk (#1356)
+          for flow in "$APP"/test/emulator-walk-*.sh; do
+            [ -f "$flow" ] || continue
+            name=$(basename "$flow" .sh)
+            echo "── flow $name ──"
+            timeout 600 bash "$flow" app-under-test.apk "walk-out/flows/$name" || { echo "::error::flow $name failed"; [ "$rc" -eq 0 ] && rc=1; }
+          done
           # a dead emulator makes a bare adb call wait for the device forever (run 40679943894 sat 87 min here)
           timeout 60 adb logcat -d -v threadtime > walk-out/logcat.txt || true
           kill "$LOGCAT_PID" 2>/dev/null || true

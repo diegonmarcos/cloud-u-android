@@ -28,10 +28,11 @@ import com.diegonmarcos.clouddrive.ui.DriveTags
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GitPageFrame(refreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier = Modifier, content: LazyListScope.() -> Unit) {
+fun GitPageFrame(refreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier = Modifier, state: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(), content: LazyListScope.() -> Unit) {
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).testTag(DriveTags.SYNC_GIT_LIST),
+            state = state,
             contentPadding = PaddingValues(bottom = DriveMetrics.sectionInset),
             content = content,
         )
