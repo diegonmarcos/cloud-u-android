@@ -4,6 +4,8 @@
 #   S2  completeness: one entry per row of fwa.md, every row's link, Type, 2D/3D and VR carried over
 #   S4  cleartext is narrow: the network security config forbids it by default, allows it for EXACTLY the hosts of the http-only
 #       Store entries (no more, no fewer, never a global allowance), and the manifest uses that config
+#   S5  every entry carries its link's status/checked from data/link-status.json (an unprobed link is unverified, never online)
+#   S6  the probe's verdicts: HTTP 404/410 and a timeout are offline, a proxy block is unverified (never offline), 200 online
 #   S3  the generator refuses a malformed row (an unknown Type / 2D/3D / VR, a name without a link) instead of guessing
 # then plants a mutation per rule in a scratch copy and requires RED for each.
 set -u
@@ -50,6 +52,37 @@ except Exception as e:
 man = open(os.path.join(app, "app/src/main/AndroidManifest.xml"), encoding="utf-8").read()
 if 'android:networkSecurityConfig="@xml/network_security_config"' not in man: bad.append("S4 the manifest does not use the generated network security config")
 if 'usesCleartextTraffic="true"' in man: bad.append("S4 the manifest allows cleartext globally")
+# S5
+lp = os.path.join(d, "link-status.json")
+links = json.load(open(lp, encoding="utf-8")).get("links", {}) if os.path.exists(lp) else {}
+for e in entries:
+    want = links.get(e.get("url"), {"status": "unverified", "checked": ""})
+    if (e.get("status"), e.get("checked")) != (want.get("status"), want.get("checked")):
+        bad.append("S5 %r carries %r/%r, link-status.json says %r/%r" % (e.get("id"), e.get("status"), e.get("checked"), want.get("status"), want.get("checked")))
+# S6: the probe against a stubbed network
+import importlib.util, socket, urllib.error, urllib.request, io
+spec = importlib.util.spec_from_file_location("probe", os.path.join(d, "probe-links.py")); pr = importlib.util.module_from_spec(spec); spec.loader.exec_module(pr)
+def http(code, body=b""):
+    def f(*a, **k): raise urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(body))
+    return f
+class Ok:
+    status = 200
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+def raise_(e):
+    def f(*a, **k): raise e
+    return f
+cases = [("HTTP 404", http(404), "offline"), ("HTTP 410", http(410), "offline"), ("HTTP 500", http(500), "online"),
+         ("HTTP 200", lambda *a, **k: Ok(), "online"), ("timeout", raise_(urllib.error.URLError(socket.timeout("timed out"))), "offline"),
+         ("bare timeout", raise_(socket.timeout("timed out")), "offline"), ("proxy 407", http(407), "unverified"),
+         ("proxy 403", http(403, b"blocked by proxy policy"), "unverified"),
+         ("tunnel", raise_(urllib.error.URLError("Tunnel connection failed: 403 Forbidden")), "unverified")]
+real = urllib.request.urlopen
+for name, fn, want in cases:
+    urllib.request.urlopen = fn
+    try: got = pr.probe("https://x.example/", 1)[0]
+    finally: urllib.request.urlopen = real
+    if got != want: bad.append("S6 probe says %s for %s, want %s" % (got, name, want))
 for b in bad: print("FAIL " + b)
 sys.exit(1 if bad else 0)
 PY
@@ -74,6 +107,14 @@ mutant "an extra cleartext host"       "sed -i 's#a-way-to-go.com</domain>#a-way
 mutant "an http host loses cleartext"  "sed -i '/a-way-to-go.com/d' \$NSC" "S4 cleartext hosts"
 mutant "the manifest drops the config" "sed -i 's#android:networkSecurityConfig=.@xml/network_security_config.##' \$MAN" "S4 the manifest does not use"
 mutant "the manifest goes cleartext"   "sed -i 's#android:hardwareAccelerated=#android:usesCleartextTraffic=\"true\" android:hardwareAccelerated=#' \$MAN" "S4 the manifest allows cleartext"
+mutant "a probe result is not merged" "python3 -c \"import json;d=json.load(open('link-status.json'));d['links']['http://a-way-to-go.com/']['status']='online';json.dump(d,open('link-status.json','w'),indent=2)\"" "S1"
+mutant "store.json hides an offline world" "sed -i '0,/\"status\": \"offline\"/s//\"status\": \"online\"/' store.json" "S5"
+mutant "an unprobed link reads online" "sed -i 's/get(\"status\", \"unverified\")/get(\"status\", \"online\")/' gen-store.py && python3 -c \"import json;d=json.load(open('link-status.json'));d['links'].pop('https://lusion.co/');json.dump(d,open('link-status.json','w'),indent=2)\" && python3 gen-store.py >/dev/null" "S5"
+mutant "404 reads online"              "sed -i 's/GONE = (404, 410)/GONE = (410,)/' probe-links.py" "S6 probe says online for HTTP 404"
+mutant "410 reads online"              "sed -i 's/GONE = (404, 410)/GONE = (404,)/' probe-links.py" "S6 probe says online for HTTP 410"
+mutant "a timeout reads unverified"    "sed -i 's/return \"offline\", \"timeout\"/return \"unverified\", \"timeout\"/g' probe-links.py" "S6 probe says unverified for timeout"
+mutant "a proxy block reads offline"   "sed -i 's/return \"unverified\", \"proxy %d\"/return \"offline\", \"proxy %d\"/' probe-links.py" "S6 probe says offline for proxy"
+mutant "a tunnel block reads offline"  "sed -i 's/return \"unverified\", \"proxy: %s\"/return \"offline\", \"proxy: %s\"/' probe-links.py" "S6 probe says offline for tunnel"
 mutant "an entry is dropped"           "python3 -c \"import json;d=json.load(open('store.json'));d['entries'].pop();json.dump(d,open('store.json','w'),indent=2)\"" "S2"
 
 # S3: the generator itself refuses what it cannot map

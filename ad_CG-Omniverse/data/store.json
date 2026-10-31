@@ -15,7 +15,9 @@
         "React"
       ],
       "vr": false,
-      "description": "A legendary 3D portfolio where you drive a physics-based toy car to explore the developer's work."
+      "description": "A legendary 3D portfolio where you drive a physics-based toy car to explore the developer's work.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "lusion-v3",
@@ -30,7 +32,9 @@
         "GLSL"
       ],
       "vr": false,
-      "description": "The breathtaking portfolio of creative studio Lusion, featuring mind-bending real-time rendering."
+      "description": "The breathtaking portfolio of creative studio Lusion, featuring mind-bending real-time rendering.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "pioneer-corn-revolutionized",
@@ -45,7 +49,9 @@
         "GLSL"
       ],
       "vr": false,
-      "description": "A beautifully bizarre, surreal digital experience exploring agricultural innovation."
+      "description": "A beautifully bizarre, surreal digital experience exploring agricultural innovation.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "nomadic-tribe",
@@ -60,7 +66,9 @@
         "GSAP"
       ],
       "vr": false,
-      "description": "A stunning, poetic 3D journey using gorgeous illustration and WebGL."
+      "description": "A stunning, poetic 3D journey using gorgeous illustration and WebGL.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "kpr",
@@ -75,7 +83,9 @@
         "Vercel"
       ],
       "vr": false,
-      "description": "A slick, high-performance web experience blending streetwear, crypto, and surreal digital worlds."
+      "description": "A slick, high-performance web experience blending streetwear, crypto, and surreal digital worlds.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "prometheus-fuels",
@@ -90,7 +100,9 @@
         "Webpack"
       ],
       "vr": false,
-      "description": "A high-end, atmospheric scrolling experience explaining complex green energy concepts."
+      "description": "A high-end, atmospheric scrolling experience explaining complex green energy concepts.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "frans-hals-museum",
@@ -105,7 +117,9 @@
         "JavaScript"
       ],
       "vr": false,
-      "description": "A masterclass in digital editorial design and smooth transitions for a fine art museum."
+      "description": "A masterclass in digital editorial design and smooth transitions for a fine art museum.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "orano",
@@ -120,7 +134,9 @@
         "HTML5"
       ],
       "vr": false,
-      "description": "A beautiful, seamless 3D scrolling journey explaining nuclear materials."
+      "description": "A beautiful, seamless 3D scrolling journey explaining nuclear materials.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "active-theory-v5",
@@ -135,7 +151,9 @@
         "WebSockets"
       ],
       "vr": false,
-      "description": "The benchmark-setting portfolio site for one of the world's best digital production agencies."
+      "description": "The benchmark-setting portfolio site for one of the world's best digital production agencies.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "the-cool-club-x-fwa",
@@ -150,7 +168,9 @@
         "GSAP"
       ],
       "vr": false,
-      "description": "A highly stylized, fun 3D card-collecting web experience celebrating the FWA itself."
+      "description": "A highly stylized, fun 3D card-collecting web experience celebrating the FWA itself.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "food-for-fish",
@@ -165,7 +185,9 @@
         "GLSL"
       ],
       "vr": false,
-      "description": "An incredibly charming, meticulously coded personal WebGL game project that won FOTY 2024."
+      "description": "An incredibly charming, meticulously coded personal WebGL game project that won FOTY 2024.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "paper-planes",
@@ -180,7 +202,9 @@
         "Node.js"
       ],
       "vr": false,
-      "description": "A famous mobile-to-web gamified experience where users throw digital planes onto a shared screen."
+      "description": "A famous mobile-to-web gamified experience where users throw digital planes onto a shared screen.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "star-atlas",
@@ -195,7 +219,9 @@
         "Solana"
       ],
       "vr": false,
-      "description": "A breathtaking interactive web hub for the next-gen gaming metaverse with incredible 3D assets."
+      "description": "A breathtaking interactive web hub for the next-gen gaming metaverse with incredible 3D assets.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "interland",
@@ -210,7 +236,9 @@
         "HTML5"
       ],
       "vr": false,
-      "description": "A beautifully designed, multi-level 3D web game by Google teaching kids internet safety."
+      "description": "A beautifully designed, multi-level 3D web game by Google teaching kids internet safety.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "kode-sports-club",
@@ -225,7 +253,9 @@
         "Vue"
       ],
       "vr": false,
-      "description": "A vintage 8-bit style web game experience that was flawlessly executed with modern tech."
+      "description": "A vintage 8-bit style web game experience that was flawlessly executed with modern tech.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "ouigo-let-s-play",
@@ -240,7 +270,9 @@
         "GSAP"
       ],
       "vr": false,
-      "description": "A wildly fun, high-speed pinball/arcade-style promotional web game."
+      "description": "A wildly fun, high-speed pinball/arcade-style promotional web game.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "wayfinder",
@@ -254,7 +286,9 @@
         "Generative AI"
       ],
       "vr": false,
-      "description": "An AI-driven, poetic generative art game where you explore nature via interactive tokens."
+      "description": "An AI-driven, poetic generative art game where you explore nature via interactive tokens.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "mammut-expedition-baikal",
@@ -269,7 +303,9 @@
         "React"
       ],
       "vr": false,
-      "description": "A gamified expedition mapping tool that lets users explore a treacherous real-world journey."
+      "description": "A gamified expedition mapping tool that lets users explore a treacherous real-world journey.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "the-aviator",
@@ -284,7 +320,9 @@
         "HTML5"
       ],
       "vr": false,
-      "description": "An awarded web-based flight experience letting users soar through low-poly digital landscapes."
+      "description": "An awarded web-based flight experience letting users soar through low-poly digital landscapes.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "a-way-to-go",
@@ -298,7 +336,9 @@
         "Interactive Video"
       ],
       "vr": true,
-      "description": "An interactive web experience blurring the line between a walk in the woods and a video game."
+      "description": "An interactive web experience blurring the line between a walk in the woods and a video game.",
+      "status": "offline",
+      "checked": "2026-10-31"
     },
     {
       "id": "20-years-of-xbox-museum",
@@ -313,7 +353,9 @@
         "Cloud"
       ],
       "vr": false,
-      "description": "A massive, multiplayer WebGL metaverse museum celebrating the history of Xbox."
+      "description": "A massive, multiplayer WebGL metaverse museum celebrating the history of Xbox.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "dunkirk-webvr",
@@ -328,7 +370,9 @@
         "Web Audio"
       ],
       "vr": true,
-      "description": "An intense, award-winning WebVR experience built to promote the Christopher Nolan film."
+      "description": "An intense, award-winning WebVR experience built to promote the Christopher Nolan film.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "persepolis-reimagined",
@@ -343,7 +387,9 @@
         "WebXR"
       ],
       "vr": true,
-      "description": "A stunning WebGL/WebVR historical reconstruction of the ancient city, supported by the Getty."
+      "description": "A stunning WebGL/WebVR historical reconstruction of the ancient city, supported by the Getty.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "bear-71-vr",
@@ -358,7 +404,9 @@
         "HTML5"
       ],
       "vr": true,
-      "description": "The legendary interactive documentary rebuilt in WebVR from a bear's perspective."
+      "description": "The legendary interactive documentary rebuilt in WebVR from a bear's perspective.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "ponk-installation",
@@ -373,7 +421,9 @@
         "OpenGL"
       ],
       "vr": false,
-      "description": "An experimental physical/digital game installation utilizing Kinect for touchless gameplay."
+      "description": "An experimental physical/digital game installation utilizing Kinect for touchless gameplay.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "petra-vr-experience",
@@ -388,7 +438,9 @@
         "GCP"
       ],
       "vr": true,
-      "description": "An immersive WebVR tour of the ancient ruins of Petra, utilizing massive photogrammetry scans."
+      "description": "An immersive WebVR tour of the ancient ruins of Petra, utilizing massive photogrammetry scans.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "webgl-fluid-simulation",
@@ -402,7 +454,9 @@
         "GLSL"
       ],
       "vr": false,
-      "description": "One of the most famous, mesmerizing experimental physics simulations in a browser."
+      "description": "One of the most famous, mesmerizing experimental physics simulations in a browser.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "gucci-vault",
@@ -417,7 +471,9 @@
         "GSAP"
       ],
       "vr": false,
-      "description": "An immersive, experimental WebGL brand world acting as a digital concept store."
+      "description": "An immersive, experimental WebGL brand world acting as a digital concept store.",
+      "status": "offline",
+      "checked": "2026-10-31"
     },
     {
       "id": "jam3-fwa-100",
@@ -432,7 +488,9 @@
         "Canvas API"
       ],
       "vr": false,
-      "description": "A pure experimental WebGL celebration featuring particle explosions and drawing interactions."
+      "description": "A pure experimental WebGL celebration featuring particle explosions and drawing interactions.",
+      "status": "online",
+      "checked": "2026-10-31"
     },
     {
       "id": "inside-the-head",
@@ -447,7 +505,9 @@
         "GLSL"
       ],
       "vr": false,
-      "description": "A weird, highly experimental, and wildly creative digital art piece exploring human thoughts."
+      "description": "A weird, highly experimental, and wildly creative digital art piece exploring human thoughts.",
+      "status": "online",
+      "checked": "2026-10-31"
     }
   ]
 }

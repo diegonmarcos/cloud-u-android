@@ -7,6 +7,7 @@ import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -28,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -39,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,12 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.cgomniverse.Decl
+import com.diegonmarcos.cgomniverse.Offline
 import com.diegonmarcos.cgomniverse.R
 import com.diegonmarcos.cgomniverse.World
 import com.diegonmarcos.superapp.uikit.KitButton
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitOutlinedButton
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import kotlinx.coroutines.delay
 
 /** Galaxy: the world loaded now (enter it again, or open it in the browser) and every selectable world of the Store's data. */
 @Composable
@@ -124,7 +129,9 @@ fun GalaxyPage(loaded: World?, onEnter: (World) -> Unit) {
  * One world, full screen: a WebView with WebGL on and hardware acceleration, a bar with close, reload and open-in-browser, and
  * for a VR entry the WebXR state this WebView reports (Android's WebView has no immersive WebXR today, so a VR world offers the
  * browser for it). Back walks the page's history, then closes. A main-frame error (an unreachable host, a blocked scheme) or a
- * crashed renderer replaces the page with a fallback card: Open in browser, or Reload.
+ * crashed renderer replaces the page with a fallback card: Open in browser, or Reload. A world that is offline ([Offline]: no page
+ * within the load watchdog, the host never answering, or HTTP 404/410) gets the offline card instead: Open in browser, its Wayback
+ * Machine copy, or Reload.
  */
 @Composable
 fun WorldView(w: World, onClose: () -> Unit) {
@@ -135,6 +142,16 @@ fun WorldView(w: World, onClose: () -> Unit) {
     var error by remember(w.id) { mutableStateOf<String?>(null) }
     var xr by remember(w.id) { mutableStateOf<Boolean?>(null) }
     var generation by remember(w.id) { mutableIntStateOf(0) }
+    // every load attempt (first load, reload, re-create) restarts the watchdog; finished = the main frame loaded a page
+    var attempt by remember(w.id) { mutableIntStateOf(0) }
+    var finished by remember(w.id) { mutableStateOf(false) }
+    var offline by remember(w.id) { mutableStateOf(false) }
+    val reload = { error = null; offline = false; finished = false; attempt++; if (web == null) generation++ else web?.reload(); Unit }
+    LaunchedEffect(w.id, attempt) {
+        val start = System.currentTimeMillis()
+        delay(Offline.LOAD_TIMEOUT_MS)
+        if (error == null && Offline.timedOut(System.currentTimeMillis() - start, finished)) { offline = true; web?.stopLoading() }
+    }
     val crashed = stringResource(R.string.world_crashed)
 
     BackHandler { val v = web; if (v != null && v.canGoBack()) v.goBack() else onClose() }
@@ -152,14 +169,14 @@ fun WorldView(w: World, onClose: () -> Unit) {
                     modifier = Modifier.testTag(Tags.WORLD_VR),
                 ) { Icon(Icons.Filled.ViewInAr, stringResource(if (xr == true) R.string.world_xr_ready else R.string.world_xr_browser), tint = if (xr == true) p.ok else p.accent) }
             }
-            IconButton(onClick = { error = null; if (web == null) generation++ else web?.reload() }, modifier = Modifier.testTag(Tags.WORLD_RELOAD)) {
+            IconButton(onClick = reload, modifier = Modifier.testTag(Tags.WORLD_RELOAD)) {
                 Icon(Icons.Filled.Refresh, stringResource(R.string.world_reload), tint = p.textPrimary)
             }
             IconButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_BROWSER)) {
                 Icon(Icons.Filled.OpenInBrowser, stringResource(R.string.open_browser), tint = p.textPrimary)
             }
         }
-        if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = p.accent)
+        if (progress in 1..99 && !offline) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = p.accent)
         if (w.vr && xr == false) Text(stringResource(R.string.world_xr_note), style = MaterialTheme.typography.labelSmall, color = p.textSecondary,
             modifier = Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 4.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -182,10 +199,15 @@ fun WorldView(w: World, onClose: () -> Unit) {
                             }
                             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) { error = null }
                             override fun onPageFinished(view: WebView, url: String) {
+                                if (error == null && !offline) finished = true
                                 if (w.vr) view.evaluateJavascript("(function(){return !!(navigator.xr&&navigator.xr.isSessionSupported)})()") { xr = it == "true" }
                             }
                             override fun onReceivedError(view: WebView, request: WebResourceRequest, err: WebResourceError) {
-                                if (request.isForMainFrame) error = err.description?.toString()
+                                if (!request.isForMainFrame) return
+                                if (Offline.isOfflineError(err.errorCode)) offline = true else error = err.description?.toString()
+                            }
+                            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                                if (request.isForMainFrame && Offline.isOfflineHttp(response.statusCode)) offline = true
                             }
                             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                                 if (web === view) web = null
@@ -198,7 +220,30 @@ fun WorldView(w: World, onClose: () -> Unit) {
                 }, modifier = Modifier.fillMaxSize().testTag(Tags.WORLD_WEB))
             }
             // a world that cannot load here gets a clear card, never the WebView's raw error page
-            error?.let { msg ->
+            if (offline) {
+                Box(Modifier.fillMaxSize().background(Color(0xFF0B0D16)).padding(20.dp), contentAlignment = Alignment.Center) {
+                    KitCard(Modifier.testTag(Tags.WORLD_OFFLINE)) {
+                        Text(stringResource(R.string.world_offline_title), style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold, color = p.textPrimary)
+                        Text(stringResource(R.string.world_offline_body, w.name), style = MaterialTheme.typography.bodyMedium,
+                            color = p.textSecondary, modifier = Modifier.padding(top = 6.dp))
+                        if (w.checked.isNotEmpty()) Text(stringResource(R.string.world_offline_checked, w.status.name.lowercase(), w.checked),
+                            style = MaterialTheme.typography.labelSmall, color = p.textSecondary, modifier = Modifier.padding(top = 6.dp))
+                        Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            KitButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_OFFLINE_BROWSER)) {
+                                Icon(Icons.Filled.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_in_browser))
+                            }
+                            KitOutlinedButton(onClick = { Web.openInBrowser(ctx, Offline.wayback(w.url)) }, modifier = Modifier.testTag(Tags.WORLD_OFFLINE_WAYBACK)) {
+                                Icon(Icons.Filled.History, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_wayback))
+                            }
+                        }
+                        KitOutlinedButton(onClick = reload, modifier = Modifier.padding(top = 8.dp)) {
+                            Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.world_reload))
+                        }
+                    }
+                }
+            }
+            if (!offline) error?.let { msg ->
                 Box(Modifier.fillMaxSize().background(Color(0xFF0B0D16)).padding(20.dp), contentAlignment = Alignment.Center) {
                     KitCard(Modifier.testTag(Tags.WORLD_FALLBACK)) {
                         Text(stringResource(R.string.world_fallback_title), style = MaterialTheme.typography.titleMedium,
@@ -210,7 +255,7 @@ fun WorldView(w: World, onClose: () -> Unit) {
                             KitButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_FALLBACK_BROWSER)) {
                                 Icon(Icons.Filled.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_in_browser))
                             }
-                            KitOutlinedButton(onClick = { error = null; if (web == null) generation++ else web?.reload() }) {
+                            KitOutlinedButton(onClick = reload) {
                                 Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.world_reload))
                             }
                         }

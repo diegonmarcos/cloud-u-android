@@ -1,0 +1,155 @@
+{
+  "_doc": "Written by data/probe-links.py - DO NOT EDIT by hand. status online|offline|unverified per Store link, checked = probe date.",
+  "links": {
+    "http://a-way-to-go.com/": {
+      "status": "offline",
+      "checked": "2026-10-31",
+      "detail": "timeout"
+    },
+    "https://activetheory.net/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://beinternetawesome.withgoogle.com/en_us/interland": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://bruno-simon.com/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://lusion.co/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://museum.xbox.com/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://paperplanes.world/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://paveldogreat.github.io/WebGL-Fluid-Simulation/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://persepolis.getty.edu/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://staratlas.com/": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/bear-71-vr": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://thefwa.com/cases/dunkirk-webvr": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/food-for-fish": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/frans-hals-museum": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/inside-the-head": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://thefwa.com/cases/jam3-fwa-100": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/kode-sports-club": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://thefwa.com/cases/kpr": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/mammut-expedition-baikal": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/nomadic-tribe": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/orano": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/ouigo-let-s-play": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://thefwa.com/cases/petra-vr-experience": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/pioneer-corn-revolutionized": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/ponk-interactive-installation": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/prometheus-fuels": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/the-aviator": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 200"
+    },
+    "https://thefwa.com/cases/the-cool-club-x-fwa": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://thefwa.com/cases/wayfinder": {
+      "status": "online",
+      "checked": "2026-10-31",
+      "detail": "HTTP 404"
+    },
+    "https://vault.gucci.com/": {
+      "status": "offline",
+      "checked": "2026-10-31",
+      "detail": "timeout"
+    }
+  }
+}

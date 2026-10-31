@@ -7,12 +7,16 @@ forbidden for everything, and is allowed ONLY for the hosts of the Store entries
 would otherwise fail in Galaxy with net::ERR_CLEARTEXT_NOT_PERMITTED). There is no global cleartext allowance.
   python3 data/gen-store.py           write data/store.json and the network security config
   python3 data/gen-store.py --check   exit 1 when either file is not exactly what fwa.md generates (drift)
+Each entry also carries its link's `status` (online | offline | unverified) and `checked` date from data/link-status.json
+(written by data/probe-links.py); a link the probe has not recorded is `unverified` with no date, never guessed online.
 Every row must carry a link, a known Type, 2D/3D and VR value; anything else fails loudly rather than being guessed.
 """
 import json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC, OUT = os.path.join(HERE, "fwa.md"), os.path.join(HERE, "store.json")
+LINKS = os.path.join(HERE, "link-status.json")
+STATUSES = {"online", "offline", "unverified"}
 NSC = os.path.join(HERE, "..", "app", "src", "main", "res", "xml", "network_security_config.xml")
 COLUMNS = ["Name", "Type", "2D/3D", "Framework", "Stack", "VR Compatibility", "Description"]
 TYPES = {"Website", "Game", "Others"}
@@ -28,7 +32,17 @@ def cells(line):
     return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
-def generate(text):
+def load_links(path=LINKS):
+    if not os.path.exists(path): return {}
+    links = json.load(open(path, encoding="utf-8")).get("links", {})
+    for url, v in links.items():
+        if v.get("status") not in STATUSES: raise SystemExit("link-status.json: %s status %r not in %s" % (url, v.get("status"), sorted(STATUSES)))
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v.get("checked", ""))): raise SystemExit("link-status.json: %s checked %r is not a date" % (url, v.get("checked")))
+    return links
+
+
+def generate(text, links=None):
+    links = load_links() if links is None else links
     rows = [l for l in text.splitlines() if l.strip().startswith("|")]
     if not rows or cells(rows[0]) != COLUMNS:
         raise SystemExit("fwa.md: the header is not %s" % " | ".join(COLUMNS))
@@ -50,6 +64,7 @@ def generate(text):
         entries.append({
             "id": sid, "name": name, "url": url, "type": c[1], "dimension": c[2], "framework": c[3],
             "stack": [s.strip() for s in c[4].split(",") if s.strip()], "vr": VR[c[5]], "description": c[6],
+            "status": links.get(url, {}).get("status", "unverified"), "checked": links.get(url, {}).get("checked", ""),
         })
     if not entries: raise SystemExit("fwa.md: no rows")
     return {

@@ -13,7 +13,47 @@ data class World(
     val stack: List<String>,
     val vr: Boolean,
     val description: String,
+    /** The link probe's verdict (data/probe-links.py via gen-store.py) and its date; an unprobed link is UNVERIFIED. */
+    val status: LinkStatus = LinkStatus.UNVERIFIED,
+    val checked: String = "",
 )
+
+/** What the link probe found: ONLINE answered, OFFLINE is gone (404/410, timeout, no host), UNVERIFIED the probe could not tell. */
+enum class LinkStatus {
+    ONLINE, OFFLINE, UNVERIFIED;
+
+    companion object {
+        fun parse(s: String?): LinkStatus = when (s) {
+            "online" -> ONLINE
+            "offline" -> OFFLINE
+            else -> UNVERIFIED
+        }
+    }
+}
+
+/**
+ * When Galaxy calls a world offline: its main frame timed out (no page within [LOAD_TIMEOUT_MS]), the host never answered
+ * (WebView timeout, no such host, connect refused) or the server says it is gone (HTTP 404/410). Any other failure is not
+ * "offline" and keeps the generic fallback card. Pure, so the JVM suite holds every rule.
+ */
+object Offline {
+    const val LOAD_TIMEOUT_MS = 15_000L
+    /** android.webkit.WebViewClient.ERROR_HOST_LOOKUP, ERROR_CONNECT, ERROR_TIMEOUT (spelled here so the JVM tests need no Android). */
+    const val ERROR_HOST_LOOKUP = -2
+    const val ERROR_CONNECT = -6
+    const val ERROR_TIMEOUT = -8
+    val GONE = setOf(404, 410)
+
+    fun isOfflineError(errorCode: Int): Boolean = errorCode == ERROR_TIMEOUT || errorCode == ERROR_HOST_LOOKUP || errorCode == ERROR_CONNECT
+
+    fun isOfflineHttp(status: Int): Boolean = status in GONE
+
+    /** The main frame has not finished after [elapsedMs]: offline once the watchdog's time is up. */
+    fun timedOut(elapsedMs: Long, finished: Boolean): Boolean = !finished && elapsedMs >= LOAD_TIMEOUT_MS
+
+    /** The Wayback Machine's copy of [url], the way back to a world that is gone. */
+    fun wayback(url: String): String = "https://web.archive.org/web/2020/$url"
+}
 
 /** A filter group of the Store: its chips (All aside) in order, and the chips a world counts for in this group. */
 enum class FilterGroup(val chips: List<String>) {
@@ -48,6 +88,7 @@ object Store {
                 framework = o.optString("framework"),
                 stack = if (st == null) emptyList() else (0 until st.length()).map { st.optString(it) },
                 vr = o.optBoolean("vr", false), description = o.optString("description"),
+                status = LinkStatus.parse(o.optString("status")), checked = o.optString("checked"),
             )
         }
     }

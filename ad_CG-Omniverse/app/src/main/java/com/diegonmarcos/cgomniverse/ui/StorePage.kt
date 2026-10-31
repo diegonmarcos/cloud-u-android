@@ -5,6 +5,7 @@ package com.diegonmarcos.cgomniverse.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cgomniverse.Decl
 import com.diegonmarcos.cgomniverse.FilterGroup
+import com.diegonmarcos.cgomniverse.LinkStatus
 import com.diegonmarcos.cgomniverse.R
 import com.diegonmarcos.cgomniverse.Store
 import com.diegonmarcos.cgomniverse.World
@@ -53,6 +55,9 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /** The VR badge's colour: the one place it is spelled. */
 private val VR_TINT = Color(0xFF8F7CFF)
+/** The link-status badges' colours: offline is a warning red, unverified a muted amber (not known bad, only not proven good). */
+private val OFFLINE_TINT = Color(0xFFFF6B6B)
+private val UNVERIFIED_TINT = Color(0xFFE0B04F)
 
 /** The Store: every world of data/store.json, three multi-select filter rows (all selected at first) and a card per world. */
 @Composable
@@ -126,7 +131,19 @@ fun WorldBadges(w: World) {
         Badge(w.type)
         Badge(w.dimension)
         if (w.vr) Badge(stringResource(R.string.badge_vr), VR_TINT)
+        StatusBadge(w)
     }
+}
+
+/** Offline or Unverified from the link probe; an online world shows nothing extra. */
+@Composable
+fun StatusBadge(w: World) {
+    val (label, tint) = when (w.status) {
+        LinkStatus.OFFLINE -> R.string.badge_offline to OFFLINE_TINT
+        LinkStatus.UNVERIFIED -> R.string.badge_unverified to UNVERIFIED_TINT
+        LinkStatus.ONLINE -> return
+    }
+    Box(Modifier.testTag(Tags.statusBadge(w.id))) { Badge(stringResource(label), tint) }
 }
 
 @Composable

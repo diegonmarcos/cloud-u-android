@@ -13,6 +13,12 @@
     <string name="store_count">%1$d of %2$d worlds</string>
     <string name="store_empty">No world matches these filters. Select a chip in every row.</string>
     <string name="badge_vr">VR</string>
+    <string name="badge_offline">Offline</string>
+    <string name="badge_unverified">Unverified</string>
+    <string name="world_offline_title">This world is offline</string>
+    <string name="world_offline_body">%1$s did not answer. The site may be gone or down for now; the browser or the Wayback Machine may still reach it.</string>
+    <string name="world_offline_checked">Link check: %1$s on %2$s</string>
+    <string name="open_wayback">Wayback</string>
     <string name="open_galaxy">Open in Galaxy</string>
     <string name="open_browser">Browser</string>
     <string name="galaxy_loaded">Loaded world</string>
