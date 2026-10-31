@@ -12,6 +12,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
-        setContent { AppTheme { AppShell() } }
+        // `--es dashboard <id>` opens that dashboard (a deep link for the CI emulator walk and the launcher); unknown ids are ignored
+        val start = intent?.getStringExtra(EXTRA_DASHBOARD)
+        setContent { AppTheme { AppShell(startDashboard = start) } }
+    }
+
+    companion object {
+        const val EXTRA_DASHBOARD = "dashboard"
     }
 }

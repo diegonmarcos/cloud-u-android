@@ -20,6 +20,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -69,7 +70,7 @@ object Tags {
  * About and Config). Which sections exist is build.json::ui through [Decl.nav]; what a section shows is ui.stacks, drawn by [SectionPage].
  */
 @Composable
-fun AppShell() {
+fun AppShell(startDashboard: String? = null) {
     val ctx = LocalContext.current
     val nav = Decl.nav
     val dashboards = remember { AssetData.dashboards(ctx) }
@@ -95,6 +96,7 @@ fun AppShell() {
             override fun search() { searching = true }
         }
     }
+    LaunchedEffect(startDashboard) { if (startDashboard != null && dashboards.any { it.id == startDashboard }) finNav.openDashboard(startDashboard) }
     // Back (UI spec 4.4): search -> quote pops -> a non-default dashboard -> the tab's default -> the home tab -> exit.
     val back = FinNavStack.back(stack, defaultDash(section), section == homeSection)
     BackHandler(enabled = back != null) {
