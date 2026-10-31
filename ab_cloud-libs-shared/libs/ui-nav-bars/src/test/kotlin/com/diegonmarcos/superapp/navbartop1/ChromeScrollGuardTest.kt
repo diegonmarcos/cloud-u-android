@@ -16,6 +16,17 @@ class ChromeScrollGuardTest {
         "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer", "ac_cloud-superintel", "ac_cloud-kg-store", "ac_cloud-notes", "ac_cloud-tools-small-llms", "ac_cloud-calc", "ac_cloud-gallery", "ad_Capital-Stack-FinTerminal",
     )
 
+    /** #1356 ui.sections[id=<section>].title_row in a build.json text: false only when declared false (default true). */
+    private fun titleRowOf(buildJson: String, section: String): Boolean =
+        !Regex("""\{\s*"id":\s*"$section",[^{}]*?"title_row":\s*false""").containsMatchIn(buildJson)
+
+    /** null when [body] matches its declared title row, else the reason. */
+    private fun titleRowProblem(page: String, body: String, titleRow: Boolean): String? = when {
+        !titleRow && "ToolbarIsland(" in body -> "$page draws a title row (ToolbarIsland) but its section declares title_row false"
+        titleRow && "ToolbarIsland(" !in body -> "$page has no island but its section declares a title row"
+        else -> null
+    }
+
     private fun sources(app: String): List<File> {
         var dir: File? = File("").absoluteFile
         while (dir != null) {
@@ -158,11 +169,16 @@ class ChromeScrollGuardTest {
         assertTrue("the old rsync route is back", !Regex("""^\s*"rsync"\s*->""", RegexOption.MULTILINE).containsMatchIn(main))
         val fsync = files.first { it.name == "FsyncPage.kt" }.readText()
         val mounts = files.first { it.name == "MountsPage.kt" }.readText()
-        for ((page, text) in listOf("FsyncPageScreen" to fsync, "MountsPageScreen" to mounts)) {
+        // #1356 the title row is DECLARED per section (ui.sections[].title_row in Cloud Drive's build.json): false = no island,
+        // the page starts with its strip under the shell's top bar; absent/true = the page draws its island.
+        val build = files.firstOrNull { it.name == "build.json" }?.readText() ?: File(files.first().path.substringBefore("/app/src/") + "/build.json").readText()
+        // mutation: the rule must reject a title-row-less section that draws an island, and one with a title row that draws none
+        assertTrue("M: an island on a title_row=false section passed", titleRowProblem("X", "NavBarTopSecondRow(); ToolbarIsland(title = x)", false) != null)
+        assertTrue("M: a title_row=true section without an island passed", titleRowProblem("X", "NavBarTopSecondRow()", true) != null)
+        for ((page, text, section) in listOf(Triple("FsyncPageScreen", fsync, "fsync"), Triple("MountsPageScreen", mounts, "mounts"))) {
             val b = body(text, page)
             assertTrue("$page has no shared second row (NavBarTopSecondRow)", "NavBarTopSecondRow(" in b)
-            // #1356 no title row on any Cloud Drive tab: the page starts with its strip under the shell's top bar.
-            assertTrue("$page draws a title row (ToolbarIsland) again", "ToolbarIsland(" !in b)
+            titleRowProblem(page, b, titleRowOf(build, section))?.let { throw AssertionError(it) }
             assertTrue("$page does not draw its sub-pages from the declaration", "Declarations.navPages(" in b)
         }
         // each sub-page body owns the scrollable container the one connection follows (the Unison list is drawn by unisonSection inside FolderSyncScreen's LazyColumn)
