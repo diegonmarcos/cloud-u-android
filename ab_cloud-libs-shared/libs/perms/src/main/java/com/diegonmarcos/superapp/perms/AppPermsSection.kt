@@ -110,9 +110,7 @@ fun AppPermsSection(
 }
 
 /** The helper's launcher label when it is installed, else its canonical name in words. */
-internal fun AppPerms.helperName(ctx: Context, h: HelperNeed): String = runCatching {
-    val pm = ctx.packageManager; pm.getApplicationLabel(pm.getApplicationInfo(h.pkg, 0)).toString()
-}.getOrNull()?.takeIf { it.isNotBlank() && it != h.pkg } ?: PermsView.appName(h.label)
+internal fun AppPerms.helperName(ctx: Context, h: HelperNeed): String = Perms.appLabel(ctx, h.pkg, h.label)
 
 /** The install-time (normal) permissions Android granted with the app, in plain words; catalogue rows excluded. */
 internal fun AppPerms.installItems(ctx: Context): List<PermItem> {

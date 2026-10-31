@@ -83,11 +83,8 @@ object EngineGrant {
 
     suspend fun refresh(ctx: Context): Grant = withContext(Dispatchers.IO) { probe(ctx.applicationContext) }
 
-    /** The engine's launcher label (what Settings lists), else its package. */
-    fun label(ctx: Context): String = runCatching {
-        val pm = ctx.packageManager
-        pm.getApplicationLabel(pm.getApplicationInfo(PACKAGE, 0)).toString()
-    }.getOrNull()?.takeIf { it.isNotBlank() } ?: PACKAGE
+    /** The engine's launcher label in words (what Settings lists: "Cloud Git Sync Engine"), never its package or fleet id. */
+    fun label(ctx: Context): String = com.diegonmarcos.superapp.perms.Perms.appLabel(ctx, PACKAGE)
 
     /** The settings screens, in order: the engine's own All files access toggle, the list, its App info. */
     fun intents(pkg: String = PACKAGE): List<Intent> = listOf(

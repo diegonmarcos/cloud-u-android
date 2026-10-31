@@ -330,7 +330,7 @@ fun PermsPromptCard(
         Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(p.warn.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
             Icon(PermIcons.vector(ctx, icon), contentDescription = null, tint = p.warn, modifier = Modifier.size(20.dp))
         }
-        Text(text, color = p.ink, fontSize = PermsType.body, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        Text(text, color = p.ink, fontSize = PermsType.body, lineHeight = 18.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(horizontal = PermsType.pad + PermsType.gap))
         TextButton(onClick = onGrant, modifier = Modifier.heightIn(min = 48.dp).testTag(PermsTags.PROMPT_ACTION)) {
             Text(button, color = p.accent, fontSize = PermsType.body, fontWeight = FontWeight.SemiBold)
@@ -338,6 +338,18 @@ fun PermsPromptCard(
         if (dismissKey != null) IconButton(onClick = { dismissed = dismissKey }, modifier = Modifier.size(48.dp).testTag(PermsTags.DISMISS)) {
             Icon(PermIcons.vector(ctx, "close"), contentDescription = "Dismiss", tint = p.dim, modifier = Modifier.size(18.dp))
         }
+    }
+}
+
+/**
+ * The place of a [PermsPromptCard] on a page that refreshes or loads: the card ABOVE the content, never inside a
+ * pull-to-refresh box or under a progress indicator, so neither ever draws over it. [content] fills what is left.
+ */
+@Composable
+fun PermsPromptAbove(prompt: @Composable () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Column(modifier.fillMaxWidth()) {
+        prompt()
+        Box(Modifier.fillMaxWidth().weight(1f)) { content() }
     }
 }
 

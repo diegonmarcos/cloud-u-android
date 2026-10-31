@@ -152,9 +152,16 @@ object PermsView {
         else -> PermAction.OPEN
     }
 
-    /** A fleet app's canonical name in words: "cloud-terminal-termux" -> "Cloud Terminal Termux" (a launcher label wins). */
-    fun appName(raw: String): String =
-        if (raw.contains(' ') || !raw.contains('-')) raw else raw.split('-').filter { it.isNotEmpty() }.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+    /**
+     * A fleet app's canonical name in words: "cloud-terminal-termux" -> "Cloud Terminal Termux". A helper lib's id drops its
+     * "lib" segment: "cloud-lib-sample-engine" -> "Cloud Sample Engine". A label already in words is kept.
+     */
+    fun appName(raw: String): String {
+        if (raw.contains(' ') || !raw.contains('-')) return raw
+        val parts = raw.split('-').filter { it.isNotEmpty() }
+        val words = if (parts.size > 2 && parts[0] == "cloud" && parts[1] == "lib") listOf(parts[0]) + parts.drop(2) else parts
+        return words.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+    }
 
     /** A helper app's grant as a row: titled by the helper, its reason the work it does for this app. */
     fun helperItem(h: HelperNeed, e: PermEntry, s: PermStatus, highlight: Boolean = false, name: String = appName(h.label)): PermItem = PermItem(

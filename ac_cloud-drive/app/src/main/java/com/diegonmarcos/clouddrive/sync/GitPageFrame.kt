@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
+import com.diegonmarcos.superapp.perms.PermsPromptAbove
 
 /**
  * THE FRAME OF THE GIT PAGE's scroller: pull to refresh around ONE bounded LazyColumn (no scroller is ever nested in it).
@@ -29,13 +30,16 @@ import com.diegonmarcos.clouddrive.ui.DriveTags
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GitPageFrame(refreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier = Modifier, state: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(), content: LazyListScope.() -> Unit) {
-    PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
-        LazyColumn(
-            Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).testTag(DriveTags.SYNC_GIT_LIST),
-            state = state,
-            contentPadding = PaddingValues(bottom = DriveMetrics.sectionInset),
-            // #1358 the git engine's missing All files access is said ONCE, above every row (EngineGrantBanner draws nothing otherwise).
-            content = { item(key = EngineGrant.TAG_BANNER) { EngineGrantBanner() }; content() },
-        )
+    // #1358 the git engine's missing All files access is said ONCE, above every row (EngineGrantBanner draws nothing otherwise);
+    // #1372 it sits ABOVE the pull-to-refresh box, so the refresh spinner never draws over it.
+    PermsPromptAbove(prompt = { EngineGrantBanner() }, modifier = modifier.fillMaxSize()) {
+        PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).testTag(DriveTags.SYNC_GIT_LIST),
+                state = state,
+                contentPadding = PaddingValues(bottom = DriveMetrics.sectionInset),
+                content = content,
+            )
+        }
     }
 }
