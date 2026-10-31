@@ -1,4 +1,4 @@
-
+# ─── GENERATED: do not edit — edit 1_cicd/src/scripts/cloud-android-nav-walk.py ───
 #!/usr/bin/env python3
 """cloud-android-nav-walk: the shared nav pattern, enforced at RUNTIME on a real emulator.
 
