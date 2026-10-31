@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithText
@@ -199,7 +200,9 @@ class DriveShellTest {
         val toolbar = compose.onNodeWithTag(DriveTags.FILES_TOOLBAR).fetchSemanticsNode().boundsInRoot.top
         val list = compose.onNodeWithTag(DriveTags.FILES_LIST).fetchSemanticsNode().boundsInRoot.top
         assertTrue("strip $strip < crumbs $crumbs < toolbar $toolbar < list $list", strip < crumbs && crumbs < toolbar && toolbar < list)
-        compose.onNodeWithTag(DriveTags.ISLAND).assertIsDisplayed()
+        // #1356 no title row on the Files tab: no island, its actions stay in one compact row.
+        assertTrue("the Files tab draws no title island", compose.onAllNodesWithTag(DriveTags.ISLAND).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithContentDescription(ctx.getString(com.diegonmarcos.clouddrive.R.string.files_search)).assertIsDisplayed()
         assertTrue(compose.onAllNodesWithTag(DriveTags.FILES_ROW).fetchSemanticsNodes().size == 2)
         compose.onAllNodesWithTag(DriveTags.FILES_SELECTION_BAR).fetchSemanticsNodes().let { assertTrue("no selection bar before a long press", it.isEmpty()) }
         compose.onAllNodesWithTag(DriveTags.FILES_ROW).onFirst().performTouchInput { longClick() }
