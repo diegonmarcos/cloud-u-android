@@ -191,7 +191,7 @@ echo "── D5 the fleet island ──"
 if python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); m=b["modules"]; sys.exit(0 if "libs:bottomnav" in m and "libs:bottomnav" in m["app"]["depends_on"] and m["libs:bottomnav"].get("dir","").endswith("libs/bottomnav") else 1)' "$BJ"; then pass "libs:bottomnav declared and depended on"; else fail "libs:bottomnav missing from build.json modules / app.depends_on"; fi
 if grep -qE "implementation project\(':libs:bottomnav'\)" "$GRADLE"; then pass "libs:bottomnav linked"; else fail "libs:bottomnav not linked in app/build.gradle"; fi
 if grep -qE 'NavBarBottomHost\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries\(\)' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, on the fleet's host (which owns the scroll-collapse)"; else fail "DriveShell does not draw NavBarBottomHost from Declarations.tabs"; fi
-if grep -qE 'setContent \{ DriveTheme \{ Root\(\)(; [A-Za-z.]+\(\))* \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
+if grep -qE 'setContent \{ (CompositionLocalProvider\([A-Za-z.]+ provides [A-Za-z.]+\) \{ )?DriveTheme \{ Root\(\)(; [A-Za-z.]+\(\))* \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
 
 echo "── D6 the WebView shell is gone ──"
 for gone in "$APP/app/src/main/assets/drive.html" "$APP/app/src/main/assets/vendor/tailwind.js" "$SRC/FilesBridge.kt" "$APP/app/src/main/res/layout/activity_main.xml"; do

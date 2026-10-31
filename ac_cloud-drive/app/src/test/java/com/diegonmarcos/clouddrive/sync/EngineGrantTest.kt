@@ -22,7 +22,7 @@ class EngineGrantTest {
     }
 
     @Test fun `only shared storage needs the engine's grant, never the store`() {
-        assertTrue(EngineGrant.touchesSharedStorage("/storage/emulated/0/vaults/_git-repos-master"))
+        assertTrue(EngineGrant.touchesSharedStorage("/storage/self/primary/vaults/_git-repos-master"))
         assertTrue(EngineGrant.touchesSharedStorage("/sdcard/Obsidian/notes"))
         assertFalse(EngineGrant.touchesSharedStorage("/data/user/0/cld.termux/files/home/cloud-shared-store/git/_git-repos-master"))
     }
@@ -30,7 +30,7 @@ class EngineGrantTest {
     @Test fun `the engine's refusal reads as FILES_ACCESS, not as an engine that did not answer`() {
         val engine = "the git sync engine has no All files access, so it cannot read or write the shared storage"
         assertEquals(RepoStatus.ErrorKind.FILES_ACCESS, RepoStatus.errorKind(engine))
-        assertEquals(RepoStatus.ErrorKind.FILES_ACCESS, RepoStatus.errorKind(EngineGrant.REASON + " (/storage/emulated/0/x)"))
+        assertEquals(RepoStatus.ErrorKind.FILES_ACCESS, RepoStatus.errorKind(EngineGrant.REASON + " (/sdcard/x)"))
         assertEquals(RepoStatus.ErrorKind.ENGINE, RepoStatus.errorKind("the git sync engine did not answer git"))
     }
 
