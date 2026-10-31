@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup rules (Android 11 and below): the avatar configuration (shared prefs avatar.xml) is the app's one piece of user data. -->
+<full-backup-content>
+    <include domain="sharedpref" path="avatar.xml" />
+</full-backup-content>

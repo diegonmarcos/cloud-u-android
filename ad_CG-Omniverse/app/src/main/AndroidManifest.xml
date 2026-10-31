@@ -2,13 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- No network of its own: a target opens in the browser. Cloud Account is opened by a package-pinned intent. -->
+    <!-- Galaxy loads the Store's web worlds in a WebView. Cloud Account is opened by a package-pinned intent. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- WebGL is required by the avatar scene and the worlds. -->
+    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
     <queries>
         <package android:name="com.diegonmarcos.cloudaccount" />
     </queries>
 
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -21,6 +27,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.CgOmniverse">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

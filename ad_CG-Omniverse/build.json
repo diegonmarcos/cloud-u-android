@@ -7,7 +7,7 @@
   },
   "name": "cg-omniverse",
   "display_name": "CG-Omniverse",
-  "description": "CG-Omniverse: the CG area's Android app behind the SuperApp's Cloud > Lnktree row. Three pages on the shared bottom nav: Galaxy (opens the CG Galaxy web app, read from the registry), Game Store and VR Store (planned, greyed). The pages are declared in build.json::ui and drawn by declared kinds; the address of Galaxy is read at build time from the SuperApp's own declarations, none is typed here.",
+  "description": "CG-Omniverse: the CG area's Android app behind the SuperApp's Cloud > Lnktree row. Three pages on the shared bottom nav: Avatar (a 3D avatar configurator: three.js in a WebView over bundled assets, options declared in data/avatar.json, the configuration saved and backed up), Galaxy (a Store world loaded full screen in a WebView, WebGL on) and Store (the worlds of data/store.json, generated from data/fwa.md, with Type / Dimension / Device multi-select filters). The pages are declared in build.json::ui and drawn by declared kinds.",
   "category": "android",
   "android": {
     "application_id": "com.diegonmarcos.cgomniverse",
@@ -153,7 +153,11 @@
       "type": "library",
       "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
-    "libs:perms": {"dir": "../ab_cloud-libs-shared/libs/perms", "type": "library", "_doc": "#1360 the permission contract (libs:perms): Configs > General > Perms (AppPermsSection, linked by libs:ui-nav-bars), first run (PermsFirstRun), PermsGate, and the state provider helper apps are read through."},
+    "libs:perms": {
+      "dir": "../ab_cloud-libs-shared/libs/perms",
+      "type": "library",
+      "_doc": "#1360 the permission contract (libs:perms): Configs > General > Perms (AppPermsSection, linked by libs:ui-nav-bars), first run (PermsFirstRun), PermsGate, and the state provider helper apps are read through."
+    },
     "libs:theme-background": {
       "dir": "../ab_cloud-libs-shared/libs/theme-background",
       "type": "library",
@@ -171,24 +175,33 @@
       "dir": "test",
       "requires": [
         "python3"
-      ]
+      ],
+      "_doc": "test/: test-lnktree-app.sh (the family template), test-store-data.sh (data/store.json is exactly what data/gen-store.py makes of data/fwa.md, and the generator refuses a malformed row), test-fleet-setup.sh."
     },
     "unit": {
-      "_doc": "This app's JVM suite in app/src/test: Pages (the entries of a declared stack and where each leads) and Holdings (the local list).",
+      "_doc": "This app's JVM suite in app/src/test: Pages (the declared stacks), Store (the catalogue and the filter logic, mutation-proven by .github/workflows/cg-omniverse-proof.yml) and Avatar (options, defaults, saved configuration).",
       "task": ":app:testDebugUnitTest",
       "enabled": true
     }
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of CG-Omniverse: the sections on the bottom bar in order, and a hidden About behind the gear of the first row. #1335 ui.stacks[<section>] is the page of that section: a list of entries drawn by declared KIND (Pages.kt: entry, section_title, holdings, about). An `entry` has a title, a one-line subtitle and ONE declared source for its target: `site` (the label of a link of aa_cloud-superapp/data/linktree.json), `registry` (a code of aa_cloud-superapp/build.json ui.app_urls.registry_sites) or `repo` + `path` (a repo under ui.app_urls.repo_base); app/build.gradle resolves them at BUILD time from the SuperApp's own declarations (fails if one does not resolve) and bakes UI_TARGETS_B64, so no address is typed in this file or in Kotlin. A `planned` entry has a note and no source and is drawn greyed. No price, rate or chart is declared: nothing real to show yet.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of CG-Omniverse: the sections on the bottom bar in order, and a hidden About behind the gear of the first row. #1335 ui.stacks[<section>] is the page of that section: a list of entries drawn by declared KIND (Pages.kt: avatar, galaxy and store own their whole page; entry, section_title and about stack in a column). An `entry` has a title, a one-line subtitle and ONE declared source for its target: `site` (the label of a link of aa_cloud-superapp/data/linktree.json), `registry` (a code of aa_cloud-superapp/build.json ui.app_urls.registry_sites) or `repo` + `path` (a repo under ui.app_urls.repo_base); app/build.gradle resolves them at BUILD time from the SuperApp's own declarations (fails if one does not resolve) and bakes UI_TARGETS_B64, so no address is typed in this file or in Kotlin. A `planned` entry has a note and no source and is drawn greyed. No price, rate or chart is declared: nothing real to show yet.",
     "bottom_nav": [
+      "avatar",
       "galaxy",
-      "game-store",
-      "vr-store"
+      "store"
     ],
-    "default_section": "galaxy",
-    "configs_ui": ["nav_ui"],
+    "default_section": "avatar",
+    "configs_ui": [
+      "nav_ui"
+    ],
     "sections": [
+      {
+        "id": "avatar",
+        "label": "Avatar",
+        "icon": "person",
+        "pages": []
+      },
       {
         "id": "galaxy",
         "label": "Galaxy",
@@ -196,15 +209,9 @@
         "pages": []
       },
       {
-        "id": "game-store",
-        "label": "Game Store",
-        "icon": "play_circle",
-        "pages": []
-      },
-      {
-        "id": "vr-store",
-        "label": "VR Store",
-        "icon": "devices",
+        "id": "store",
+        "label": "Store",
+        "icon": "apps",
         "pages": []
       },
       {
@@ -215,27 +222,22 @@
       }
     ],
     "stacks": {
+      "avatar": [
+        {
+          "kind": "avatar",
+          "title": "Avatar"
+        }
+      ],
       "galaxy": [
         {
-          "title": "Galaxy",
-          "subtitle": "CG Galaxy: the 3D galaxy worlds web app",
-          "registry": "2.1.1"
+          "kind": "galaxy",
+          "title": "Galaxy"
         }
       ],
-      "game-store": [
+      "store": [
         {
-          "title": "Game Store",
-          "subtitle": "Games in one place",
-          "planned": true,
-          "note": "Planned: no game store yet"
-        }
-      ],
-      "vr-store": [
-        {
-          "title": "VR Store",
-          "subtitle": "VR experiences in one place",
-          "planned": true,
-          "note": "Planned: no VR store yet"
+          "kind": "store",
+          "title": "Store"
         }
       ],
       "about": [
@@ -249,12 +251,24 @@
     "_doc": "Configs > General and Configs > About (libs:ui-nav-bars fleetconfigs, rule 1_cicd/src/data/configs-pages.json, #1352 v2). general.sections: the anchors of the one General page, in order (perms, battery, storage, notifications, ui, language are required; app opens this app's own Configs; update is added after perms by default). about: the hand-written part of the extensive About: tagline, description, features, screens, guide, privacy, backends (ids of ac_cloud-account/build.json::fleet_endpoints, resolved to mesh URLs at build time), related fleet apps, credits for a fork. Permissions, data stores, crash/analytics libs, name, icon, version, build sha and date, repo, licence, origin, crash sink, debug API and changelog are derived, never typed here.",
     "general": {
       "sections": [
-        {"id": "perms"},
-        {"id": "battery"},
-        {"id": "storage"},
-        {"id": "notifications"},
-        {"id": "ui"},
-        {"id": "language"},
+        {
+          "id": "perms"
+        },
+        {
+          "id": "battery"
+        },
+        {
+          "id": "storage"
+        },
+        {
+          "id": "notifications"
+        },
+        {
+          "id": "ui"
+        },
+        {
+          "id": "language"
+        },
         {
           "id": "app",
           "label": "App",

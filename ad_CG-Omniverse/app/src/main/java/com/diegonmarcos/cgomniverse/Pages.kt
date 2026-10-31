@@ -24,7 +24,9 @@ object Pages {
     /** The kinds the renderer draws; test-lnktree-app.sh holds them against the kinds build.json declares. */
     const val KIND_ENTRY = "entry"
     const val KIND_SECTION_TITLE = "section_title"
-    const val KIND_HOLDINGS = "holdings"
+    const val KIND_AVATAR = "avatar"
+    const val KIND_GALAXY = "galaxy"
+    const val KIND_STORE = "store"
     const val KIND_ABOUT = "about"
 
     /** The entries declared for [sectionId] in the stacks JSON (empty when the section declares none). */

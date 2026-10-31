@@ -23,17 +23,26 @@ import com.diegonmarcos.cgomniverse.Decl
 import com.diegonmarcos.cgomniverse.Entry
 import com.diegonmarcos.cgomniverse.Pages
 import com.diegonmarcos.cgomniverse.R
+import com.diegonmarcos.cgomniverse.World
 import com.diegonmarcos.superapp.uikit.GroupTitle
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitSettingsRow
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
-/** A section's page: its declared entries (ui.stacks[section]) drawn by kind. Nothing here is typed text: the words are build.json's. */
+/**
+ * A section's page: its declared entries (ui.stacks[section]) drawn by kind. A page kind (avatar, galaxy, store) owns the whole page;
+ * the other kinds stack in a scrolling column. Nothing here is typed text: the words are build.json's and the data files'.
+ */
 @Composable
-fun SectionPage(sectionId: String) {
+fun SectionPage(sectionId: String, loaded: World?, onEnterWorld: (World) -> Unit) {
     val ctx = LocalContext.current
     val entries = remember(sectionId) { Pages.entries(Decl.stacks, sectionId) }
+    when (entries.firstOrNull()?.kind) {
+        Pages.KIND_AVATAR -> return AvatarPage()
+        Pages.KIND_GALAXY -> return GalaxyPage(loaded, onEnterWorld)
+        Pages.KIND_STORE -> return StorePage(onEnterWorld)
+    }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp).testTag(Tags.PAGE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -41,7 +50,6 @@ fun SectionPage(sectionId: String) {
         entries.forEach { e ->
             when (e.kind) {
                 Pages.KIND_SECTION_TITLE -> GroupTitle(e.title)
-                Pages.KIND_HOLDINGS -> HoldingsPanel()
                 Pages.KIND_ABOUT -> AboutPanel()
                 else -> EntryRow(e, Pages.resolve(e, Decl.targets)) { url -> openUrl(ctx, url) }
             }

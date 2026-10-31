@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup / device-transfer rules (Android 12+): the avatar configuration (shared prefs avatar.xml) is the app's one piece of user data. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="avatar.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="avatar.xml" />
+    </device-transfer>
+</data-extraction-rules>

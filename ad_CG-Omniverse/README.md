@@ -3,10 +3,16 @@
 An app of the Lnktree family (#1335), behind the SuperApp's Cloud > Lnktree row. Package `com.diegonmarcos.cgomniverse`, folder `ad_CG-Omniverse` (the `ad_` prefix of the
 Lnktree family, declared in `1_cicd/src/data/app-families.json`; the Cloud family is `ac_cloud-<x>`).
 
-* The pages are `build.json::ui` (`bottom_nav`, `sections`, `stacks`) and are drawn by declared kinds (`Pages.kt`: `entry`,
-  `section_title`, `holdings`, `about`). The shell is the fleet's: `libs:ui-nav-bars` (first row, bottom nav), `libs:bottomnav`
-  (NavDecl), `libs:ui-kit` (tokens and kit), `libs:ui-icons` (the nav icons), `libs:theme-background`.
-* An entry's target is read from a declared source (a linktree label, a registry code or a repo of `ui.app_urls`) by `app/build.gradle`
-  at build time; no address is typed here. A `planned` entry is greyed with its note. No market data is shown.
-* Tester: `test/test-lnktree-app.sh` (the shared template `1_cicd/src/templates/test-lnktree-app.sh`), JVM: `PagesTest`, `HoldingsTest`.
+Bottom nav: **Avatar | Galaxy | Store** (`build.json::ui`; each is a page kind drawn by `ui/SectionPage.kt`).
+
+* **Avatar**: a 3D avatar configurator. The scene is `app/src/main/assets/avatar` (three.js in a WebView, served by `WebViewAssetLoader`, offline);
+  three.js and OrbitControls are Cloud Nav's copies, copied into the APK at build time (`copyThreeAssets` in `app/build.gradle`). The groups and
+  the default avatar are `data/avatar.json`; the configuration is saved in the `avatar` prefs file, which the backup rules (`res/xml`) include.
+* **Store**: the worlds of `data/store.json`, GENERATED from `data/fwa.md` by `python3 data/gen-store.py` (never edit the JSON; `--check` is the
+  drift check, run by `test/test-store-data.sh`). Filters Type / Dimension / Device are multi-select chip rows, all selected by default
+  (`Store.kt`; 2D/3D and 3D/Video count as both 2D and 3D, VR Yes as VR Glass and Flat Screen, VR No as Flat Screen only).
+* **Galaxy**: the selectable worlds and the loaded one; a world opens full screen in a WebView (WebGL, hardware acceleration) with close, reload
+  and open-in-browser; a VR world reports whether this WebView has WebXR and otherwise offers the browser for VR.
+* Tests: `test/test-lnktree-app.sh` (family template `1_cicd/src/templates/test-lnktree-app.sh`), `test/test-store-data.sh`, JVM `PagesTest`,
+  `StoreTest`, `AvatarTest`. `cg-omniverse-proof.yml` (dispatch) proves the filter tests against planted mutants and takes emulator screenshots.
 * Ship: `1_cicd/src/cicd/ship-cg-omniverse.yml` (APK to GHCR and the rolling release, installable from the SuperApp's Constellation).
