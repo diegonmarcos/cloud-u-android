@@ -902,8 +902,16 @@ class Walk:
                         if missing:
                             fails.append("C3 General has no anchor for %s" % ", ".join(missing))
                         for i in sids:
-                            a = find(dump() or [], FC_ANCHOR + i)
+                            # the v2 grid sits at the top of the one General page: scroll back up to it before each tap
+                            a = None
+                            for _ in range(6):
+                                a = find(dump() or [], FC_ANCHOR + i)
+                                if a is not None:
+                                    break
+                                swipe(self.w // 2, int(self.h * 0.3), int(self.h * 0.85))
+                                settle(0.4)
                             if a is None:
+                                fails.append("C4 the %s anchor is not on the grid" % i)
                                 continue
                             tap(a)
                             settle(1.2)
@@ -951,7 +959,7 @@ class Walk:
                     settle(1.0)
                     if not self.foreground():
                         fails.append("C6 closing %s left the app" % page)
-            if self.crashed():
+            if self.crashed()[0]:  # crashed() returns (flag, log): the tuple itself is always truthy
                 fails.append("the app crashed on Configs \u25b8 %s" % page.capitalize())
             if fails:
                 self.evidence("configs_%s_fail" % page)
