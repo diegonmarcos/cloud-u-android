@@ -147,8 +147,8 @@ ROWS = {
     # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
     # then MySocials, MyBuro, MyHealth, MyStudy, MyTrips as the owner ordered. Agenda left the row (it is
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
-    # Owner order (Cloud Me restructure): Account Me | Me-Health Experiences RoadMap | Me-Duties Me-Buro Me-LLC.
-    "Me": ["tools-account", "me", "me-sep-1", "myhealth", "myexperiences", "myroadmap", "me-sep-2", "myduties", "myburo", "myllc"],
+    # Owner order (Cloud Me restructure): Me | Me-Health Experiences RoadMap | Me-Duties Me-Buro Me-LLC | Account.
+    "Me": ["me", "me-sep-1", "myhealth", "myexperiences", "myroadmap", "me-sep-2", "myduties", "myburo", "myllc", "me-sep-3", "tools-account"],
     # (#1331: the row is now Lnktree; before it held seven named boards (#1212), and task 311 had removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
@@ -228,9 +228,9 @@ for title, want_order in ROWS.items():
     # second rule divides Buro pages from Projects pages and BOTH are deep
     # links, so the stronger assertion would be false, and a tester that
     # asserts something false is deleted the first time it is inconvenient.
-    # EXCEPTION: the Me row's first run is `Account Me` (an in-app page and an app launch) by owner
-    # order, so that run mixes kinds by design. Only that row is exempt; every other row keeps the rule.
-    for run in ([] if title == "Me" else runs):
+    # The Me row once exempted its `Account Me` run; since #1362 Account sits
+    # alone behind its own rule, so every row keeps the rule.
+    for run in runs:
         kinds = {kind(t) for t in run}
         assert len(kinds) == 1, (
             f"{title}: one run mixes {sorted(kinds)} — a browser link and a "
@@ -266,7 +266,7 @@ for gone in ("myprojects", "myfin"):
 PY
 
 echo "== T6 (#1092): Cloud ▸ Apps row order, Vault and Account in Tools Primary =="
-python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Lnktree, Configs; Vault in Tools Primary; Account leads Me, before the Me tile; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
+python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Lnktree, Configs; Vault in Tools Primary; Account closes Me, after a '|' (#1362); Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
@@ -274,8 +274,8 @@ titles = [g["title"] for g in cloud["tile_groups"]]
 want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Lnktree", "Configs"]
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
-assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Experiences", "RoadMap", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]
-assert g["Tools Primary"][-2:] == ["Wallet", "Vault"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order (Light left for Cloud Calc > Toolkit); Account moved to Me, before the Me tile
+assert g["Me"] == ["Me", "|", "Me-Health", "Experiences", "RoadMap", "|", "Me-Duties", "Me-Buro", "Me-LLC", "|", "Account"], g["Me"]
+assert g["Tools Primary"][-2:] == ["Wallet", "Vault"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order (Light left for Cloud Calc > Toolkit); Account moved to Me (last since #1362)
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
 ids = [t["id"] for x in cloud["tile_groups"] for t in x["tiles"] if t.get("id")]
