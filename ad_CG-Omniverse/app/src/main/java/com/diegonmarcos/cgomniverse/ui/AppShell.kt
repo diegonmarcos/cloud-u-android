@@ -43,6 +43,8 @@ object Tags {
     const val WORLD_RELOAD = "world_reload"
     const val WORLD_BROWSER = "world_browser"
     const val WORLD_VR = "world_vr"
+    const val WORLD_FALLBACK = "world_fallback"
+    const val WORLD_FALLBACK_BROWSER = "world_fallback_browser"
     fun entry(title: String): String = "entry:$title"
     fun avatarGroup(id: String): String = "avatar_group:$id"
     fun avatarOption(group: String, id: String): String = "avatar_option:$group:$id"

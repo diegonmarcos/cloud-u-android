@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Galaxy loads the Store's web worlds in a WebView. Cloud Account is opened by a package-pinned intent. -->
+    <!-- Galaxy loads the Store's web worlds in a WebView; cleartext only for the http-only Store hosts (res/xml/network_security_config.xml, generated). Cloud Account is opened by a package-pinned intent. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- WebGL is required by the avatar scene and the worlds. -->
     <uses-feature android:glEsVersion="0x00020000" android:required="true" />
@@ -15,6 +15,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:hardwareAccelerated="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"

@@ -59,12 +59,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.cgomniverse.Decl
 import com.diegonmarcos.cgomniverse.R
 import com.diegonmarcos.cgomniverse.World
-import com.diegonmarcos.superapp.uikit.KitAction
 import com.diegonmarcos.superapp.uikit.KitButton
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitOutlinedButton
-import com.diegonmarcos.superapp.uikit.KitState
-import com.diegonmarcos.superapp.uikit.KitStatusBanner
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /** Galaxy: the world loaded now (enter it again, or open it in the browser) and every selectable world of the Store's data. */
@@ -126,8 +123,8 @@ fun GalaxyPage(loaded: World?, onEnter: (World) -> Unit) {
 /**
  * One world, full screen: a WebView with WebGL on and hardware acceleration, a bar with close, reload and open-in-browser, and
  * for a VR entry the WebXR state this WebView reports (Android's WebView has no immersive WebXR today, so a VR world offers the
- * browser for it). Back walks the page's history, then closes. A main-frame error or a crashed renderer shows a banner whose
- * action opens the world in the browser.
+ * browser for it). Back walks the page's history, then closes. A main-frame error (an unreachable host, a blocked scheme) or a
+ * crashed renderer replaces the page with a fallback card: Open in browser, or Reload.
  */
 @Composable
 fun WorldView(w: World, onClose: () -> Unit) {
@@ -165,10 +162,6 @@ fun WorldView(w: World, onClose: () -> Unit) {
         if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = p.accent)
         if (w.vr && xr == false) Text(stringResource(R.string.world_xr_note), style = MaterialTheme.typography.labelSmall, color = p.textSecondary,
             modifier = Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 4.dp))
-        error?.let { msg ->
-            KitStatusBanner(msg, KitState.WARN, Modifier.padding(8.dp),
-                action = KitAction(stringResource(R.string.open_browser), "world_error_browser") { Web.openInBrowser(ctx, w.url) })
-        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             key(w.id, generation) {
                 AndroidView(factory = { c ->
@@ -203,6 +196,26 @@ fun WorldView(w: World, onClose: () -> Unit) {
                         web = wv
                     }
                 }, modifier = Modifier.fillMaxSize().testTag(Tags.WORLD_WEB))
+            }
+            // a world that cannot load here gets a clear card, never the WebView's raw error page
+            error?.let { msg ->
+                Box(Modifier.fillMaxSize().background(Color(0xFF0B0D16)).padding(20.dp), contentAlignment = Alignment.Center) {
+                    KitCard(Modifier.testTag(Tags.WORLD_FALLBACK)) {
+                        Text(stringResource(R.string.world_fallback_title), style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold, color = p.textPrimary)
+                        Text(stringResource(R.string.world_fallback_body, w.name), style = MaterialTheme.typography.bodyMedium,
+                            color = p.textSecondary, modifier = Modifier.padding(top = 6.dp))
+                        Text(msg, style = MaterialTheme.typography.labelSmall, color = p.textSecondary, modifier = Modifier.padding(top = 6.dp))
+                        Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            KitButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_FALLBACK_BROWSER)) {
+                                Icon(Icons.Filled.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_in_browser))
+                            }
+                            KitOutlinedButton(onClick = { error = null; if (web == null) generation++ else web?.reload() }) {
+                                Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.world_reload))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
