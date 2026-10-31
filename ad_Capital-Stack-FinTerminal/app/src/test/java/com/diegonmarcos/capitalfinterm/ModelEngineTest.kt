@@ -118,7 +118,7 @@ class ModelEngineTest {
         val d = load("market_monitor", "crypto", http)
         assertEquals(3, http.asked.size)
         assertEquals(listOf("Bitcoin", "Ether"), d.rows.map { it[0] })
-        assertEquals(listOf("Bitcoin", "110.00", "+10.0000", "+10.00", "24h"), d.rows[0])
+        assertEquals(listOf("Bitcoin", "110.00", "+10.00", "+10.00", "24h"), d.rows[0])
         assertEquals(-10.0, d.chart[1].y, 1e-9)
     }
 
@@ -208,6 +208,6 @@ class ModelEngineTest {
         assertTrue(http.asked[0].startsWith("http://mesh-base/v1/fx/spot"))
         assertTrue(http.asked[1].contains("/v1/2026-09-30.."))
         assertEquals("", d.servedBy)
-        assertEquals(listOf("EUR per USD", "0.90000", "+0.01000", "+1.12", "2026-10-30"), d.rows.single())
+        assertEquals(listOf("EUR per USD", "0.90000", "+0.0100", "+1.12", "2026-10-30"), d.rows.single())
     }
 }
