@@ -77,6 +77,9 @@ android {
 // settings-extras.gradle includes it from build.json::modules.
 dependencies {
     implementation project(':libs:core')
+    // #1352 Configs ▸ General / ▸ About (libs:ui-nav-bars), reached through the launcher shortcuts the lib publishes;
+    // hooks/post-process.js puts the Compose compiler plugin on the generated root buildscript for it.
+    implementation project(':libs:ui-nav-bars')
 }
 
 // ── cloud-code Chat: the fleet's model catalogue, BY REFERENCE (one implementation with Cloud Search) ──

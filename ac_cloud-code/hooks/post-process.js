@@ -37,6 +37,7 @@ disableSplashFadeOnRealmeAndroid13();
 removeLegacyKeyboardWorkaround();
 patchTargetSdkVersion();
 stripLauncherFilterFromMainActivity();
+addComposeCompilerPlugin();
 
 function getPackageName() {
   const configPath = path.resolve(__dirname, '../config.xml');
@@ -438,4 +439,28 @@ function removeConflictingResourceFiles(src, dest) {
     fs.rmSync(existingPath);
     console.log('\x1b[31m%s\x1b[0m', `deleted conflicting resource: ${existingName}`);
   }
+}
+
+
+/**
+ * #1352 libs:ui-nav-bars (Configs ▸ General / ▸ About, linked in build-extras.gradle) is Compose: its compiler plugin must be on
+ * the generated root buildscript next to the Kotlin plugin, at the same Kotlin version (config.xml GradlePluginKotlinVersion).
+ */
+function addComposeCompilerPlugin() {
+  const prefix = execSync('npm prefix').toString().trim();
+  const gradleFile = path.join(prefix, 'platforms/android/build.gradle');
+  if (!fs.existsSync(gradleFile)) {
+    console.warn('[Cordova Hook] ⚠️ root build.gradle not found');
+    return;
+  }
+  let content = fs.readFileSync(gradleFile, 'utf-8');
+  if (content.includes('compose-compiler-gradle-plugin')) return;
+  const re = /(classpath\s*\(?\s*["']org\.jetbrains\.kotlin:kotlin-gradle-plugin:([^"']+)["'](?:\s*\))?)/;
+  if (!re.test(content)) {
+    console.warn('[Cordova Hook] ⚠️ no kotlin-gradle-plugin classpath in the root build.gradle; Compose compiler not added');
+    return;
+  }
+  content = content.replace(re, (m, line, version) => `${line}\n        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:${version}"`);
+  fs.writeFileSync(gradleFile, content, 'utf-8');
+  console.log('[Cordova Hook] ✅ Compose compiler plugin added for libs:ui-nav-bars');
 }
