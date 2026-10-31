@@ -16,6 +16,8 @@ data class World(
     /** The link probe's verdict (data/probe-links.py via gen-store.py) and its date; an unprobed link is UNVERIFIED. */
     val status: LinkStatus = LinkStatus.UNVERIFIED,
     val checked: String = "",
+    /** The Wayback Machine copy of [url], generated into store.json (no address is spelled in Kotlin); empty when absent. */
+    val wayback: String = "",
 )
 
 /** What the link probe found: ONLINE answered, OFFLINE is gone (404/410, timeout, no host), UNVERIFIED the probe could not tell. */
@@ -50,9 +52,6 @@ object Offline {
 
     /** The main frame has not finished after [elapsedMs]: offline once the watchdog's time is up. */
     fun timedOut(elapsedMs: Long, finished: Boolean): Boolean = !finished && elapsedMs >= LOAD_TIMEOUT_MS
-
-    /** The Wayback Machine's copy of [url], the way back to a world that is gone. */
-    fun wayback(url: String): String = "https://web.archive.org/web/2020/$url"
 }
 
 /** A filter group of the Store: its chips (All aside) in order, and the chips a world counts for in this group. */
@@ -88,7 +87,7 @@ object Store {
                 framework = o.optString("framework"),
                 stack = if (st == null) emptyList() else (0 until st.length()).map { st.optString(it) },
                 vr = o.optBoolean("vr", false), description = o.optString("description"),
-                status = LinkStatus.parse(o.optString("status")), checked = o.optString("checked"),
+                status = LinkStatus.parse(o.optString("status")), checked = o.optString("checked"), wayback = o.optString("wayback"),
             )
         }
     }

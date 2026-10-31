@@ -5,6 +5,7 @@
 #   S4  cleartext is narrow: the network security config forbids it by default, allows it for EXACTLY the hosts of the http-only
 #       Store entries (no more, no fewer, never a global allowance), and the manifest uses that config
 #   S5  every entry carries its link's status/checked from data/link-status.json (an unprobed link is unverified, never online)
+#   S7  every entry's wayback link is the Wayback Machine 2020 copy of its own url
 #   S6  the probe's verdicts: HTTP 404/410 and a timeout are offline, a proxy block is unverified (never offline), 200 online
 #   S3  the generator refuses a malformed row (an unknown Type / 2D/3D / VR, a name without a link) instead of guessing
 # then plants a mutation per rule in a scratch copy and requires RED for each.
@@ -59,6 +60,9 @@ for e in entries:
     want = links.get(e.get("url"), {"status": "unverified", "checked": ""})
     if (e.get("status"), e.get("checked")) != (want.get("status"), want.get("checked")):
         bad.append("S5 %r carries %r/%r, link-status.json says %r/%r" % (e.get("id"), e.get("status"), e.get("checked"), want.get("status"), want.get("checked")))
+# S7
+for e in entries:
+    if e.get("wayback") != "https://web.archive.org/web/2020/" + str(e.get("url")): bad.append("S7 %r wayback %r is not the archive copy of its url" % (e.get("id"), e.get("wayback")))
 # S6: the probe against a stubbed network
 import importlib.util, socket, urllib.error, urllib.request, io
 spec = importlib.util.spec_from_file_location("probe", os.path.join(d, "probe-links.py")); pr = importlib.util.module_from_spec(spec); spec.loader.exec_module(pr)
@@ -115,6 +119,7 @@ mutant "410 reads online"              "sed -i 's/GONE = (404, 410)/GONE = (404,
 mutant "a timeout reads unverified"    "sed -i 's/return \"offline\", \"timeout\"/return \"unverified\", \"timeout\"/g' probe-links.py" "S6 probe says unverified for timeout"
 mutant "a proxy block reads offline"   "sed -i 's/return \"unverified\", \"proxy %d\"/return \"offline\", \"proxy %d\"/' probe-links.py" "S6 probe says offline for proxy"
 mutant "a tunnel block reads offline"  "sed -i 's/return \"unverified\", \"proxy: %s\"/return \"offline\", \"proxy: %s\"/' probe-links.py" "S6 probe says offline for tunnel"
+mutant "a wayback link points elsewhere" "sed -i 's#^WAYBACK = .*#WAYBACK = \"https://web.archive.org/web/\"#' gen-store.py && python3 gen-store.py >/dev/null" "S7"
 mutant "an entry is dropped"           "python3 -c \"import json;d=json.load(open('store.json'));d['entries'].pop();json.dump(d,open('store.json','w'),indent=2)\"" "S2"
 
 # S3: the generator itself refuses what it cannot map

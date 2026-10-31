@@ -58,7 +58,10 @@ class OfflineTest {
         assertTrue(Offline.LOAD_TIMEOUT_MS in 10_000L..20_000L)
     }
 
-    @Test fun waybackIsTheArchiveCopy() {
-        assertEquals("https://web.archive.org/web/2020/http://a-way-to-go.com/", Offline.wayback("http://a-way-to-go.com/"))
+    @Test fun waybackIsTheArchiveCopyFromStoreJson() {
+        val f = listOf("../data/store.json", "data/store.json").map(::File).first { it.exists() }
+        val w = Store.parse(f.readText()).first { it.id == "a-way-to-go" }
+        assertEquals("https://web.archive.org/web/2020/http://a-way-to-go.com/", w.wayback)
+        assertEquals("", Store.parse("""{"entries":[{"id":"a","url":"http://a/"}]}""").single().wayback)
     }
 }

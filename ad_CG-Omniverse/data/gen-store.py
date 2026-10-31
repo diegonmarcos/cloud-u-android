@@ -8,7 +8,7 @@ would otherwise fail in Galaxy with net::ERR_CLEARTEXT_NOT_PERMITTED). There is 
   python3 data/gen-store.py           write data/store.json and the network security config
   python3 data/gen-store.py --check   exit 1 when either file is not exactly what fwa.md generates (drift)
 Each entry also carries its link's `status` (online | offline | unverified) and `checked` date from data/link-status.json
-(written by data/probe-links.py); a link the probe has not recorded is `unverified` with no date, never guessed online.
+(written by data/probe-links.py) and its `wayback` link (the Wayback Machine copy, so no address is spelled in Kotlin); a link the probe has not recorded is `unverified` with no date, never guessed online.
 Every row must carry a link, a known Type, 2D/3D and VR value; anything else fails loudly rather than being guessed.
 """
 import json, os, re, sys
@@ -17,6 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC, OUT = os.path.join(HERE, "fwa.md"), os.path.join(HERE, "store.json")
 LINKS = os.path.join(HERE, "link-status.json")
 STATUSES = {"online", "offline", "unverified"}
+WAYBACK = "https://web.archive.org/web/2020/"   # an entry's archived copy is WAYBACK + its url (Galaxy's offline card links it)
 NSC = os.path.join(HERE, "..", "app", "src", "main", "res", "xml", "network_security_config.xml")
 COLUMNS = ["Name", "Type", "2D/3D", "Framework", "Stack", "VR Compatibility", "Description"]
 TYPES = {"Website", "Game", "Others"}
@@ -65,6 +66,7 @@ def generate(text, links=None):
             "id": sid, "name": name, "url": url, "type": c[1], "dimension": c[2], "framework": c[3],
             "stack": [s.strip() for s in c[4].split(",") if s.strip()], "vr": VR[c[5]], "description": c[6],
             "status": links.get(url, {}).get("status", "unverified"), "checked": links.get(url, {}).get("checked", ""),
+            "wayback": WAYBACK + url,
         })
     if not entries: raise SystemExit("fwa.md: no rows")
     return {

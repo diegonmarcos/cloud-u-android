@@ -233,7 +233,7 @@ fun WorldView(w: World, onClose: () -> Unit) {
                             KitButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_OFFLINE_BROWSER)) {
                                 Icon(Icons.Filled.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_in_browser))
                             }
-                            KitOutlinedButton(onClick = { Web.openInBrowser(ctx, Offline.wayback(w.url)) }, modifier = Modifier.testTag(Tags.WORLD_OFFLINE_WAYBACK)) {
+                            if (w.wayback.isNotEmpty()) KitOutlinedButton(onClick = { Web.openInBrowser(ctx, w.wayback) }, modifier = Modifier.testTag(Tags.WORLD_OFFLINE_WAYBACK)) {
                                 Icon(Icons.Filled.History, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.open_wayback))
                             }
                         }
