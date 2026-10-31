@@ -264,19 +264,31 @@
         "file": "ab_cloud-libs-shared/libs/perms/src/main/java/com/diegonmarcos/superapp/perms/AppPermsSection.kt",
         "needle": "LaunchedEffect(resumes) { if (walking && !step()) walking = false }",
         "why": "Grant all walks every missing grant"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/AndroidManifest.xml",
+        "needle": "com.diegonmarcos.superapp.fleetconfigs.FleetConfigsInitProvider",
+        "why": "the launcher shortcuts are published for every app that links the lib"
+      },
+      {
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/fleetconfigs/FleetConfigsShortcuts.kt",
+        "needle": "ShortcutManagerCompat.addDynamicShortcuts(ctx, list)",
+        "why": "Configs ▸ General / ▸ About as launcher shortcuts (the reach of shortcut_reach apps)"
       }
     ]
   },
   "exempt": {
     "aa_cloud-superapp": "The fleet's launcher hub keeps its own special Configs (owner rule): its Configs is the fleet console, not one app's settings."
   },
+  "shortcut_reach": {
+    "_doc": "Apps with no native menu of their own to extend: React Native, Tauri and Cordova hosts and the generated office host. They reach Configs ▸ General and ▸ About through the launcher shortcuts libs:ui-nav-bars publishes for every app that links it (FleetConfigsInitProvider → FleetConfigsShortcuts: long-press the app icon). G4 accepts an app named here only while it links libs:ui-nav-bars (build.json::modules or a settings / patch file of the app names :libs:ui-nav-bars). Each entry says why no in-app entry exists.",
+    "ac_cloud-c3-webserver": "Tauri 2 host: the whole UI is the Rust web server's page in one WebView; the Android side is a generated shell with no menu of its own.",
+    "ac_cloud-media-center": "Tauri 2 host: seven static web pages in one WebView; the generated Android shell draws nothing of its own to hang an entry on."
+  },
   "pending": {
     "_doc": "Apps that declare configs_pages (held by G1-G3) but do not reach the pages yet. Wiring means linking libs:ui-nav-bars (with bottomnav, ui-icons, theme-background, perms) and calling FleetConfigsMenu( (Compose) or FleetConfigsEntries.addTo( / FleetConfigsActivity.intent( (Views, forks) from the app's own menu. Delete an entry in the commit that wires the app (the guard fails a stale one).",
-    "ac_cloud-c3-webserver": "Tauri 2 app (Rust and web only, no Kotlin UI); needs a native settings entry that starts the activity.",
     "ac_cloud-chat": "Upstream chat fork with its own settings UI; the fork's preferences need the two entries.",
     "ac_cloud-code": "Own Compose shell without the shared first-row scaffold; its settings need the two entries.",
-    "ac_cloud-matrix": "Element fork with its own settings UI; the fork's preferences need the two entries.",
-    "ac_cloud-media-center": "Tauri 2 app (Rust and static web only, no Kotlin UI); needs a native settings entry that starts the activity.",
     "ac_cloud-office": "Upstream office fork with its own settings UI; the fork's preferences need the two entries."
   }
 }

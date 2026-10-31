@@ -7,5 +7,12 @@
             android:name="com.diegonmarcos.superapp.fleetconfigs.FleetConfigsActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar" />
+        <!-- #1352 publishes Configs ▸ General / ▸ About as launcher shortcuts at process start (FleetConfigsShortcuts): the way
+             an app with no native menu (React Native, Tauri, Cordova, the office host) reaches them, and a shortcut for every
+             other app too. Not exported, answers no query. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.fleetconfigs.FleetConfigsInitProvider"
+            android:authorities="${applicationId}.fleetconfigs.init"
+            android:exported="false" />
     </application>
 </manifest>

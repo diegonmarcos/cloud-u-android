@@ -87,6 +87,17 @@ project(":libs:fleetconfig-model").projectDir = file("../ab_cloud-libs-shared/li
 // #1122 libs:core declares `api project(':libs:crash')` (the default crash handler and screen): the include is not optional.
 include(":libs:crash")
 project(":libs:crash").projectDir = file("../ab_cloud-libs-shared/libs/crash")
+// #1352 Configs ▸ General / ▸ About in Settings ▸ Manage app (libs:ui-nav-bars) and its deps.
+include(":libs:ui-nav-bars")
+project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
+include(":libs:bottomnav")
+project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")
+include(":libs:ui-icons")
+project(":libs:ui-icons").projectDir = file("../ab_cloud-libs-shared/libs/ui-icons")
+include(":libs:theme-background")
+project(":libs:theme-background").projectDir = file("../ab_cloud-libs-shared/libs/theme-background")
+include(":libs:perms")
+project(":libs:perms").projectDir = file("../ab_cloud-libs-shared/libs/perms")
 // ':libs:<x>' implicitly declares a ':libs' container whose default projectDir
 // is <root>/libs, which this fork does not have — and Gradle 9 fails outright
 // on a project directory that does not exist. Point it at the shared root.

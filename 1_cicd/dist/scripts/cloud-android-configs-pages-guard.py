@@ -22,7 +22,9 @@ DECLARATION  1_cicd/src/data/configs-pages.json (the required sections and About
   G4  the app reaches the pages (its sources call the shared scaffold, FleetConfigsActivity.intent, or one of the
       lib's menu helpers FleetConfigsMenu / FleetConfigsEntries), or it is
       named in `pending` with a reason; a pending app that reaches them is stale
-  G5  every exempt / pending entry names a real app and carries a reason
+      An app with no native menu (React Native, Tauri, Cordova, the office host) is named in shortcut_reach with a
+      reason and must link libs:ui-nav-bars: the lib publishes the two pages as launcher shortcuts for it.
+  G5  every exempt / pending / shortcut_reach entry names a real app and carries a reason
 
 USAGE  cloud-android-configs-pages-guard.py [ROOT]      EXIT 0 ok · 1 at least one violation
 """
@@ -72,6 +74,18 @@ def reaches(root, app, needles):
     return False
 
 
+def links_ui_nav_bars(root, app, build):
+    """The app compiles libs:ui-nav-bars: its build.json::modules lists it, or a settings / build / patch file of the app names it."""
+    if "libs:ui-nav-bars" in (build.get("modules") or {}):
+        return True
+    for base, dirs, files in os.walk(os.path.join(root, app)):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        for f in files:
+            if re.search(r"(settings|build)(-extras)?\.gradle(\.kts)?$|\.patch$", f) and ":libs:ui-nav-bars" in read(os.path.join(base, f)):
+                return True
+    return False
+
+
 def derived_about(root, spec, app, build):
     """What fleet-configs.gradle derives; empty string when it would not resolve."""
     android = build.get("android") or {}
@@ -102,6 +116,7 @@ def check(root):
     apps = apps_of(root)
     exempt = {k: v for k, v in (spec.get("exempt") or {}).items() if not k.startswith("_")}
     pending = {k: v for k, v in (spec.get("pending") or {}).items() if not k.startswith("_")}
+    shortcut_reach = {k: v for k, v in (spec.get("shortcut_reach") or {}).items() if not k.startswith("_")}
 
     # G0
     lib = spec["lib"]
@@ -199,6 +214,10 @@ def check(root):
                 bad.append("G3 %s: About field %r does not resolve (derived at build time by libs/ui-nav-bars/fleet-configs.gradle)" % (app, f))
         # G4
         reached = reaches(root, app, (spec["scaffold_call"], spec["views_call"]) + tuple(spec.get("menu_calls") or []))
+        if not reached and app in shortcut_reach:
+            reached = links_ui_nav_bars(root, app, build)
+            if not reached:
+                bad.append("G4 %s: named in %s::shortcut_reach but does not link libs:ui-nav-bars, so no launcher shortcut is published" % (app, DATA))
         if app in pending:
             if reached:
                 bad.append("G4 %s: reaches Configs ▸ General / ▸ About now — delete its entry in %s::pending" % (app, DATA))
@@ -207,7 +226,7 @@ def check(root):
                        % (app, spec["scaffold_call"], spec["views_call"], DATA))
 
     # G5
-    for kind, ledger in (("exempt", exempt), ("pending", pending)):
+    for kind, ledger in (("exempt", exempt), ("pending", pending), ("shortcut_reach", shortcut_reach)):
         for app, why in ledger.items():
             if app not in apps:
                 bad.append("G5 %s::%s names %s, which is not an app (a[acd]_*/build.json)" % (DATA, kind, app))
@@ -215,6 +234,8 @@ def check(root):
                 bad.append("G5 %s::%s.%s needs a reason of at least %d characters" % (DATA, kind, app, spec["min_reason_chars"]))
     for app in set(exempt) & set(pending):
         bad.append("G5 %s is both exempt and pending" % app)
+    for app in set(shortcut_reach) & (set(pending) | set(exempt)):
+        bad.append("G5 %s is in shortcut_reach and also pending or exempt" % app)
     return bad, apps, exempt, pending
 
 

@@ -137,6 +137,8 @@ dependencies {
     // merges the fleet provider, receiver, <queries> and the signature
     // permission into this APK; nothing here calls it (settings.gradle).
     implementation(project(":libs:core"))
+    // #1352 Configs ▸ General / ▸ About, reached through the launcher shortcuts the lib publishes (no native menu here)
+    implementation(project(":libs:ui-nav-bars"))
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")

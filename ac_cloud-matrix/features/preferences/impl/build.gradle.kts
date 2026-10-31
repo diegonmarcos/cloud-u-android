@@ -54,6 +54,8 @@ dependencies {
     implementation(projects.libraries.cachestore.api)
     implementation(projects.libraries.matrix.api)
     implementation(projects.libraries.designsystem)
+    // #1352 Cloud Matrix: Configs ▸ General / ▸ About, the fleet's shared pages (libs:ui-nav-bars)
+    implementation(project(":libs:ui-nav-bars"))
     implementation(projects.libraries.featureflag.api)
     implementation(projects.libraries.featureflag.ui)
     implementation(projects.libraries.network)

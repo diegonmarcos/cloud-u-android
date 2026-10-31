@@ -188,6 +188,18 @@ private fun ColumnScope.ManageAppSection(
             onClick = onSecureBackupClick,
         )
     }
+    // #1352 Cloud Matrix: Configs ▸ General and ▸ About, the fleet's shared pages (libs:ui-nav-bars)
+    val fleetCtx = androidx.compose.ui.platform.LocalContext.current
+    ListItem(
+        headlineContent = { Text(com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel(com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.General)) },
+        leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Settings())),
+        onClick = { com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.open(fleetCtx, com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.General) },
+    )
+    ListItem(
+        headlineContent = { Text(com.diegonmarcos.superapp.fleetconfigs.fleetConfigsEntryLabel(com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.About)) },
+        leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Info())),
+        onClick = { com.diegonmarcos.superapp.fleetconfigs.FleetConfigsEntries.open(fleetCtx, com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage.About) },
+    )
     HorizontalDivider()
 }
 
