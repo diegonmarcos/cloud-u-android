@@ -9,17 +9,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -59,7 +56,7 @@ class PermsActivity : ComponentActivity() {
         val ids = intent.getStringArrayExtra(EXTRA_IDS)?.toSet().orEmpty()
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-                if (feature == FIRST_RUN) Sheet(ids, tick) else Surface(Modifier.fillMaxSize()) { Page(feature, ids, tick) }
+                if (feature == FIRST_RUN) Sheet(ids, tick) else Page(feature, ids, tick)
             }
         }
     }
@@ -68,13 +65,16 @@ class PermsActivity : ComponentActivity() {
 
     @Composable
     private fun Page(feature: String, ids: Set<String>, tick: Int) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // the Scaffold clears the system bars (its content insets); this page names no inset itself (ShellTopInsetStaticGuardTest S4b)
+        Scaffold(Modifier.fillMaxSize()) { bars ->
+        Column(Modifier.padding(bars).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(
                 when (feature) { "" -> "Permissions"; else -> "Permissions needed by $feature" },
                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 8.dp, bottom = 16.dp).semantics { heading() }.testTag("perms:title"))
             // #1360 the one shared section: this app's declared grants and its helper apps', live, Grant / Open, Grant all.
             AppPermsSection(tick, highlight = ids)
+        }
         }
     }
 
