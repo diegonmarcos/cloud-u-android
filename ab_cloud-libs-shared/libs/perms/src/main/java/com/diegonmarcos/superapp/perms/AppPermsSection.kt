@@ -58,7 +58,7 @@ fun rememberAppPerms(
     val helpers = remember(tick, local, resumes) { AppPerms.helpers(ctx) }
     val install = remember(tick) { AppPerms.installItems(ctx) }
     val items = own.map { PermsView.item(it.entry, it.status, it.entry.id in highlight) } +
-        helpers.map { PermsView.helperItem(it.helper, it.entry, it.status, it.entry.id in highlight) } + install + extra
+        helpers.map { PermsView.helperItem(it.helper, it.entry, it.status, it.entry.id in highlight, AppPerms.helperName(ctx, it.helper)) } + install + extra
     val entries = own.associate { it.entry.id to it.entry }
     val helperRows = helpers.associateBy { "${it.helper.pkg}:${it.entry.id}" }
     val extraIds = extra.map { it.id }.toSet()
@@ -108,6 +108,11 @@ fun AppPermsSection(
     val s = rememberAppPerms(tick, highlight, extra, onExtra)
     PermsList(s.items, s.act, s.grantAll.takeIf { s.missing > 0 }, modifier, style)
 }
+
+/** The helper's launcher label when it is installed, else its canonical name in words. */
+internal fun AppPerms.helperName(ctx: Context, h: HelperNeed): String = runCatching {
+    val pm = ctx.packageManager; pm.getApplicationLabel(pm.getApplicationInfo(h.pkg, 0)).toString()
+}.getOrNull()?.takeIf { it.isNotBlank() && it != h.pkg } ?: PermsView.appName(h.label)
 
 /** The install-time (normal) permissions Android granted with the app, in plain words; catalogue rows excluded. */
 internal fun AppPerms.installItems(ctx: Context): List<PermItem> {

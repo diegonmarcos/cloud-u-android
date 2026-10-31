@@ -152,9 +152,13 @@ object PermsView {
         else -> PermAction.OPEN
     }
 
+    /** A fleet app's canonical name in words: "cloud-terminal-termux" -> "Cloud Terminal Termux" (a launcher label wins). */
+    fun appName(raw: String): String =
+        if (raw.contains(' ') || !raw.contains('-')) raw else raw.split('-').filter { it.isNotEmpty() }.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+
     /** A helper app's grant as a row: titled by the helper, its reason the work it does for this app. */
-    fun helperItem(h: HelperNeed, e: PermEntry, s: PermStatus, highlight: Boolean = false): PermItem = PermItem(
-        id = "${h.pkg}:${e.id}", title = "${h.label}: ${e.label}", reason = h.why.ifBlank { e.why }, icon = e.icon.ifBlank { "apps" },
+    fun helperItem(h: HelperNeed, e: PermEntry, s: PermStatus, highlight: Boolean = false, name: String = appName(h.label)): PermItem = PermItem(
+        id = "${h.pkg}:${e.id}", title = "$name: ${e.label}", reason = h.why.ifBlank { e.why }, icon = e.icon.ifBlank { "apps" },
         kind = PermItemKind.HELPER, state = s.state, detail = s.reason,
         action = if (s.missing || s.state == PermState.UNKNOWN) PermAction.OPEN else null, highlight = highlight,
     )

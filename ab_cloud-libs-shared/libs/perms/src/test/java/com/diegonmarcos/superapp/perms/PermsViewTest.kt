@@ -137,7 +137,8 @@ class PermsViewTest {
     }
 
     @Test fun `a helper's row names the helper and the work it does`() {
-        val h = HelperNeed("cld.termux", "Cloud Termux", listOf("e"), "Runs git.")
+        assertEquals("Cloud Terminal Termux", PermsView.appName("cloud-terminal-termux")); assertEquals("Cloud Termux", PermsView.appName("Cloud Termux"))
+        val h = HelperNeed("cld.termux", "cloud-termux", listOf("e"), "Runs git.")
         val i = PermsView.helperItem(h, entry(PermKind.SPECIAL), PermStatus(PermState.UNKNOWN, "cannot report"))
         assertEquals("cld.termux:e", i.id); assertEquals("Cloud Termux: Label", i.title); assertEquals("Runs git.", i.reason)
         assertEquals(PermItemKind.HELPER, i.kind); assertEquals(PermAction.OPEN, i.action)

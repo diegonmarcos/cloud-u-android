@@ -1120,7 +1120,7 @@
     "helpers": [
       {
         "package": "cld.termux",
-        "label": "Cloud Termux",
+        "label": "cloud-terminal-termux",
         "needs": [
           "all_files"
         ],

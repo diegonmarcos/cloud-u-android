@@ -65,9 +65,9 @@ while IFS='|' read -r -u 3 key entry grant revoke texts; do
   check "$key Perms page in dark mode" "$key-5-dark" "${want[@]}"
   adb shell cmd uimode night no >/dev/null 2>&1; sleep 1
 done 3<<'TABLE'
-drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Termux;Grant all
+drive|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Terminal Termux;Grant all
 me|Notifications|adb shell pm grant {pkg} android.permission.POST_NOTIFICATIONS|adb shell pm revoke {pkg} android.permission.POST_NOTIFICATIONS|Notifications;Health Connect;Grant all
-notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Termux
+notes|All files access|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE allow|adb shell appops set {pkg} MANAGE_EXTERNAL_STORAGE default|All files access;HELPER APPS;Cloud Terminal Termux
 finterm||||needs no permission
 calc|Camera|adb shell pm grant {pkg} android.permission.CAMERA|adb shell pm revoke {pkg} android.permission.CAMERA|Camera;Microphone;Grant all
 browser|Camera|adb shell pm grant {pkg} android.permission.CAMERA|adb shell pm revoke {pkg} android.permission.CAMERA|Camera;Microphone;Grant all
