@@ -25,7 +25,8 @@ ipc() {
     printf '%s' "$v" | sed 's/\\/\\\\/g; s/:/\\:/g' | adb shell "cat > /data/local/tmp/ipc_$k"
     extras="$extras --extra \"$k:s:\$(cat /data/local/tmp/ipc_$k)\""
   done
-  adb shell "content call --uri content://$pkg.fleet --method fleet.ipc.v1 --arg $op$extras" 2>&1
+  # bounded: a route that never answers fails this run with its logcat, it does not eat the step timeout
+  timeout "${IPC_TIMEOUT:-300}" adb shell "content call --uri content://$pkg.fleet --method fleet.ipc.v1 --arg $op$extras" 2>&1 || echo "ipc $op @ $pkg: no answer in ${IPC_TIMEOUT:-300}s (rc $?)"
 }
 
 adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
@@ -39,7 +40,7 @@ done
 adb shell dumpsys package $DRIVE | grep -E "CLOUD_EXEC|cld.termux.permission" | tee "$OUT/drive-perms.txt"
 
 echo "── bootstrap cld.termux (Termux bootstrap + rootfs unpack) ──"
-ipc $TERMUX terminal/exec "cmd=echo shell=\$SHELL; command -v git fish" timeout=600000 | tee "$OUT/bootstrap.json"; echo
+IPC_TIMEOUT=960 ipc $TERMUX terminal/exec "cmd=echo shell=\$SHELL; command -v git fish" timeout=600000 | tee "$OUT/bootstrap.json"; echo
 grep -q 'status=200' "$OUT/bootstrap.json" && grep -q '"ok":true' "$OUT/bootstrap.json" || fail "cld.termux did not bootstrap: $(head -c 600 "$OUT/bootstrap.json")"
 
 echo "── BEFORE: the pre-#1353 bare-clone job start through root's login shell ──"
@@ -50,9 +51,13 @@ ipc $TERMUX terminal/exec "cmd=sh -c $(q "$START")" timeout=60000 | tee "$OUT/be
 sleep 20
 ipc $TERMUX terminal/exec "cmd=sh -c $(q "cat $D/$ID.rc $D/$ID.log 2>&1; ls -d $G 2>&1")" | tee "$OUT/before-job.json"; echo
 
+grep -q "fish: Unsupported use of '='" "$OUT/before.json" || fail "the pre-#1353 start was not refused by fish: the root cause did not reproduce"
+grep -q "No such file or directory" "$OUT/before-job.json" || fail "the pre-#1353 start produced a job or a mirror"
+echo "BEFORE reproduced: fish refused the twice-quoted job start, no job ran, no mirror (the phone's bare clone failure)"
+
 echo "── AFTER: Drive's bare clone (StoreGit.bareClone over CLOUD_EXEC) for three public repositories ──"
 ipc $DRIVE health | tee "$OUT/drive-health.json"; echo
-ipc $DRIVE git/bare "url=$REPOS" depth=1 | tee "$OUT/after.json"; echo
+IPC_TIMEOUT=900 ipc $DRIVE git/bare "url=$REPOS" depth=1 | tee "$OUT/after.json"; echo
 adb exec-out screencap -p > "$OUT/after.png" 2>/dev/null
 grep -q '"ok":true,"results"' "$OUT/after.json" || fail "a bare clone failed through Drive: $(head -c 1500 "$OUT/after.json")"
 ipc $TERMUX terminal/exec "cmd=sh -c $(q "for m in /root/cloud-shared-store/git/_bare/octocat/*.git; do printf '%s ' \$m; git -C \$m rev-parse --is-bare-repository; done")" | tee "$OUT/mirrors.json"; echo
