@@ -981,9 +981,12 @@
      "account",
      "browser",
      "c3",
+     "c3-webserver",
      "calc",
+     "camera",
      "capital-stack-finterminal",
      "cg-omniverse",
+     "code",
      "contacts",
      "dialer",
      "drive",
@@ -996,7 +999,11 @@
      "lib-rootfs-nixdroid",
      "lib-rootfs-termux",
      "mail",
+     "matrix",
      "me",
+     "media-center",
+     "morpheus",
+     "myterminal",
      "nav",
      "news",
      "nix-on-droid",
@@ -1007,6 +1014,10 @@
      "tasks",
      "termux",
      "tools-small-llms",
+     "vault",
+     "wallet",
+     "watchdog",
+     "watchtower",
      "writer"
     ]
    }
@@ -1310,7 +1321,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -1325,6 +1337,7 @@
     "core",
     "devtools",
     "fleetconfig-model",
+    "perms",
     "watchdog"
    ],
    "endpoints": []
@@ -1339,7 +1352,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -1504,7 +1518,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -1762,7 +1777,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -1857,7 +1873,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2223,7 +2240,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2275,7 +2293,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
@@ -2289,7 +2308,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2920,7 +2940,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": [
     {
@@ -2983,7 +3004,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "perms"
    ],
    "endpoints": []
   },
