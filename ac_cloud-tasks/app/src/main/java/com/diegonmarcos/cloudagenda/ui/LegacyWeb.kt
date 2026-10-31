@@ -1,5 +1,8 @@
 package com.diegonmarcos.cloudagenda.ui
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -25,12 +28,9 @@ fun LegacyWeb(tab: String, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.cacheMode = WebSettings.LOAD_DEFAULT
+            CloudWeb.create(ctx, WebProfile.APP_PAGE).apply {
                 addJavascriptInterface(CalBridge(ctx), "CalBridge")
-                webViewClient = object : WebViewClient() {
+                webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
                     override fun onPageFinished(view: WebView, url: String) {
                         view.tag = true
                         com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(view)

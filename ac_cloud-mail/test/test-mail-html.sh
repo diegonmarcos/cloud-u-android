@@ -86,14 +86,18 @@ has "$SANI" "scheme != \"data\" || DATA_IMAGE" "H2 a data: URL may be a picture 
 # EVERY WebView that renders a message, not "at least one": the reader and the print document each
 # build their own, and a grep satisfied by either would go quiet the day one of them was flipped.
 # This is the shape that shipped as decoration once already -- two call sites sharing one assertion.
-all=$(grep -c 'javaScriptEnabled' "$SCREEN")
-off=$(grep -c 'javaScriptEnabled = false' "$SCREEN")
-[ "$all" -ge 2 ] && [ "$all" -eq "$off" ] \
+# #1371 every one is built by libs:web-core with the UNTRUSTED_HTML profile (JS and storage off), and nothing in the
+# screen turns either back on.
+WEBLIB="$APP/../ab_cloud-libs-shared/libs/web-core/src/main/java/com/diegonmarcos/cloudlib/web"
+all=$(grep -c -E 'CloudWeb\.(create|configure)\(' "$SCREEN")
+off=$(grep -c -E 'CloudWeb\.(create\(activity|configure\(BodyWebView\(ctx\)), WebProfile\.UNTRUSTED_HTML\)' "$SCREEN")
+[ "$all" -ge 2 ] && [ "$all" -eq "$off" ] && ! grep -q -E 'javaScriptEnabled = true|sandboxedJs' "$SCREEN" \
   && ok "H3 JavaScript is off on ALL $off of the $all WebViews that render a message" \
-  || bad "H3 only $off of $all WebViews disable JavaScript"
+  || bad "H3 only $off of $all WebViews are UNTRUSTED_HTML (JS off)"
+has "$WEBLIB/WebProfile.kt" 'UNTRUSTED_HTML(false, false, false, WebSettings.MIXED_CONTENT_NEVER_ALLOW' "H3 UNTRUSTED_HTML: no JS, no storage, no remote images by default, never mixed content"
 has "$SCREEN" "default-src 'none'" "H3 the document's policy denies by default"
 has "$SCREEN" "form-action 'none'" "H3 nothing in a message can submit"
-has "$SCREEN" 'settings.domStorageEnabled = false' "H3 a message gets no on-device storage"
+has "$WEBLIB/CloudWeb.kt" 'domStorageEnabled = profile.storage' "H3 a message gets no on-device storage"
 has "$SCREEN" 'val SAFE_OPEN_SCHEMES = setOf("http", "https", "mailto", "tel", "sms", "geo")' \
   "H3 only these schemes are handed to the system on a tap"
 has "$SCREEN" 'if (!request.hasGesture()) return true' \
@@ -341,12 +345,12 @@ done
 has "$FITKT" 'class ReaderFitDocumentTest' "H12 executed: the cascade is judged by a unit test, not only by this grep"
 
 # Untrusted markup renders here. Fitting the page must not have cost any of the containment H3 set.
-has "$SCREEN" 'settings.javaScriptEnabled = false' "H12 the CSS is string-built, JS stays off"
+has "$WEBLIB/CloudWeb.kt" 'javaScriptEnabled = profile.javaScript' "H12 the CSS is string-built, JS stays off"
 n=$(grep -c 'loadDataWithBaseURL(null,' "$SCREEN")
 [ "$n" -eq 2 ] && ok "H12 both document loads keep a null base URL ($n)" \
   || bad "H12 $n of the 2 document loads keep a null base URL"
-has "$SCREEN" 'settings.allowFileAccessFromFileURLs = false' "H12 no file access from file URLs"
-has "$SCREEN" 'settings.allowUniversalAccessFromFileURLs = false' "H12 no universal access from file URLs"
+has "$WEBLIB/CloudWeb.kt" 'allowFileAccessFromFileURLs = profile == WebProfile.APP_PAGE' "H12 no file access from file URLs"
+has "$WEBLIB/CloudWeb.kt" 'allowUniversalAccessFromFileURLs = false' "H12 no universal access from file URLs"
 
 echo
 echo "== $PASS passed, $FAIL failed =="

@@ -91,6 +91,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:watchdog')
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).

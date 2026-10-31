@@ -1,5 +1,7 @@
 package app.cloudnotes.pro
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.content.ComponentCallbacks2
 import android.os.Bundle
 import android.view.Gravity
@@ -200,18 +202,14 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
     }
 
     private fun configureEditorWebView() {
+        // Capacitor builds the view and keeps its own client; the fleet's APP_PAGE profile (#1371) sets the rest:
+        // JS, storage, compatibility-mode mixed content (a debug CAP_SERVER_URL on an HTTP dev server), GPU, recovery
+        CloudWeb.configure(bridge.webView, WebProfile.APP_PAGE)
         bridge.webView.apply {
             overScrollMode = View.OVER_SCROLL_NEVER
             isHorizontalScrollBarEnabled = false
             isVerticalScrollBarEnabled = false
             settings.apply {
-                // Debug builds may point CAP_SERVER_URL at an HTTP dev server; release builds
-                // should keep mixed content blocked.
-                mixedContentMode = if (BuildConfig.DEBUG) {
-                    WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                } else {
-                    WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                }
                 setSupportZoom(false)
                 builtInZoomControls = false
                 displayZoomControls = false

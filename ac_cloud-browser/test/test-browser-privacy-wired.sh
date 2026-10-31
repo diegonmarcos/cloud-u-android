@@ -25,7 +25,7 @@ def check(root, ok):
     sug = src.get(os.path.join(LIB, "BrowserSuggest.kt"), "")
     api = src.get(os.path.join(APP, "debugapi", "BrowserDebugApi.kt"), "")
     clear = priv[priv.find("object BrowserClearData"):]
-    calls = {"history": "BrowserHistory(ctx).clear()", "cookies": "removeAllCookies", "cache": "clearCache(true)",
+    calls = {"history": "BrowserHistory(ctx).clear()", "cookies": "removeAllCookies", "cache": "CloudWeb.clearCache(ctx)",
              "storage": "WebStorage.getInstance().deleteAllData()", "previews": "clearPreviews()", "downloads": "BrowserDownloads(ctx).clear()"}
     for box in b.get("clear_data", []):
         i = box["id"]
@@ -39,8 +39,8 @@ def check(root, ok):
     ok("tabs.filter { BrowserSitePolicy.shouldRecord(it) }" in sug, "suggestions skip private tabs")
     ok("LOAD_NO_CACHE" in frag, "a private tab keeps no HTTP cache")
     ok("WebViewCompat.setProfile(wv, name)" in src.get(os.path.join(LIB, "TabProfile.kt"), "") and "WebViewFeature.MULTI_PROFILE" in frag, "private tabs bind the incognito profile where multi-profile exists")
-    wv = frag[frag.find("webView = WebView(ctx).apply {"):]
-    ok(0 <= wv.find("bindProfile(this, tab)") < wv.find("settings.javaScriptEnabled"), "setProfile runs before the WebView loads anything")
+    # #1371 CloudWeb.create runs its prepare hook on the bare view before any setting is touched
+    ok("webView = CloudWeb.create(ctx, WebProfile.BROWSER) { bindProfile(it, tab) }" in frag, "setProfile runs before the WebView loads anything")
     ok("store.deleteProfile(PrivateProfile.NAME)" in frag, "the last private tab closing deletes the profile")
     # tab-scoped paths never read the process-wide cookie jar: a private tab's cookies are in its profile
     import re as _re
@@ -71,7 +71,7 @@ def check(root, ok):
 PRIV = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserPrivacy.kt"
 FRAG = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt"
 main("privacy wiring", check, [
-    ("the cache box stops clearing", PRIV, "clearCache(true)", "settings.toString()", "`cache` makes its call"),
+    ("the cache box stops clearing", PRIV, "CloudWeb.clearCache(ctx)", "Unit", "`cache` makes its call"),
     ("a download reads the default jar", "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserDownloads.kt", "cookieHeader(url)?.let", "android.webkit.CookieManager.getInstance().getCookie(url)?.let", "no bare CookieManager.getInstance()"),
     ("private visits reach history", FRAG, "if (!privateSession.visit(prefs.byId(tabKey), origin)) return", "if (false) return", "before history.record"),
     ("a site permission the manifest lacks", "ac_cloud-browser/app/src/main/AndroidManifest.xml", 'android:name="android.permission.CAMERA"', 'android:name="android.permission.NOCAM"', "CAMERA"),

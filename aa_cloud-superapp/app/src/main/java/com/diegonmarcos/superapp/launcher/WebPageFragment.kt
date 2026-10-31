@@ -1,5 +1,9 @@
 package com.diegonmarcos.superapp.launcher
 
+import com.diegonmarcos.cloudlib.web.CloudChromeClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebSettings
@@ -166,30 +170,28 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
             AndroidView(
                 modifier = Modifier.fillMaxSize().testTag(TAG_WEB),
                 factory = { ctx ->
-                    WebView(ctx).apply {
+                    CloudWeb.create(ctx, WebProfile.APP_PAGE).apply {
                         // MATCH_PARENT, not the WRAP_CONTENT AndroidView hands its child: a WebView whose height is WRAP_CONTENT
                         // forces a ZERO layout height in the renderer (so content can size the view). The page then sees
                         // 100%/100vh/100dvh = 0 px; cloud-mobile's shell is height:100dvh;overflow:hidden, so Cloud ▸ WebApps
                         // painted nothing at all (Android 16 emulator: innerHeight 362, <html> 0 px). WebPagesRenderTest guards it.
                         layoutParams = android.view.ViewGroup.LayoutParams(
                             android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
-                        if (embed) settings.userAgentString = settings.userAgentString + UA_MARKER
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
+                        if (embed) CloudWeb.appendUserAgent(this, UA_MARKER)
                         settings.builtInZoomControls = true
                         settings.displayZoomControls = false
                         settings.cacheMode = WebSettings.LOAD_DEFAULT
                         // Every console line of the page reaches logcat (tag WebPage) and [probe]: a page that renders blank on a
                         // phone is a JS error nobody can see without this.
-                        webChromeClient = object : android.webkit.WebChromeClient() {
+                        webChromeClient = object : CloudChromeClient(activity) {
                             override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
                                 report("console ${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
                                 return super.onConsoleMessage(m)
                             }
                         }
-                        webViewClient = object : WebViewClient() {
+                        webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
+                            override fun onRecovered(dead: WebView, fresh: WebView?) { web = fresh }
+
                             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                                 report("probe onPageStarted url=$url declared=$declaredUrl canGoBack=${view?.canGoBack()}")
                                 if (!url.isNullOrBlank() && url != declaredUrl && url != failed) userNavigated = true

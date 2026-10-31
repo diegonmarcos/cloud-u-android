@@ -30,6 +30,11 @@
     "log_sink_stream": "cloud-news"
   },
   "modules": {
+    "libs:web-core": {
+      "_doc": "#1371 THE embedded web view: CloudWeb.create(ctx, WebProfile.X), profiles, GPU probe, render-process recovery, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/web-core",
+      "type": "library"
+    },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library",
@@ -59,6 +64,7 @@
     "app": {
       "type": "application",
       "depends_on": [
+        "libs:web-core",
         "libs:bottomnav",
 
         "libs:ui-icons",

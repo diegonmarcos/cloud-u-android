@@ -1,7 +1,7 @@
 package com.diegonmarcos.cloudnav.configs
 
 import android.content.Context
-import android.webkit.WebView
+import com.diegonmarcos.cloudlib.web.CloudWeb
 import android.widget.Toast
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -130,11 +130,7 @@ object CacheDisk {
 
     // WebView.clearCache(true) is the documented API; it clears the whole app's WebView cache
     // (one per-app Chromium cache, not per instance), so a throwaway instance works.
-    fun clearWebView(ctx: Context) {
-        val wv = WebView(ctx)
-        wv.clearCache(true)
-        wv.destroy()
-    }
+    fun clearWebView(ctx: Context) = CloudWeb.clearCache(ctx)
 
     fun clearAppCache(ctx: Context): Long {
         val n = dirSize(ctx.cacheDir)

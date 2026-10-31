@@ -38,6 +38,11 @@
     "jdk": "17"
   },
   "modules": {
+    "libs:web-core": {
+      "_doc": "#1371 THE embedded web view: CloudWeb.create(ctx, WebProfile.X), profiles, GPU probe, render-process recovery, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/web-core",
+      "type": "library"
+    },
     "libs:decisions-link": {
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/decisions-link"
@@ -46,6 +51,7 @@
     "app": {
       "type": "application",
       "depends_on": [
+        "libs:web-core",
         "libs:core",
         "libs:browser",
         "libs:bluetooth",

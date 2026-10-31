@@ -1,0 +1,35 @@
+name: "webview guard — every embedded web view is built by libs:web-core with a declared profile"
+
+# #1371 libs:web-core (CloudWeb, WebProfile) is the fleet's ONE web view: same settings, security, GPU knobs and
+# renderer-crash recovery everywhere. cloud-android-webview-guard.py fails on a WebView constructed or configured
+# outside it, a bare WebViewClient/WebChromeClient, a usage in 1_cicd/src/data/webview-guard.json without a profile
+# (or whose file does not use it), and a web view built with no declared usage.
+#
+# EVERY PUSH, NO PATH FILTER: see 1_cicd/src/data/guard-triggers.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: webview-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
+jobs:
+  webview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The guard still fails on each defect
+        run: bash 1_cicd/src/scripts/test/webview-guard.test.sh
+
+      - name: Every web view is built by libs:web-core with a declared profile
+        run: python3 1_cicd/src/scripts/cloud-android-webview-guard.py .

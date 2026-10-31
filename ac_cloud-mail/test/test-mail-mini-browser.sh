@@ -56,9 +56,9 @@ done
 has 'InAppBrowser.CLOUD_BROWSER_PACKAGE' "$WINDOW" "B5 Cloud Browser is named explicitly"
 has 'InAppBrowser.BRAVE_PACKAGE' "$WINDOW" "B5 Brave is named explicitly"
 
-# B6 — "view as desktop" is the user agent and nothing else. Changing the viewport flags instead
-# gives a mobile page at desktop width, which is not what the reader asked for.
-has 'userAgentString = if (desktop) DESKTOP_USER_AGENT else null' "$WINDOW" \
+# B6 — "view as desktop" is the fleet's one desktop mode (#1371 libs:web-core: a desktop UA with the WebView's own
+# Chrome version, plus a desktop viewport); off restores the platform's own UA.
+has 'CloudWeb.desktopMode(wv, desktop)' "$WINDOW" \
     "B6 desktop mode switches the user agent"
 
 # B7 — translate through Google's own redirect, not a locally-built .translate.goog host. The proxy

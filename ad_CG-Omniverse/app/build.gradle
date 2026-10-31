@@ -201,6 +201,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     // The fleet's navigation: NavDecl and the top-bar scaffold's drawer (libs:bottomnav), the first row with
     // Profile at the top right, the second row with icons, the bottom nav, the page gradient (#1154).
@@ -220,8 +221,6 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.core:core-ktx:1.15.0'
-    // WebViewAssetLoader: the Avatar scene's ES modules are served from the APK's assets (as Cloud Nav's space view).
-    implementation 'androidx.webkit:webkit:1.12.1'
     // themes.xml's parent, Theme.Material3.Dark.NoActionBar, lives here.
     implementation 'com.google.android.material:material:1.12.0'
 

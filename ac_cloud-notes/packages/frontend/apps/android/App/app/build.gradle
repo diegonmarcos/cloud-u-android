@@ -151,6 +151,7 @@ dependencies {
     // cloud-notes (#743): fleet mesh member. libs:core (+ devtools via `api`)
     // merges the fleet provider, receiver, <queries> and the signature
     // permission into this APK; nothing here calls it (settings.gradle).
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     // #868 the fleet's bottom island + top page tabs (build.json::modules).
     implementation project(':libs:bottomnav')

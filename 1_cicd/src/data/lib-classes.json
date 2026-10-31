@@ -98,6 +98,7 @@
     "voice":                   { "class": "logic",    "why": "Voice engines + model manager + VoiceBarView, keyboard only." },
     "wallet":                  { "class": "gui",      "why": "cloud-wallet's feature module." },
     "watchdog":                { "class": "contract", "why": "ICloudExec binder contract + bridge, c3-watchdog only.", "budget_lines": 230 },
+    "web-core":                { "class": "gui",      "why": "#1371 the fleet's one embedded web view: CloudWeb (factory, profiles, desktop mode), the client bases, the GPU probe." },
     "webserver":               { "class": "logic",    "why": "SuperApp's embedded HTTP server." }
   }
 }

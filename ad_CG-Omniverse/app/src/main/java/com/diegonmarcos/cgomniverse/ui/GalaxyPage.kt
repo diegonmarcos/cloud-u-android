@@ -4,12 +4,10 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
-import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -63,6 +62,11 @@ import com.diegonmarcos.cgomniverse.Decl
 import com.diegonmarcos.cgomniverse.Offline
 import com.diegonmarcos.cgomniverse.R
 import com.diegonmarcos.cgomniverse.World
+import com.diegonmarcos.cloudlib.web.CloudChromeClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.GpuProbe
+import com.diegonmarcos.cloudlib.web.WebProfile
 import com.diegonmarcos.superapp.uikit.KitButton
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitOutlinedButton
@@ -152,6 +156,10 @@ fun WorldView(w: World, onClose: () -> Unit) {
         delay(Offline.LOAD_TIMEOUT_MS)
         if (error == null && Offline.timedOut(System.currentTimeMillis() - start, finished)) { offline = true; web?.stopLoading() }
     }
+    // per-world desktop mode (desktop UA + viewport, #1371): a site that gates phones by user agent takes its desktop path
+    var desktop by remember(w.id) { mutableStateOf(Web.desktop(ctx, w.id)) }
+    var caps by remember { mutableStateOf(GpuProbe.last) }
+    LaunchedEffect(Unit) { GpuProbe.probe(ctx) { caps = it } }
     val crashed = stringResource(R.string.world_crashed)
 
     BackHandler { val v = web; if (v != null && v.canGoBack()) v.goBack() else onClose() }
@@ -169,6 +177,9 @@ fun WorldView(w: World, onClose: () -> Unit) {
                     modifier = Modifier.testTag(Tags.WORLD_VR),
                 ) { Icon(Icons.Filled.ViewInAr, stringResource(if (xr == true) R.string.world_xr_ready else R.string.world_xr_browser), tint = if (xr == true) p.ok else p.accent) }
             }
+            IconButton(onClick = { desktop = !desktop; Web.setDesktop(ctx, w.id, desktop); error = null; offline = false; finished = false; attempt++ }, modifier = Modifier.testTag(Tags.WORLD_DESKTOP)) {
+                Icon(Icons.Filled.DesktopWindows, stringResource(R.string.world_desktop), tint = if (desktop) p.accent else p.textSecondary)
+            }
             IconButton(onClick = reload, modifier = Modifier.testTag(Tags.WORLD_RELOAD)) {
                 Icon(Icons.Filled.Refresh, stringResource(R.string.world_reload), tint = p.textPrimary)
             }
@@ -179,11 +190,20 @@ fun WorldView(w: World, onClose: () -> Unit) {
         if (progress in 1..99 && !offline) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = p.accent)
         if (w.vr && xr == false) Text(stringResource(R.string.world_xr_note), style = MaterialTheme.typography.labelSmall, color = p.textSecondary,
             modifier = Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 4.dp))
+        // what this WebView can draw with: a world that needs WebGPU it lacks gets a clear line and Chrome (which ships WebGPU)
+        caps?.takeIf { !it.webgpuUsable }?.let { c ->
+            Row(Modifier.fillMaxWidth().background(p.surface).padding(start = 14.dp, end = 4.dp).testTag(Tags.WORLD_GPU), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.world_gpu_missing, c.summary()), style = MaterialTheme.typography.labelSmall, color = p.textSecondary, modifier = Modifier.weight(1f))
+                IconButton(onClick = { Web.openInBrowser(ctx, w.url) }, modifier = Modifier.testTag(Tags.WORLD_GPU_CHROME)) {
+                    Icon(Icons.Filled.OpenInBrowser, stringResource(R.string.open_chrome), tint = p.accent)
+                }
+            }
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            key(w.id, generation) {
+            key(w.id, generation, desktop) {
                 AndroidView(factory = { c ->
-                    Web.create(c).also { wv ->
-                        wv.webChromeClient = object : WebChromeClient() {
+                    CloudWeb.create(c, WebProfile.WEB_WORLD, desktop).also { wv ->
+                        wv.webChromeClient = object : CloudChromeClient(ctx as? android.app.Activity) {
                             override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
                             // protected media (some worlds stream DRM video) is the one resource granted; nothing else is asked of the user
                             override fun onPermissionRequest(request: PermissionRequest) {
@@ -191,7 +211,7 @@ fun WorldView(w: World, onClose: () -> Unit) {
                                 if (ok.isEmpty()) request.deny() else request.grant(ok.toTypedArray())
                             }
                         }
-                        wv.webViewClient = object : WebViewClient() {
+                        wv.webViewClient = object : CloudWebClient(WebProfile.WEB_WORLD) {
                             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                                 val s = request.url.scheme.orEmpty()
                                 if (s == "http" || s == "https") return false

@@ -279,6 +279,7 @@ android {
 dependencies {
     // Shared BY REFERENCE from ab_cloud-libs-shared/libs — Cloud Me owns no
     // library source, it is an assembly of the constellation's modules.
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     implementation project(':libs:updater')

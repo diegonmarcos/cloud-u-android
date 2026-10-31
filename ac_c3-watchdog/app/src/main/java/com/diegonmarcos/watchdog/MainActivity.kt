@@ -1,5 +1,8 @@
 package com.diegonmarcos.watchdog
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebView
@@ -44,18 +47,14 @@ class MainActivity : AppCompatActivity() {
                 AndroidView(
                     modifier = Modifier.fillMaxSize().background(LocalKitPalette.current.surface),
                     factory = { ctx ->
-                        WebView(ctx).apply {
-                            settings.javaScriptEnabled = true
-                            settings.allowFileAccess = false
-                            settings.allowContentAccess = false
-                            settings.domStorageEnabled = true
+                        CloudWeb.create(ctx, WebProfile.APP_PAGE).apply {
                             settings.useWideViewPort = false
                             settings.loadWithOverviewMode = false
                             setBackgroundColor(c(R.color.kit_surface))
                             val b = WatchdogBridge(this@MainActivity, this)
                             bridge = b
                             addJavascriptInterface(b, "AndroidWatchdog")
-                            webViewClient = object : WebViewClient() {
+                            webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
                                 override fun onPageFinished(v: WebView?, url: String?) = b.renderLast()
                             }
                             loadUrl("file:///android_asset/watchdog-app.html")

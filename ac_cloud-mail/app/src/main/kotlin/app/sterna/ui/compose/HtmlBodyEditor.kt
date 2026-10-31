@@ -1,5 +1,8 @@
 package app.sterna.ui.compose
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import android.os.Handler
@@ -402,11 +405,9 @@ internal fun HtmlBodyEditor(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = false
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
+            // our editor over foreign markup: UNTRUSTED_HTML with sandboxed JS (#1371), and no network at all
+            CloudWeb.create(ctx, WebProfile.UNTRUSTED_HTML).apply {
+                CloudWeb.sandboxedJs(this, true)
                 settings.blockNetworkLoads = true
                 settings.setSupportZoom(false)
                 settings.javaScriptCanOpenWindowsAutomatically = false
@@ -415,7 +416,7 @@ internal fun HtmlBodyEditor(
                 isFocusableInTouchMode = true
                 // Nothing leaves the page: no navigation, no subresource. The document is its own
                 // world (see its CSP); this is the second lock on the same door.
-                webViewClient = object : WebViewClient() {
+                webViewClient = object : CloudWebClient(WebProfile.UNTRUSTED_HTML) {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
 
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =

@@ -1,5 +1,7 @@
 package com.diegonmarcos.ide
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -66,21 +68,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         ssh = SshBackend(this)
-        webView = WebView(this).apply {
+        // APP_PAGE (#1371): JS, localStorage (CRITICAL: frontend session-restore uses it), the bundled file:// page reads its
+        // sibling assets; a ws:// socket is not an XHR, so no universal file access is needed. CloudWebClient keeps
+        // navigation in-app and survives a renderer crash; CloudChromeClient logs the console.
+        webView = CloudWeb.create(this, WebProfile.APP_PAGE).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
             )
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true   // CRITICAL — frontend session-restore uses localStorage
-                allowFileAccess = true
-                allowFileAccessFromFileURLs = true
-                allowUniversalAccessFromFileURLs = true   // file:// page opening a ws:// connection
-                mediaPlaybackRequiresUserGesture = false
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            }
-            webViewClient = WebViewClient()       // keep navigation in-app
-            webChromeClient = WebChromeClient()   // console logging
         }
 
         // Wire the bridge — exposes AndroidTerm to JS before loadUrl.
@@ -98,14 +92,10 @@ class MainActivity : AppCompatActivity() {
 
         // The native browser's page. Opened via openBrowser(url) called from
         // TerminalBridge.browserOpen().
-        browserWeb = WebView(this).apply {
+        browserWeb = CloudWeb.create(this, WebProfile.BROWSER).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
             )
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            webViewClient = WebViewClient()
-            webChromeClient = WebChromeClient()
         }
 
         setContent { Shell() }

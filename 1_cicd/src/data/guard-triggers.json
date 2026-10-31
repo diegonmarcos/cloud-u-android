@@ -24,6 +24,7 @@
     "mesh-membership-guard.yml": "#753: the edit that drops an app from the mesh can be anywhere on its route to libs:core; see the workflow",
     "one-pdf-engine-guard.yml": "scans every app and lib for an in-process PDF renderer (26k files traced)",
     "sync-submodules.yml": "keeps submodule pointers current; it is not a guard over any path",
+    "webview-guard.yml": "scans every app and lib for a WebView built or configured outside libs:web-core and checks each declared web usage against its profile; the commit it must catch is any of their Kotlin or Java",
     "density-guard.yml": "scans every converted app and lib for a bare MaterialTheme, a Scaffold without insets and re-applied system-bar padding; the commit it must catch is any of their Kotlin",
     "top-bar-guard.yml": "reads every app's build.json for ui.top_bar and scans the declaring apps' Kotlin for a second copy of the bar; the commit it must catch can be any app's build.json or source",
     "update-ack-guard.yml": "scans every app's update routes (10k files traced)",

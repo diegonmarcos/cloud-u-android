@@ -1,5 +1,9 @@
 package com.diegonmarcos.cloudnews
 
+import com.diegonmarcos.cloudlib.web.CloudChromeClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.WebProfile
+import com.diegonmarcos.superapp.bottomnav.ChromeWebView
 import android.os.Bundle
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -45,14 +49,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
-        webView = WebView(this)
-        webView.webViewClient = WebViewClient()
+        webView = CloudWeb.create(this, WebProfile.APP_PAGE)
         // Without this the entire UI is a black box: the whole app is one
         // WebView, so a JS error or a diagnostic console.log went nowhere and
         // the devtools logcat endpoint could only ever show the Kotlin side.
         // Anything the page logs now lands in logcat under "NewsWeb", which
         // means /api/diagnostics/logcat can see it from another machine.
-        webView.webChromeClient = object : WebChromeClient() {
+        webView.webChromeClient = object : CloudChromeClient(this) {
             override fun onConsoleMessage(m: ConsoleMessage): Boolean {
                 val where = "${m.sourceId()?.substringAfterLast('/') ?: "?"}:${m.lineNumber()}"
                 val line = "[$where] ${m.message()}"
@@ -63,11 +66,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true
             }
-        }
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
         }
         // SECURITY: attaching a JavascriptInterface is only safe because this
         // WebView loads a LOCAL asset we ship (file:///android_asset/news.html)

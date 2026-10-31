@@ -2,6 +2,9 @@
 
 package com.diegonmarcos.cloudcalc.ui
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -205,18 +208,14 @@ private fun configured(
     ctx: Context, handle: TexHandle, bg: Int, cfg: Latex.Config,
     onPick: (String) -> Unit, onStatus: (Boolean, String) -> Unit, onSize: (Int) -> Unit,
 ): WebView {
-    val made = WebView(ctx)
+    val made = CloudWeb.create(ctx, WebProfile.APP_PAGE)
     made.setBackgroundColor(bg)
-    made.settings.javaScriptEnabled = true
     // Offline by construction: nothing is fetched, the page and its fonts are the APK's assets.
     made.settings.blockNetworkLoads = true
-    made.settings.allowFileAccess = true
-    made.settings.allowContentAccess = false
-    made.settings.allowFileAccessFromFileURLs = true
     made.settings.setSupportZoom(false)
     made.settings.textZoom = 100
     made.addJavascriptInterface(TexBridge(Handler(Looper.getMainLooper()), onPick, onStatus, onSize), cfg.bridge)
-    made.webViewClient = object : WebViewClient() {
+    made.webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
         override fun onPageFinished(view: WebView?, url: String?) {
             view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
             handle.pageLoaded()
@@ -527,18 +526,14 @@ private fun PlotView(
         modifier = modifier,
         factory = { ctx: Context ->
             runCatching {
-                val made = WebView(ctx)
+                val made = CloudWeb.create(ctx, WebProfile.APP_PAGE)
                 made.setBackgroundColor(bg)
-                made.settings.javaScriptEnabled = true
                 made.settings.blockNetworkLoads = true
-                made.settings.allowFileAccess = true
-                made.settings.allowContentAccess = false
-                made.settings.allowFileAccessFromFileURLs = true
                 made.settings.setSupportZoom(false)
                 made.settings.textZoom = 100
                 made.isVerticalScrollBarEnabled = false
                 made.addJavascriptInterface(PlotBridge(Handler(Looper.getMainLooper()), { made }, onProbe, onAnim, onSize, onError), cfg.graph.bridge)
-                made.webViewClient = object : WebViewClient() {
+                made.webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
                     override fun onPageFinished(view: WebView?, url: String?) { handle.pageLoaded() }
                 }
                 handle.web = made

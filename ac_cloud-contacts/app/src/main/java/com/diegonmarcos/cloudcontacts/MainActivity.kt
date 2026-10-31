@@ -1,5 +1,8 @@
 package com.diegonmarcos.cloudcontacts
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.WebProfile
+import com.diegonmarcos.superapp.bottomnav.ChromeWebView
 import android.Manifest
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -62,11 +65,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
 
-        webView = WebView(this).apply {
+        webView = CloudWeb.create(this, WebProfile.APP_PAGE).apply {
             setBackgroundColor(Color.parseColor("#0B0F14"))
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
         }
         bridge = ContactsBridge(
             activity = this,

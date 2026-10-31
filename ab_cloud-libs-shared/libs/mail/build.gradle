@@ -45,6 +45,7 @@ android {
 }
 
 dependencies {
+    api project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     implementation project(':libs:fleetconfig-model')   // #1093 FleetHttpSeam (okhttp interceptor pair)
     api project(':libs:ui-kit')   // CloudKitTheme, KitComposeFragment

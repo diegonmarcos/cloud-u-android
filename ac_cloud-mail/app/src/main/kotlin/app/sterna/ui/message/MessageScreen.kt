@@ -1,5 +1,8 @@
 package app.sterna.ui.message
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import app.sterna.BuildConfig
 import app.sterna.appLocale
 import androidx.compose.material.icons.filled.Search
@@ -4484,14 +4487,15 @@ private fun EmailWebView(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            val webView = BodyWebView(ctx).apply {
+            // UNTRUSTED_HTML (#1371): no JS, no storage, no file/content access, never mixed content, remote images
+            // gated (the client below and CloudWeb.remoteImages), pinch zoom; the software latch below still wins
+            val webView = CloudWeb.configure(BodyWebView(ctx), WebProfile.UNTRUSTED_HTML).apply {
                 // Compositing path. The hardware-accelerated GLFunctor lets the WebView tile its own
                 // paint, but on devices whose HWUI/GPU blobs are mismatched it dereferences a null
                 // SkSurface in RenderThread and the app SIGSEGVs the instant a body is drawn. Such
                 // devices are latched onto the software layer by [WebViewLayerGuard]; for a static,
                 // JS-disabled body the software rendering cost is negligible.
                 setLayerType(if (useSoftwareLayer) View.LAYER_TYPE_SOFTWARE else View.LAYER_TYPE_NONE, null)
-                settings.javaScriptEnabled = false
                 applyFitSettings()
                 // Keep the text READABLE once [FIT_CSS] has squeezed a desktop-authored page into a
                 // phone's width. Without this the two settings above are free to satisfy "it fits" by
@@ -4500,18 +4504,10 @@ private fun EmailWebView(
                 // 1200px layout costs column width, not legibility. NARROW_COLUMNS/SINGLE_COLUMN are
                 // the deprecated predecessors and are deliberately not used.
                 settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
                 // Explicitly deny every path from email markup to the local filesystem, on-device
                 // storage or geolocation. Off by default on modern API levels, but untrusted HTML
                 // email warrants asserting it.
-                @Suppress("DEPRECATION")
-                settings.allowFileAccessFromFileURLs = false
-                @Suppress("DEPRECATION")
-                settings.allowUniversalAccessFromFileURLs = false
-                settings.domStorageEnabled = false
                 settings.setGeolocationEnabled(false)
-                settings.mediaPlaybackRequiresUserGesture = true
                 // The way out for content that genuinely cannot fit — a wide invoice table shrunk by
                 // [FIT_CSS] until it is hard to read is only half a fix if he cannot zoom back into
                 // it. Stated explicitly rather than left to the platform default, because the cap
@@ -4540,6 +4536,7 @@ private fun EmailWebView(
         },
         update = { frame ->
             val webView = frame.getChildAt(0) as BodyWebView
+            CloudWeb.remoteImages(webView, !blockRemote)
             // Match the WebView's own background to the theme so it doesn't flash white.
             webView.setBackgroundColor(backgroundColor)
             webView.settings.textZoom = textZoom
@@ -4732,7 +4729,7 @@ private fun restingMetrics(wv: WebView, step: HeightPoll.Report, maxSeen: Int): 
 }
 
 /** Blocks remote (http/https) resource loads while [blockRemote]; opens links externally. */
-private class BlockingWebViewClient : WebViewClient() {
+private class BlockingWebViewClient : CloudWebClient(WebProfile.UNTRUSTED_HTML) {
     var blockRemote: Boolean = true
     var stripTracking: Boolean = true
 
@@ -4823,8 +4820,8 @@ private class BlockingWebViewClient : WebViewClient() {
  * [blockRemote] is the SAME decision the screen took, enforced by the same client.
  */
 private fun printDocument(activity: Activity, html: String, jobName: String, blockRemote: Boolean) {
-    val webView = WebView(activity)
-    webView.settings.javaScriptEnabled = false
+    val webView = CloudWeb.create(activity, WebProfile.UNTRUSTED_HTML)
+    CloudWeb.remoteImages(webView, !blockRemote)
     // Held HERE from creation, not only from the moment the print service gets its adapter: between
     // `loadDataWithBaseURL` and `onPageFinished` nothing else references this detached view, and a page
     // with remote images on a slow network keeps that window open for seconds.

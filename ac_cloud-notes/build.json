@@ -29,6 +29,11 @@
   },
   "modules": {
     "_doc": "Shared gradle modules the vendored Android project (android.gradle_module's root, packages/frontend/apps/android/App) includes BY REFERENCE beside its own :app. Its settings.gradle iterates this map and, like every other reader of it (the ship workflow's trigger derivation, the publish gate, ab_cloud-libs-shared/libs/shared-modules.test.sh), resolves each dir against THIS directory, not against the gradle root five levels down. libs:devtools looks for build.json by walking UP from the gradle root (packages/frontend/apps/android/App), and THIS file is the first one it meets, five levels up: one declaration, no copy and no symlink. A symlink at App/build.json is not an option here: the licence-boundary guard scans packages/frontend/apps/android, follows it, and reads this file's own upstream._doc naming the pruned EE directories as a new reach.",
+    "libs:web-core": {
+      "_doc": "#1371 THE embedded web view: CloudWeb.create(ctx, WebProfile.X), profiles, GPU probe, render-process recovery, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/web-core",
+      "type": "library"
+    },
     "libs:core": {
       "_doc_dir": "Fleet mesh membership (#743): core manifest-merges the CONSTELLATION_DATA signature permission (defined and requested). Declared so a core change rebuilds this app instead of shipping a stale mesh member.",
       "type": "library",

@@ -66,7 +66,7 @@ import re, sys
 t = "".join(l for l in open(sys.argv[1], encoding="utf-8") if not l.strip().startswith(("//", "*", "/*")))
 t = re.sub(r"fun WebView\.applyFitSettings\(\)", "", t)
 calls = len(re.findall(r"\bapplyFitSettings\(\)", t))
-ok = calls == 1 and re.search(r"BodyWebView\(ctx\)\.apply \{.*?applyFitSettings\(\)", t, re.S)
+ok = calls == 1 and re.search(r"BodyWebView\(ctx\)(, WebProfile\.UNTRUSTED_HTML\))?\.apply \{.*?applyFitSettings\(\)", t, re.S)
 if not ok: print("    applyFitSettings() is called %d time(s) and not from the BodyWebView factory" % calls)
 sys.exit(0 if ok else 1)
 PY

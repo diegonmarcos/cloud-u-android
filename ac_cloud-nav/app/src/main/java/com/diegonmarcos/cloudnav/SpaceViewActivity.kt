@@ -1,19 +1,16 @@
 package com.diegonmarcos.cloudnav
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
 import android.webkit.WebView
-import android.webkit.WebViewClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.webkit.WebViewAssetLoader
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 
@@ -44,24 +41,13 @@ class SpaceViewActivity : AppCompatActivity() {
         })
     }
 
-    /** The scene itself stays a WebView (three.js); Compose only hosts it. */
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(ctx: android.content.Context): WebView = WebView(ctx).also { wv ->
+    /** The scene itself stays a WebView (three.js, WEB_WORLD); Compose only hosts it. */
+    private fun createWebView(ctx: android.content.Context): WebView = CloudWeb.create(ctx, WebProfile.WEB_WORLD).also { wv ->
         webView = wv
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+        wv.webViewClient = object : CloudWebClient(WebProfile.WEB_WORLD, CloudWeb.assetLoader(this)) {
+            override fun onRecovered(dead: WebView, fresh: WebView?) { webView = fresh }
         }
-
-        val assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
-        wv.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-                assetLoader.shouldInterceptRequest(request.url)
-        }
-        wv.loadUrl("https://appassets.androidplatform.net/assets/space/space_view.html")
+        wv.loadUrl(CloudWeb.assetUrl("space/space_view.html"))
     }
 
     override fun onDestroy() {

@@ -1,5 +1,8 @@
 package app.sterna.ui.settings
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -204,11 +207,9 @@ fun AutheliaSignInDialog(onCaptured: (String) -> Unit, onDismiss: () -> Unit) {
             Column(Modifier.fillMaxSize()) {
                 AndroidView(
                     factory = { c ->
-                        WebView(c).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
+                        CloudWeb.create(c, WebProfile.APP_PAGE).apply {   // the fleet's Authelia portal
                             CookieManager.getInstance().setAcceptCookie(true)
-                            webViewClient = object : WebViewClient() {
+                            webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
                                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                     val host = request?.url?.host.orEmpty().lowercase()
                                     return !(host == AUTHELIA_DOMAIN || host.endsWith(".$AUTHELIA_DOMAIN"))

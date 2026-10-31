@@ -14,7 +14,7 @@ fi
 
 echo "[2/4] MainActivity.kt loads the frontend + enables domStorage"
 if grep -q 'loadUrl("file:///android_asset/frontend/index.html")' src/main/java/com/diegonmarcos/ide/MainActivity.kt \
-   && grep -q 'domStorageEnabled = true' src/main/java/com/diegonmarcos/ide/MainActivity.kt; then
+   && grep -q 'CloudWeb.create(this, WebProfile.APP_PAGE)' src/main/java/com/diegonmarcos/ide/MainActivity.kt; then   # #1371 APP_PAGE = JS + domStorage
     echo "OK"
 else
     echo "FAIL: MainActivity.kt missing loadUrl or domStorageEnabled"; fail=1

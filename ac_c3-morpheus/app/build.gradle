@@ -87,6 +87,7 @@ dependencies {
     // rather than growing one here.
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     // 2026-10-15 owner decision: all apps must be Compose. The screen is a Compose host under
     // the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.

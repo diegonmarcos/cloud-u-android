@@ -96,6 +96,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
+      - "ab_cloud-libs-shared/libs/web-core/**"
       - "ac_c3-morpheus/**"
 permissions:
   contents: write   # for gh release create + tag push reads

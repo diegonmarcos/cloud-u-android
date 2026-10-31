@@ -1,0 +1,42 @@
+{
+  "_doc": "#1371 the fleet's embedded web views. libs:web-core (CloudWeb, WebProfile) builds and configures every one; cloud-android-webview-guard.py fails on a WebView built or configured anywhere else, on a usage below whose profile WebProfile.kt does not define or whose file does not use it, and on a file that calls CloudWeb.create/configure without a usage here. exclude = vendored upstream forks that keep their own engine (Element, Acode, Termux, nix-on-droid, Mattermost, Bitwarden). pending = apps not migrated yet (each must still violate, so the list only shrinks).",
+  "lib": "ab_cloud-libs-shared/libs/web-core",
+  "profiles_file": "src/main/java/com/diegonmarcos/cloudlib/web/WebProfile.kt",
+  "exclude": [
+    "ac_cloud-matrix",
+    "ac_cloud-code",
+    "ac_cloud-termux",
+    "ac_cloud-nix-on-droid",
+    "ac_cloud-chat",
+    "ac_cloud-vault"
+  ],
+  "pending": [],
+  "usages": [
+    {"app": "Cloud Mail", "usage": "message body", "profile": "UNTRUSTED_HTML", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/message/MessageScreen.kt"},
+    {"app": "Cloud Mail", "usage": "html fragment (quoted part)", "profile": "UNTRUSTED_HTML", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/message/HtmlFragmentView.kt"},
+    {"app": "Cloud Mail", "usage": "compose editor (sandboxed JS)", "profile": "UNTRUSTED_HTML", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/compose/HtmlBodyEditor.kt"},
+    {"app": "Cloud Mail", "usage": "signature preview", "profile": "UNTRUSTED_HTML", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/settings/SignatureWebPreview.kt"},
+    {"app": "Cloud Mail", "usage": "Authelia sign-in", "profile": "APP_PAGE", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt"},
+    {"app": "Cloud Mail", "usage": "link mini browser", "profile": "BROWSER", "file": "ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/browser/MiniBrowserActivity.kt"},
+    {"app": "libs:mail (SuperApp, Account)", "usage": "Authelia sign-in", "profile": "APP_PAGE", "file": "ab_cloud-libs-shared/libs/mail/src/main/java/com/diegonmarcos/superapp/mail/MailAuthUi.kt"},
+    {"app": "libs:auth (SuperApp, Account, Drive)", "usage": "provider sign-in portal", "profile": "APP_PAGE", "file": "ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"},
+    {"app": "Cloud SuperApp", "usage": "Lnktree and web pages", "profile": "APP_PAGE", "file": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/WebPageFragment.kt"},
+    {"app": "Cloud Browser (libs:browser)", "usage": "tabs, popups, scrape", "profile": "BROWSER", "file": "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt"},
+    {"app": "Cloud Browser (libs:browser)", "usage": "offline site crawl", "profile": "BROWSER", "file": "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/OfflineSites.kt"},
+    {"app": "Cloud Browser", "usage": "auth mission sign-in", "profile": "APP_PAGE", "file": "ac_cloud-browser/app/src/main/java/com/diegonmarcos/cloudbrowser/AuthMissionActivity.kt"},
+    {"app": "CG-Omniverse", "usage": "Avatar three.js scene", "profile": "WEB_WORLD", "file": "ad_CG-Omniverse/app/src/main/java/com/diegonmarcos/cgomniverse/ui/AvatarPage.kt"},
+    {"app": "CG-Omniverse", "usage": "Galaxy worlds", "profile": "WEB_WORLD", "file": "ad_CG-Omniverse/app/src/main/java/com/diegonmarcos/cgomniverse/ui/GalaxyPage.kt"},
+    {"app": "Cloud Notes", "usage": "Capacitor editor (vault HTML, canvas)", "profile": "APP_PAGE", "file": "ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/MainActivity.kt"},
+    {"app": "Cloud Me", "usage": "lnktree and profile pages", "profile": "APP_PAGE", "file": "ac_cloud-me/app/src/main/java/com/diegonmarcos/cloudme/WebPage.kt"},
+    {"app": "Cloud Nav", "usage": "space view (three.js)", "profile": "WEB_WORLD", "file": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/SpaceViewActivity.kt"},
+    {"app": "Cloud Nav", "usage": "3D terrain (MapLibre GL)", "profile": "WEB_WORLD", "file": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/TerrainActivity.kt"},
+    {"app": "Cloud News", "usage": "news.html shell", "profile": "APP_PAGE", "file": "ac_cloud-news/app/src/main/java/com/diegonmarcos/cloudnews/MainActivity.kt"},
+    {"app": "Cloud Contacts", "usage": "contacts.html shell", "profile": "APP_PAGE", "file": "ac_cloud-contacts/app/src/main/java/com/diegonmarcos/cloudcontacts/MainActivity.kt"},
+    {"app": "Cloud Tasks", "usage": "legacy tasks.html", "profile": "APP_PAGE", "file": "ac_cloud-tasks/app/src/main/java/com/diegonmarcos/cloudagenda/ui/LegacyWeb.kt"},
+    {"app": "Cloud Calc", "usage": "LaTeX and plot viewers", "profile": "APP_PAGE", "file": "ac_cloud-calc/app/src/main/java/com/diegonmarcos/cloudcalc/ui/LatexScreens.kt"},
+    {"app": "Cloud MyTerminal", "usage": "terminal frontend", "profile": "APP_PAGE", "file": "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/MainActivity.kt"},
+    {"app": "Cloud MyTerminal", "usage": "native browser pane", "profile": "BROWSER", "file": "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/MainActivity.kt"},
+    {"app": "C3 Morpheus", "usage": "Dagu and Paca SPAs", "profile": "APP_PAGE", "file": "ac_c3-morpheus/app/src/main/java/com/diegonmarcos/morpheus/MainActivity.kt"},
+    {"app": "C3 Watchdog", "usage": "watchdog dashboard", "profile": "APP_PAGE", "file": "ac_c3-watchdog/app/src/main/java/com/diegonmarcos/watchdog/MainActivity.kt"}
+  ]
+}

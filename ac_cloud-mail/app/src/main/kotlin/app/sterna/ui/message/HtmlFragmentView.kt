@@ -1,5 +1,8 @@
 package app.sterna.ui.message
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import android.webkit.WebResourceRequest
@@ -44,13 +47,10 @@ internal fun HtmlFragmentView(fragment: String, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
         factory = {
-            WebView(context).apply {
-                settings.javaScriptEnabled = false
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
+            CloudWeb.create(context, WebProfile.UNTRUSTED_HTML).apply {
                 settings.blockNetworkLoads = true
                 setBackgroundColor(AndroidColor.TRANSPARENT)
-                webViewClient = object : WebViewClient() {
+                webViewClient = object : CloudWebClient(WebProfile.UNTRUSTED_HTML) {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
 
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =

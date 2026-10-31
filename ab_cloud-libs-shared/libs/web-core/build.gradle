@@ -1,0 +1,33 @@
+// libs:web-core: THE embedded web view of the fleet (#1371). One factory (CloudWeb.create / configure), four declared
+// usage profiles (WebProfile), one client base (CloudWebClient: assets + render-process recovery), one chrome client
+// (CloudChromeClient: full-screen video), the GPU probe (GpuProbe: WebGL2 / WebGPU via navigator.gpu), desktop mode
+// and open-in-Chrome. No app builds or configures a WebView by hand: 1_cicd/src/scripts/cloud-android-webview-guard.py.
+// Scroll/nav-chrome integration stays in libs:bottomnav (ChromeWebScroll, ChromeWebView); Browser-only features
+// (tabs, downloads, autofill, Web Bluetooth) stay in libs:browser.
+plugins {
+    id 'com.android.library'
+}
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.web'
+    compileSdk 36
+    defaultConfig { minSdk 26 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    api 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core-ktx:1.13.1'
+}

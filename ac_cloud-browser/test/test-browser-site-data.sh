@@ -48,14 +48,14 @@ def check(root, ok):
     ok('CrawlLimits.of(browserSettings.int("offline_depth"), browserSettings.int("offline_max_pages"), browserSettings.int("offline_max_mb"))' in frag, "D2 a site save reads its limits from the settings")
     ok("SiteScope.sameOrigin(startUrl, finalUrl)" in off, "D2 a redirect off the site is not saved")
     ok("SiteCrawl(startUrl, limits)" in off and "crawl.next()" in off and "crawl.offer(" in off, "D2 the crawl is the tested queue")
-    ok("saveWebArchive(" in off and "WebView(ctx)" in off, "D2 pages are archived by a WebView")
+    ok("saveWebArchive(" in off and "CloudWeb.create(ctx, WebProfile.BROWSER)" in off, "D2 pages are archived by a WebView")
     ok(not re.search(r"HttpURLConnection|OkHttp|URL\(", off), "D2 no second HTTP stack")
     ok("fun cancel()" in off and "finish(\"stopped by you\")" in off and "BrowserSavePanel(saveState, onStop = { job.cancel() }" in frag, "D2 a save can be stopped, keeping what was saved")
     ok("if (SiteScope.origin(url).isEmpty())" in frag, "D2 only http(s) pages are saved")
     # D3
     ok("SiteData.human(s.bytes)" in scr and "DateFormat" in scr, "D3 each copy shows its size and date")
     ok("onOpen" in scr and "onDelete" in scr and "onDeleteAll" in scr and "KitConfirmDialog(\"Delete every offline copy?\"" in scr, "D3 open, delete one, delete all (confirmed)")
-    ok("s.allowFileAccess = offlineSites.isOffline(url)" in frag, "D3 file access only for a page of an offline copy")
+    ok("fileAccess = offlineSites.isOffline(url) || mhtml.allowsFile(url)" in frag, "D3 file access only for a page of an offline copy")
     ok("offlineSites.resolve(target)" in frag and "offlineSites.isOffline(view?.url)" in frag, "D3 links inside a copy that the copy holds stay inside it")
     ok("if (offlineSites.isOffline(u)) return" in frag, "D3 an offline copy is not recorded as a visit")
     # D4
@@ -81,7 +81,7 @@ main("site data", check, [
     ("a save follows redirects off the site", LIB + "/OfflineSites.kt", "if (!SiteScope.sameOrigin(startUrl, finalUrl)) return step()", "", "off the site is not saved"),
     ("the crawl is hand-rolled", LIB + "/OfflineSites.kt", "SiteCrawl(startUrl, limits)", "ArrayDeque<Int>()", "tested queue"),
     ("a second HTTP stack appears", LIB + "/OfflineSites.kt", "class OfflineSites(context: Context) {", "class OfflineSites(context: Context) {\n    private fun net() = java.net.URL(\"https://x\").openConnection()", "no second HTTP stack"),
-    ("file access is always on", FRAG, "s.allowFileAccess = offlineSites.isOffline(url)", "s.allowFileAccess = true", "only for a page of an offline copy"),
+    ("file access is always on", FRAG, "fileAccess = offlineSites.isOffline(url) || mhtml.allowsFile(url)", "fileAccess = true", "only for a page of an offline copy"),
     ("copy links go to the network", FRAG, "val local = offlineSites.resolve(target)", "val local: String? = null", "stay inside it"),
     ("an offline copy is logged as a visit", FRAG, "if (offlineSites.isOffline(u)) return", "", "not recorded as a visit"),
     ("a storage item has no clear", LIB + "/BrowserStorage.kt", '"form" -> @Suppress("DEPRECATION") WebViewDatabase.getInstance(ctx).clearFormData()', "", "`form` has its clear"),

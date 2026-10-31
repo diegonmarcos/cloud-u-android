@@ -1,5 +1,8 @@
 package app.sterna.ui.settings
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -45,15 +48,10 @@ internal fun SignatureWebPreview(
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
-            WebView(ctx).apply {
+            // UNTRUSTED_HTML (#1371); pictures over http(s) are the one thing PreviewClient lets out
+            CloudWeb.create(ctx, WebProfile.UNTRUSTED_HTML).apply {
                 setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                @Suppress("DEPRECATION")
-                settings.allowFileAccessFromFileURLs = false
-                @Suppress("DEPRECATION")
-                settings.allowUniversalAccessFromFileURLs = false
-                settings.domStorageEnabled = false
+                CloudWeb.remoteImages(this, true)
                 settings.setGeolocationEnabled(false)
                 settings.setSupportZoom(false)
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -63,7 +61,7 @@ internal fun SignatureWebPreview(
         },
         update = { view ->
             handle.web = view
-            view.settings.javaScriptEnabled = visual
+            CloudWeb.sandboxedJs(view, visual)
             view.removeJavascriptInterface(SignaturePreview.BRIDGE)
             if (visual) {
                 view.addJavascriptInterface(
@@ -90,7 +88,7 @@ internal fun SignatureWebPreview(
 }
 
 /** Default-deny: only pictures over http(s) and inline data leave the page; a tapped link goes nowhere. */
-internal object PreviewClient : WebViewClient() {
+internal object PreviewClient : CloudWebClient(WebProfile.UNTRUSTED_HTML) {
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = true
 
     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {

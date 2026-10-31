@@ -1,5 +1,8 @@
 package com.diegonmarcos.cloudbrowser
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.app.Activity
 import android.os.Bundle
 import android.util.Base64
@@ -69,12 +72,10 @@ class AuthMissionActivity : AppCompatActivity() {
         if (url.isBlank()) { refuse("no url in the mission"); return }
         if (capture != CAPTURE_COOKIE) { refuse("this browser captures a session cookie only; '$capture' is not a declared capture"); return }
 
-        val web = WebView(this)
-
-        web.settings.javaScriptEnabled = true
-        web.settings.domStorageEnabled = true
+        // a sign-in page of a declared fleet host (APP_PAGE, #1371), navigation confined below
+        val web = CloudWeb.create(this, WebProfile.APP_PAGE)
         CookieManager.getInstance().setAcceptCookie(true)
-        web.webViewClient = object : WebViewClient() {
+        web.webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val target = request?.url?.toString().orEmpty()
                 // Confine navigation to the declared hosts.

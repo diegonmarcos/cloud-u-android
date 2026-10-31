@@ -383,6 +383,7 @@ dependencies {
     // The fleet setup handler reads and edits the settings DataStore through the app's own instance.
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(project(":libs:web-core"))   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation(project(":libs:openpgp-api"))
     // The nav walk's seed receiver (src/navWalk, -PtestApp only) writes the cached folders through the database it builds.
     if (testApp) implementation(libs.androidx.room.runtime)

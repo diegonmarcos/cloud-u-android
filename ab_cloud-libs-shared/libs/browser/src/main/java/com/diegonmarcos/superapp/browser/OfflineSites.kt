@@ -1,5 +1,8 @@
 package com.diegonmarcos.superapp.browser
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -91,11 +94,8 @@ class OfflineSiteJob(
     private var finished = false
 
     fun start() {
-        hidden = WebView(ctx).apply {
-            TabProfile.bind(this, profile)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            userAgent?.let { settings.userAgentString = it }
+        hidden = CloudWeb.create(ctx, WebProfile.BROWSER) { TabProfile.bind(it, profile) }.apply {
+            userAgent?.let { CloudWeb.userAgent(this, it) }
         }
         step()
     }
@@ -113,7 +113,7 @@ class OfflineSiteJob(
         val h = hidden ?: return finish("")
         var handled = false
         val watchdog = Runnable { if (!handled) { handled = true; h.stopLoading(); capture(h, item) } }
-        h.webViewClient = object : WebViewClient() {
+        h.webViewClient = object : CloudWebClient(WebProfile.BROWSER) {
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (handled || url == null || url == "about:blank") return
                 handled = true

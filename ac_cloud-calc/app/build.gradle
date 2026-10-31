@@ -235,6 +235,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     implementation project(':libs:core')
     implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     // The fleet's bottom-nav island; this app supplies its own entries from ui.bottom_nav.

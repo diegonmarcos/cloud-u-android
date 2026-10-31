@@ -223,11 +223,11 @@ has "$EDPREVIEW" 'signatureBlockHtml(source, delimiter)' \
 # given the sanitised string, never the typed one.
 has "$EDWEB" 'fun SignatureWebPreview(' \
   "N5 the editor's preview RENDERS the sanitised HTML signature (#193)"
-has "$EDWEB" 'settings.javaScriptEnabled = visual' \
+has "$EDWEB" 'CloudWeb.sandboxedJs(view, visual)' \
   "N5 the preview WebView runs JavaScript only in visual mode, and then only its own nonce'd script"
 absent "$EDITOR" 'javaScriptEnabled = true' \
   "N5 nothing turns JavaScript on in the editor"
-has "$EDWEB" 'settings.allowFileAccess = false' \
+has "$EDWEB" 'CloudWeb.create(ctx, WebProfile.UNTRUSTED_HTML)' \
   "N5 the preview WebView reads no files"
 has "$TOOLS" "default-src 'none'" \
   "N5 the preview document forbids everything but pictures"

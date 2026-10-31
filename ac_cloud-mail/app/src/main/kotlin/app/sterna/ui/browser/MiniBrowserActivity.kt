@@ -1,5 +1,9 @@
 package app.sterna.ui.browser
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
+import com.diegonmarcos.cloudlib.web.CloudChromeClient
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -132,18 +136,6 @@ class MiniBrowserActivity : AppCompatActivity() {
         }
     }
 }
-
-/**
- * A desktop browser's own claim about itself, sent so that a site serves its wide layout.
- *
- * The user agent IS the "View as Desktop" switch, and nothing else needs to change with it: the
- * viewport settings below already fit whatever width arrives to the screen, so a desktop page
- * zooms out to fit rather than overflowing. Swapping layout flags as well would mean maintaining
- * two viewport configurations to express one choice.
- */
-private const val DESKTOP_USER_AGENT =
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "Chrome/124.0.0.0 Safari/537.36"
 
 /** Schemes handed to the system from inside the browser: things a web page cannot do itself. */
 private val HANDOFF_SCHEMES = setOf("mailto", "tel", "sms", "geo")
@@ -289,20 +281,9 @@ private fun MiniBrowserScreen(initialUrl: String, onClose: () -> Unit) {
     ) { padding ->
         AndroidView(
             factory = { ctx ->
-                WebView(ctx).apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    // Fit whatever the page declares to this screen, and keep pinch-zoom: the same
-                    // pair the reading view settled on (#305, #278).
-                    settings.useWideViewPort = true
-                    settings.loadWithOverviewMode = true
-                    settings.setSupportZoom(true)
-                    settings.builtInZoomControls = true
-                    settings.displayZoomControls = false
-                    // A page opened from an email has no business reading this device. Both of
-                    // these default to true on older API levels, so they are set, not assumed.
-                    settings.allowFileAccess = false
-                    settings.allowContentAccess = false
+                // BROWSER (#1371): fit to screen and pinch zoom (#305, #278), no file access. A page opened from an
+                // email gets no third-party cookies either.
+                CloudWeb.create(ctx, WebProfile.BROWSER).apply {
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
                     // A WebView renders pages; it does not download files. Without this a tapped
                     // download (the release APK on the update screen, an attachment on a web form)
@@ -314,7 +295,7 @@ private fun MiniBrowserScreen(initialUrl: String, onClose: () -> Unit) {
                         // one-shot leave latch is the wrong shape for a window that is not leaving.
                         InAppBrowser.openExternally(ctx, Uri.parse(downloadUrl))
                     }
-                    webViewClient = object : WebViewClient() {
+                    webViewClient = object : CloudWebClient(WebProfile.BROWSER) {
                         override fun shouldOverrideUrlLoading(
                             view: WebView?,
                             request: WebResourceRequest?,
@@ -347,7 +328,7 @@ private fun MiniBrowserScreen(initialUrl: String, onClose: () -> Unit) {
                             if (url != null && !editing) address = url
                         }
                     }
-                    webChromeClient = object : WebChromeClient() {
+                    webChromeClient = object : CloudChromeClient(ctx as? android.app.Activity) {
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress
                         }
@@ -365,8 +346,8 @@ private fun MiniBrowserScreen(initialUrl: String, onClose: () -> Unit) {
     // Keyed on the view too: the first load has to wait for the factory to have produced one.
     LaunchedEffect(webView, loaded, desktop) {
         val wv = webView ?: return@LaunchedEffect
-        // null restores the platform's own mobile user agent — this app does not get to author it.
-        wv.settings.userAgentString = if (desktop) DESKTOP_USER_AGENT else null
+        // desktop mode is the fleet's one (libs:web-core: desktop UA + viewport); off restores the platform's own UA
+        CloudWeb.desktopMode(wv, desktop)
         wv.loadUrl(loaded)
     }
 }

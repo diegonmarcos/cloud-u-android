@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.browser
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
 import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebStorage
@@ -134,7 +135,7 @@ object BrowserClearData {
         val out = JSONObject().put("ok", true).put("cleared", org.json.JSONArray(boxes.sorted()))
         for (b in boxes) when (b) {
             "history" -> BrowserHistory(ctx).clear()
-            "cache" -> WebView(ctx).apply { clearCache(true); destroy() }
+            "cache" -> CloudWeb.clearCache(ctx)
             "storage" -> WebStorage.getInstance().deleteAllData()
             "previews" -> { TabThumbnails.sharedOrNull()?.clear(); File(ctx.cacheDir, TabThumbnails.DIR).deleteRecursively(); BrowserTabPrefs(ctx).clearPreviews() }
             "downloads" -> BrowserDownloads(ctx).clear()

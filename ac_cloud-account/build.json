@@ -30,6 +30,11 @@
     "log_sink_stream": "cloud-account"
   },
   "modules": {
+    "libs:web-core": {
+      "_doc": "#1371 THE embedded web view: CloudWeb.create(ctx, WebProfile.X), profiles, GPU probe, render-process recovery, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/web-core",
+      "type": "library"
+    },
     "libs:perms": {"dir": "../ab_cloud-libs-shared/libs/perms", "type": "library", "depends_on": [], "comment": "#1274 the permission contract: the catalogue, PermsNeeds, PermsLink and PermsActivity, the Permissions page this app hosts for its libs (permissions are per package, so never another app's page)."},
     "libs:decisions-link": {
       "type": "library",
@@ -39,6 +44,7 @@
     "app": {
       "type": "application",
       "depends_on": [
+        "libs:web-core",
         "libs:core",
         "libs:account",
         "libs:bottomnav",

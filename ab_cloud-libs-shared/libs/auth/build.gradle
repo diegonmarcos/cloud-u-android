@@ -134,6 +134,7 @@ kotlin {
 dependencies {
     // ConfigSyncClient: the one HTTP client with the named-failure taxonomy every route shares.
     // `api` because a host receives ConfigSyncClient.Outcome through SignInHost.
+    api project(':libs:web-core')   // #1371 the fleet's one web view (CloudWeb, WebProfile)
     api project(':libs:core')
 
     implementation platform('androidx.compose:compose-bom:2025.11.01')

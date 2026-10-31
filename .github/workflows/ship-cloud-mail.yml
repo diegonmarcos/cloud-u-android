@@ -46,6 +46,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ab_cloud-libs-shared/libs/updater/**"
+      - "ab_cloud-libs-shared/libs/web-core/**"
       - "ac_cloud-mail/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)

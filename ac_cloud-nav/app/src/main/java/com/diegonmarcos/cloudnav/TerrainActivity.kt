@@ -1,10 +1,11 @@
 package com.diegonmarcos.cloudnav
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.JavascriptInterface
-import android.webkit.WebSettings
 import android.webkit.WebView
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -52,20 +53,15 @@ class TerrainActivity : AppCompatActivity() {
     }
 
     /** The page itself stays a WebView (MapLibre GL JS); Compose only hosts it. */
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(ctx: android.content.Context): WebView = WebView(ctx).also { wv ->
+    private fun createWebView(ctx: android.content.Context): WebView = CloudWeb.create(ctx, WebProfile.WEB_WORLD).also { wv ->
         webView = wv
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-        }
         wv.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
         val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
         val lon = intent.getDoubleExtra(EXTRA_LON, Double.NaN)
         val zoom = intent.getDoubleExtra(EXTRA_ZOOM, 13.0)
-        wv.webViewClient = object : android.webkit.WebViewClient() {
+        wv.webViewClient = object : CloudWebClient(WebProfile.WEB_WORLD) {
+            override fun onRecovered(dead: WebView, fresh: WebView?) { webView = fresh; fresh?.addJavascriptInterface(AndroidBridge(), "AndroidBridge") }
             override fun onPageFinished(view: WebView, url: String) {
                 if (!lat.isNaN() && !lon.isNaN()) {
                     view.evaluateJavascript("cloudNavRecenter($lat,$lon,$zoom)", null)

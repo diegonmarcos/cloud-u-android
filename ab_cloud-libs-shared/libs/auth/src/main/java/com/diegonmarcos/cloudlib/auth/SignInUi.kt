@@ -1,5 +1,7 @@
 package com.diegonmarcos.cloudlib.auth
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -263,10 +265,8 @@ private fun WebAuthDialog(p: SignIn.Provider, host: SignInHost, onDismiss: () ->
                 Text(stringResource(R.string.auth_web_caption, endpoint), style = MaterialTheme.typography.bodySmall)
                 AndroidView(
                     factory = { ctx ->
-                        WebView(ctx).apply {
-                            settings.javaScriptEnabled = true      // Authelia's portal is a JS app
-                            settings.domStorageEnabled = true      // and keeps its state in DOM storage
-                            webViewClient = WebViewClient()
+                        // Authelia's portal: a fleet JS app that keeps its state in DOM storage (APP_PAGE, #1371)
+                        CloudWeb.create(ctx, WebProfile.APP_PAGE).apply {
                             CookieManager.getInstance().setAcceptCookie(true)
                             // #669 the DECLARED portal when there is one; the config
                             // endpoint only for a provider that declares none.

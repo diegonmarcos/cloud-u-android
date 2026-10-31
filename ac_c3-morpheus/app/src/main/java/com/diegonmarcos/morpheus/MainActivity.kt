@@ -1,5 +1,8 @@
 package com.diegonmarcos.morpheus
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
@@ -111,13 +114,9 @@ class MainActivity : AppCompatActivity() {
                         AndroidView(
                             modifier = Modifier.fillMaxSize(),
                             factory = { ctx ->
-                                WebView(ctx).apply {
-                                    settings.javaScriptEnabled = true   // Dagu and Paca are both SPAs
-                                    settings.domStorageEnabled = true
-                                    settings.allowFileAccess = false
-                                    settings.allowContentAccess = false
+                                CloudWeb.create(ctx, WebProfile.APP_PAGE).apply {   // Dagu and Paca: fleet SPAs
                                     setBackgroundColor(p.surface.toArgb())
-                                    webViewClient = object : WebViewClient() {
+                                    webViewClient = object : CloudWebClient(WebProfile.APP_PAGE) {
                                         override fun onReceivedError(
                                             view: WebView?, req: WebResourceRequest?, err: WebResourceError?
                                         ) {

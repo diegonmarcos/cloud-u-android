@@ -80,6 +80,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
+      - "ab_cloud-libs-shared/libs/web-core/**"
       - "ac_cloud-myterminal/**"
       - "!ac_cloud-myterminal/web/**"
 permissions:

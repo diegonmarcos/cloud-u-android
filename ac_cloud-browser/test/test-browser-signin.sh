@@ -18,7 +18,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 export ROOT
 cd "$(dirname "$0")"
 python3 - <<'PYEOF'
-import sys
+import os, sys
 sys.path.insert(0, ".")
 from browser_tester import LIB, APP, kotlin, main
 
@@ -37,7 +37,8 @@ def check(root, ok):
     ok('ua.replace(Regex(";\\\\s*wv\\\\b")' in pol and 'Version/' in pol, "S2 the policy strips the wv token and the Version marker")
     ok('setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)' in frag, "S3 third-party cookies are on unless blocked")
     ok("cookiesOf(this).setAcceptCookie(true)" in frag, "S3 cookies are accepted")
-    ok(frag.count("settings.setSupportMultipleWindows(true)") >= 2 and "settings.javaScriptCanOpenWindowsAutomatically = true" in frag, "S4 the page may open child windows")
+    cw = open(os.path.join(root, "ab_cloud-libs-shared/libs/web-core/src/main/java/com/diegonmarcos/cloudlib/web/CloudWeb.kt")).read()
+    ok(frag.count("CloudWeb.create(ctx, WebProfile.BROWSER)") >= 2 and "setSupportMultipleWindows(profile == WebProfile.BROWSER)" in cw and "javaScriptCanOpenWindowsAutomatically = profile == WebProfile.BROWSER" in cw, "S4 the page may open child windows (#1371 the BROWSER profile)")
     ok(frag.count("override fun onCreateWindow(") >= 2 and "WebView.WebViewTransport" in frag and "transport.webView = child" in frag and "msg.sendToTarget()" in frag,
        "S4 onCreateWindow hands a child WebView to the transport (opener kept)")
     ok("override fun onCloseWindow" in frag, "S4 window.close() closes the child")
@@ -53,7 +54,7 @@ main("sign-in", check, [
     ("the mobile agent is left raw", LIB + "/BrowserDevTools.kt", "BrowserNavPolicy.cleanUserAgent((if (desktop) desktopUa else mobileUa) ?: current)", "((if (desktop) desktopUa else mobileUa) ?: current)", "cleaned"),
     ("the wv token stays", LIB + "/BrowserNavPolicy.kt", 'ua.replace(Regex(";\\\\s*wv\\\\b")', 'ua.replace(Regex(";\\\\s*wvx\\\\b")', "strips the wv token"),
     ("third-party cookies go off again", FRAG, '!= true)\n        applyViewMode', '== true)\n        applyViewMode', "third-party cookies are on"),
-    ("child windows are off", FRAG, "settings.setSupportMultipleWindows(true)", "settings.setSupportMultipleWindows(false)", "child windows"),
+    ("child windows are off", "ab_cloud-libs-shared/libs/web-core/src/main/java/com/diegonmarcos/cloudlib/web/CloudWeb.kt", "setSupportMultipleWindows(profile == WebProfile.BROWSER)", "setSupportMultipleWindows(false)", "child windows"),
     ("onCreateWindow is gone", FRAG, "override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {\n                    val transport", "override fun onCreateWindowX(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {\n                    val transport", "onCreateWindow hands"),
     ("the transport is never sent", FRAG, "msg.sendToTarget()", "Unit", "opener kept"),
     ("an intent: link leaves the browser", FRAG, "BrowserNavPolicy.Decision.Block -> return true", "BrowserNavPolicy.Decision.Block -> Unit", "never leave"),

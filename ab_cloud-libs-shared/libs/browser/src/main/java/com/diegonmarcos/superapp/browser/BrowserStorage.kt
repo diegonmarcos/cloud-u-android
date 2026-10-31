@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.browser
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
 import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebStorage
@@ -57,7 +58,7 @@ object BrowserStorage {
     fun clear(ctx: Context, ids: Set<String>, done: (JSONObject) -> Unit) {
         val out = JSONObject().put("ok", true).put("cleared", org.json.JSONArray(ids.sorted()))
         for (id in ids) when (id) {
-            "cache" -> { WebView(ctx).apply { clearCache(true); destroy() }; File(ctx.cacheDir, "WebView").deleteRecursively() }
+            "cache" -> { CloudWeb.clearCache(ctx); File(ctx.cacheDir, "WebView").deleteRecursively() }
             "dom", "indexeddb" -> WebStorage.getInstance().deleteAllData()
             "form" -> @Suppress("DEPRECATION") WebViewDatabase.getInstance(ctx).clearFormData()
             "offline" -> OfflineSites(ctx).deleteAll()

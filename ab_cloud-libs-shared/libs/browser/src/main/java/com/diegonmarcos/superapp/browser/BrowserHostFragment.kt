@@ -1,6 +1,10 @@
 package com.diegonmarcos.superapp.browser
 
 
+import com.diegonmarcos.cloudlib.web.CloudChromeClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -948,18 +952,9 @@ class BrowserHostFragment : Fragment() {
         addressOpen = false
 
         webTabKey = tabKey
-        webView = WebView(ctx).apply {
-            bindProfile(this, tab)   // before anything loads
+        // BROWSER (#1371): JS, storage, zoom, geolocation, and #893 sign-in popups (multiple windows, window.opener)
+        webView = CloudWeb.create(ctx, WebProfile.BROWSER) { bindProfile(it, tab) }.apply {   // the profile binds before anything else
             onWebViewCreated?.invoke(this)   // the scroll bridge must exist BEFORE the first load
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.setSupportZoom(true)
-            settings.builtInZoomControls = true
-            settings.displayZoomControls = false
-            settings.setGeolocationEnabled(true)
-            // #893 sign-in (Google, OAuth) opens a child window and posts back through window.opener.
-            settings.setSupportMultipleWindows(true)
-            settings.javaScriptCanOpenWindowsAutomatically = true
             cookiesOf(this).setAcceptCookie(true)
             // Passkeys: WebAuthn is off in WebView unless asked for; a refusal falls back to the system browser.
             passkeyMode = PasskeySupport.apply(settings)
@@ -981,7 +976,7 @@ class BrowserHostFragment : Fragment() {
             // #802 a private tab keeps nothing in the HTTP cache.
             if (tab.isPrivate) settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
             applySettings(this, url)
-            webViewClient = object : WebViewClient() {
+            webViewClient = object : CloudWebClient(WebProfile.BROWSER) {
                 override fun onPageStarted(view: WebView?, startedUrl: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, startedUrl, favicon)
                     // A real navigation leaves reader view; the reader's own render does not.
@@ -1079,7 +1074,7 @@ class BrowserHostFragment : Fragment() {
                     toast("Downloading ${d.file}")
                 }
             }
-            webChromeClient = object : WebChromeClient() {
+            webChromeClient = object : CloudChromeClient(activity) {
                 /** #893 window.open / target=_blank: a child window the opener can post back to (sign-in popups). */
                 override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
                     val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
@@ -1138,21 +1133,16 @@ class BrowserHostFragment : Fragment() {
     /** #893 the child window of a window.open, over the page; closing it (window.close, back) returns to the opener. */
     private fun openPopup(transport: WebView.WebViewTransport, msg: android.os.Message): Boolean {
         val ctx = context ?: return false
-        val child = WebView(ctx)
-        bindProfile(child, currentTab())
-        child.settings.javaScriptEnabled = true
-        child.settings.domStorageEnabled = true
-        child.settings.setSupportMultipleWindows(true)
-        child.settings.javaScriptCanOpenWindowsAutomatically = true
+        val child = CloudWeb.create(ctx, WebProfile.BROWSER) { bindProfile(it, currentTab()) }
         PasskeySupport.apply(child.settings)
         applyViewMode(child)
         cookiesOf(child).setAcceptThirdPartyCookies(child, browserSettings.bool("block_third_party_cookies") != true)
         val dialog = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar)
-        child.webViewClient = object : WebViewClient() {
+        child.webViewClient = object : CloudWebClient(WebProfile.BROWSER) {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean =
                 BrowserNavPolicy.decide(request?.url?.toString()) != BrowserNavPolicy.Decision.Load
         }
-        child.webChromeClient = object : WebChromeClient() {
+        child.webChromeClient = object : CloudChromeClient(activity) {
             override fun onCloseWindow(window: WebView?) { dialog.dismiss() }
             override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
                 val t = resultMsg?.obj as? WebView.WebViewTransport ?: return false
@@ -1402,7 +1392,6 @@ class BrowserHostFragment : Fragment() {
     /** #802 the catalogue's page settings onto [wv]. An undeclared key leaves WebView's own. */
     private fun applySettings(wv: WebView, url: String? = wv.url) {
         val s = wv.settings
-        browserSettings.bool("javascript")?.let { s.javaScriptEnabled = it }
         browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
         // #900 this site's own zoom (page menu > Zoom) beats the global text size.
         val siteHost = BrowserSitePolicy.hostOf(url)
@@ -1413,14 +1402,16 @@ class BrowserHostFragment : Fragment() {
         applyShields(wv, url)
         // #887 file access only for a page of an offline copy (targetSdk 30+ has it off by default).
         // An .mhtml archive opened from outside (or copied to the cache from a content:// uri) is read the same way.
-        s.allowFileAccess = offlineSites.isOffline(url) || mhtml.allowsFile(url)
+        // #802 JS: the user's setting, then this site's shield (a `deny` rule turns it off here).
+        val jsHost = BrowserSitePolicy.hostOf(url)
+        val js = browserSettings.bool("javascript") != false && !(jsHost.isNotEmpty() && shieldDenied(jsHost, "javascript"))
+        CloudWeb.site(wv, javaScript = js, fileAccess = offlineSites.isOffline(url) || mhtml.allowsFile(url))
     }
 
     /** #802 per-site shields: a `deny` rule for javascript / images on this host turns it off here. */
     private fun applyShields(wv: WebView, url: String?) {
         val host = BrowserSitePolicy.hostOf(url)
         if (host.isEmpty()) return
-        if (shieldDenied(host, "javascript")) wv.settings.javaScriptEnabled = false
         if (shieldDenied(host, "images")) wv.settings.loadsImagesAutomatically = false
     }
 
@@ -1697,9 +1688,9 @@ class BrowserHostFragment : Fragment() {
             pages.add(ScrapeEngine.rows(r, plan))
             val next = r?.optString("next")?.takeIf { it.startsWith("http") }
             if (next == null || n >= plan.maxPages) return finish(hidden)
-            val h = hidden ?: WebView(requireContext()).apply { TabProfile.bind(this, profileOfWebView[wv]); settings.javaScriptEnabled = true; settings.domStorageEnabled = true }
+            val h = hidden ?: CloudWeb.create(requireContext(), WebProfile.BROWSER) { TabProfile.bind(it, profileOfWebView[wv]) }
             var waiting = true
-            h.webViewClient = object : WebViewClient() {
+            h.webViewClient = object : CloudWebClient(WebProfile.BROWSER) {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     if (!waiting) return
                     waiting = false
@@ -1771,7 +1762,7 @@ class BrowserHostFragment : Fragment() {
         val s = wv.settings
         // #893 never `; wv)` / `Version/x.x` in the UA: Google refuses sign-in to that (disallowed_useragent). ViewModePlan holds the values.
         val plan = ViewModePlan.of(desktopMode, config.userAgents["desktop"], config.userAgents["mobile"], s.userAgentString)
-        s.userAgentString = plan.userAgent
+        CloudWeb.userAgent(wv, plan.userAgent)
         s.useWideViewPort = plan.wideViewPort
         s.loadWithOverviewMode = plan.overview
         wv.setInitialScale(plan.initialScale)

@@ -4,10 +4,10 @@ package com.diegonmarcos.cgomniverse.ui
 
 import android.app.backup.BackupManager
 import android.content.Context
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,12 +87,10 @@ fun AvatarPage() {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             AndroidView(
                 factory = { c ->
-                    val loader = Web.assetLoader(c)
-                    Web.create(c).also { wv ->
-                        wv.webViewClient = object : WebViewClient() {
-                            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-                                loader.shouldInterceptRequest(request.url)
+                    CloudWeb.create(c, WebProfile.WEB_WORLD).also { wv ->
+                        wv.webViewClient = object : CloudWebClient(WebProfile.WEB_WORLD, CloudWeb.assetLoader(c)) {
                             override fun onPageFinished(view: WebView, url: String) { ready = true }
+                            override fun onRecovered(dead: WebView, fresh: WebView?) { web = fresh; ready = false }
                         }
                         wv.loadUrl(Web.AVATAR_URL)
                         web = wv

@@ -107,6 +107,7 @@
     "app": {
       "type": "application",
       "depends_on": [
+        "libs:web-core",
         "libs:core",
         "libs:bottomnav",
         "libs:ui-icons",
@@ -146,6 +147,11 @@
     },
     "measure": {
       "_doc": "#772 the Camera tools' maths as a plain-JVM Kotlin module (measure/): reference-object scaling of a photo (millimetres per pixel, lengths, paths, shoelace areas), the ARCore route's world geometry (distance, path, Newell polygon area, height), the inclinometer (tilt, pitch, roll and edge angle from gravity, against a stored zero) and the numbers OCR hands the calculator. Golden-geometry suite, PIT on every `gradle test`.",
+      "type": "library"
+    },
+    "libs:web-core": {
+      "_doc": "#1371 THE embedded web view: CloudWeb.create(ctx, WebProfile.X), profiles, GPU probe, render-process recovery, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/web-core",
       "type": "library"
     },
     "libs:ml-l-image": {

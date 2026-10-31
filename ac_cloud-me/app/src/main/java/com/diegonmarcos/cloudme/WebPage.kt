@@ -1,5 +1,8 @@
 package com.diegonmarcos.cloudme
 
+import com.diegonmarcos.cloudlib.web.CloudWeb
+import com.diegonmarcos.cloudlib.web.CloudWebClient
+import com.diegonmarcos.cloudlib.web.WebProfile
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -102,26 +105,16 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier, pageId: String = b
             var fresh = false
             val make = {
                 fresh = true
-                WebView(ctx).apply {
-                    settings.javaScriptEnabled = true          // the pages hydrate from PORTAL_DATA
-                    settings.domStorageEnabled = true
-                    settings.allowFileAccess = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                    settings.mediaPlaybackRequiresUserGesture = false
-                    // Same-origin file access, so a page in assets can pull its own
-                    // stylesheets and data scripts. Nothing outside assets is reachable.
-                    @Suppress("DEPRECATION")
-                    settings.allowFileAccessFromFileURLs = true
-                    setBackgroundColor(0xFF0B0414.toInt())
-                }
+                // a fleet page (APP_PAGE, #1371); bundled pages come from the https asset origin, so they fetch their own
+                // stylesheets and data same-origin with no file:// access at all
+                CloudWeb.create(ctx, WebProfile.APP_PAGE).apply { setBackgroundColor(0xFF0B0414.toInt()) }
             }
             // A kept WebView comes back as it was left (page, scroll, history): no reload, so switching is instant.
             val view = if (cached) holder!!.web(url, make) else make()
             (view.parent as? android.view.ViewGroup)?.removeView(view)
             view.apply {
                 // The client is rebuilt on every attach: it closes over THIS composition's state.
-                webViewClient = object : WebViewClient() {
+                webViewClient = object : CloudWebClient(WebProfile.APP_PAGE, CloudWeb.assetLoader(ctx)) {
                     override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
                         saved.clear()
                         canGoBack = false
@@ -132,7 +125,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier, pageId: String = b
                     }
 
                     override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? =
-                        if (cached && request != null) LnktreeCache.intercept(ctx, pageId, url, request) else null
+                        if (cached && request != null) LnktreeCache.intercept(ctx, pageId, url, request) else super.shouldInterceptRequest(view, request)
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         refreshing = false
@@ -154,7 +147,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier, pageId: String = b
                 com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(this, collapse)
                 canGoBack = canGoBack()
                 if (!fresh) onResume()
-                else if (!saved.isEmpty) restoreState(saved) else loadUrl(if (url.startsWith("https://")) url else "file:///android_asset/$url")
+                else if (!saved.isEmpty) restoreState(saved) else loadUrl(if (url.startsWith("https://")) url else CloudWeb.assetUrl(url))
             }
         },
         onRelease = {
