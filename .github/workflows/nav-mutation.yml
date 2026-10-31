@@ -1,12 +1,12 @@
 # Nav-bar mutation runs (#1355): each applies ONE deliberate break to libs:bottomnav's dropdown sizing or per-gesture scroll-hide
 # and runs the JVM suite that must catch it (Cloud Store's storeUnitTests, which includes :libs:bottomnav:testDebugUnitTest:
-# NavDropdownSizingTest, NavUiTest). A RED run is the expected result; a green run means the suite is blind. Manual only.
+# NavDropdownSizingTest, NavUiTest, NavDropdownInkTest). A RED run is the expected result; a green run means the suite is blind. Manual only.
 name: nav-mutation
 on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'gesture-latch | gesture-new | dropdown-cap'
+        description: 'gesture-latch | gesture-new | dropdown-cap | dropdown-ink'
         required: true
 permissions:
   contents: read
@@ -25,6 +25,8 @@ jobs:
             gesture-latch) sed -i '/if (policy == ChromeScrollPolicy.Hide \&\& delta < 0f \&\& latch != NO_GESTURE \&\& latch == gesture) return ChromeGestureStep(state, latch)/d' $K/NavUi.kt ;;
             gesture-new)   sed -i 's/if (down \&\& !fingerDown) { gesture++; awaitingGesture = false }/if (down \&\& !fingerDown) { awaitingGesture = false }/' $K/BottomNavBar.kt ;;
             dropdown-cap)  sed -i 's/return below.coerceIn(minOf(minPx, whole), whole)/return 520/' $K/NavDropdownSizing.kt ;;
+            # the dropdown's child entries back to a dark ink on the dark dropdown: NavDropdownInkTest must go red
+            dropdown-ink)  sed -i 's/DropdownEntryRole.Child -> dropdownOnSurface.copy(alpha = dropdownChildAlpha)/DropdownEntryRole.Child -> Color(0xFF1D1B20)/' $K/NavTokens.kt ;;
             *) echo "unknown mutation"; exit 2 ;;
           esac
           git diff --stat

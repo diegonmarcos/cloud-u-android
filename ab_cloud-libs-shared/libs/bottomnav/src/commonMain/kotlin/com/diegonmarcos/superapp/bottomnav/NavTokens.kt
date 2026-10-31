@@ -125,13 +125,34 @@ public data class NavTokens(
     val dropdownScreenMargin: Dp = 16.dp,
     /** The least height the dropdown gets when its anchor sits low (landscape, split screen): a few rows always show. */
     val dropdownMinHeight: Dp = 96.dp,
+    // ── the page-list dropdown's ink ([dropdownInk]): every entry draws in the surface's ON colour ──
+    /** The dropdown's surface in dark mode (ThemeColors.DARK.island). */
+    val dropdownSurfaceDark: Color = Color(0xFF0A0F1A),
+    /** The dropdown's surface in light mode (ThemeColors.LIGHT.island): dark too, so one on-surface ink serves both modes. */
+    val dropdownSurfaceLight: Color = Color(0xFF1F2937),
+    /** The ink of every dropdown entry (parent, child, selected, disabled) and of whatever a page draws inside it. */
+    val dropdownOnSurface: Color = Color(0xFFFFFFFF),
+    /** A child entry: the on-surface ink at this alpha. The hierarchy reads from indent and weight, never a dark ink. */
+    val dropdownChildAlpha: Float = 0.87f,
+    /** A disabled entry: the on-surface ink at this alpha (still at least 4.5:1 on both surfaces). */
+    val dropdownDisabledAlpha: Float = 0.6f,
 ) {
+    /** The ink of one dropdown entry. Only ever the on-surface token: an entry picks a role, never a colour. */
+    public fun dropdownInk(role: DropdownEntryRole): Color = when (role) {
+        DropdownEntryRole.Parent, DropdownEntryRole.Selected -> dropdownOnSurface
+        DropdownEntryRole.Child -> dropdownOnSurface.copy(alpha = dropdownChildAlpha)
+        DropdownEntryRole.Disabled -> dropdownOnSurface.copy(alpha = dropdownDisabledAlpha)
+    }
+
     /** The strip's colours on [surface]. Only ever these tokens: an app picks a surface, never a colour. */
     public fun tabColors(surface: TabSurface): TabColors = when (surface) {
         TabSurface.Dark -> TabColors(tabsSelectedFill, tabsSelectedStroke, tabsSelectedText, tabsIdleFill, tabsIdleStroke, tabsIdleText, null)
         TabSurface.Light -> TabColors(tabsLightSelectedFill, tabsLightSelectedStroke, tabsLightSelectedText, tabsLightIdleFill, tabsLightIdleStroke, tabsLightIdleText, tabsLightFocusRing)
     }
 }
+
+/** A page-list dropdown entry's role: a top-level entry, an indented child, the current page, or one that cannot be opened. */
+public enum class DropdownEntryRole { Parent, Child, Selected, Disabled }
 
 /** One surface's strip colours, resolved from [NavTokens.tabColors]. [focusRing] null = the pill's own ink. */
 @Immutable

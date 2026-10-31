@@ -80,6 +80,8 @@ import com.diegonmarcos.superapp.bottomnav.rememberAppTopBarController
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.bottomnav.DropdownEntryRole
+import com.diegonmarcos.superapp.bottomnav.NavTokens
 import com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests
 import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsPage
 import com.diegonmarcos.superapp.fleetconfigs.FleetConfigsScreen
@@ -133,6 +135,13 @@ public object TopFirstRowTags {
     public const val CONFIGS_UI: String = CONFIGS_GENERAL
     public fun crumb(index: Int): String = "navtop1_crumb_$index"
     public fun entry(id: String): String = "navtop1_entry_$id"
+}
+
+/** The ink role of a title-dropdown entry: the current page, an entry indented under the current level, else a parent. */
+internal fun dropdownEntryRole(e: HierarchyEntry, currentDepth: Int): DropdownEntryRole = when {
+    e.selected -> DropdownEntryRole.Selected
+    e.depth > currentDepth -> DropdownEntryRole.Child
+    else -> DropdownEntryRole.Parent
 }
 
 /** One row of the title dropdown: the bottom page (depth 0) or one of its sub-pages (depth 1..). */
@@ -261,7 +270,8 @@ public fun NavBarTopFirstRow(
                   // The popup is its own window: the runtime nav walk (cloud-android-nav-walk.py) finds the entries by tag.
                   Box(Modifier.semantics { testTagsAsResourceId = true }) {
                   Surface(
-                    color = colors.island, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
+                    // contentColor: a page's own rows (the `extra` slot) inherit the on-surface ink, never the window's dark default.
+                    color = colors.island, contentColor = NavTokens().dropdownOnSurface, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
                     modifier = Modifier.width(TopFirstRowSpec.DROPDOWN_WIDTH).heightIn(max = dropdownMaxHeight(anchor)).testTag(TopFirstRowTags.DROPDOWN),
                   ) {
                   Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -289,7 +299,7 @@ public fun NavBarTopFirstRow(
                                     e.label,
                                     Modifier.padding(start = 16.dp * (e.depth - nav.currentDepth).coerceAtLeast(0)),
                                     fontWeight = if (e.selected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (e.selected) colors.accentOnIsland else colors.onIsland,
+                                    color = NavTokens().dropdownInk(dropdownEntryRole(e, nav.currentDepth)),
                                 )
                             },
                             onClick = { open = false; onNavigate(e) },
@@ -305,14 +315,14 @@ public fun NavBarTopFirstRow(
                     if (onConfigsUi != null || onConfigsAbout != null) HorizontalDivider(color = colors.islandBorder)
                     if (onConfigsUi != null) {
                         DropdownMenuItem(
-                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.General), color = colors.onIsland) },
+                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.General), color = NavTokens().dropdownInk(DropdownEntryRole.Parent)) },
                             onClick = { open = false; onConfigsUi() },
                             modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_GENERAL),
                         )
                     }
                     if (onConfigsAbout != null) {
                         DropdownMenuItem(
-                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.About), color = colors.onIsland) },
+                            text = { Text(fleetConfigsEntryLabel(FleetConfigsPage.About), color = NavTokens().dropdownInk(DropdownEntryRole.Parent)) },
                             onClick = { open = false; onConfigsAbout() },
                             modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_ABOUT),
                         )
