@@ -27,6 +27,14 @@ import android.provider.Settings
  * It never calls requestPermissions or starts a permission settings page itself (guarded by PermsOnePlaceTest).
  */
 object Perms {
+    /**
+     * An app's name for a sentence: its launcher label in words (a fleet id label like "cloud-lib-sample-engine" reads
+     * "Cloud Sample Engine"), else [fallback] in words. Never the package.
+     */
+    fun appLabel(ctx: Context, pkg: String, fallback: String = pkg): String = runCatching {
+        val pm = ctx.packageManager; pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }.getOrNull()?.takeIf { it.isNotBlank() && it != pkg }?.let(PermsView::appName) ?: PermsView.appName(fallback)
+
     @Volatile private var cached: PermCatalogue? = null
 
     fun catalogue(ctx: Context): PermCatalogue = cached ?: synchronized(this) {
@@ -245,14 +253,6 @@ object PermsNeeds {
         return cat.entries.filter { e -> e.features.any { it in features } }
             .filter { PermStatusReader.status(ctx, it, null, vars, decl).missing }
     }
-
-    /**
-     * An app's name for a sentence: its launcher label in words (a fleet id label like "cloud-lib-sample-engine" reads
-     * "Cloud Git Sync Engine"), else [fallback] in words. Never the package.
-     */
-    fun appLabel(ctx: Context, pkg: String, fallback: String = pkg): String = runCatching {
-        val pm = ctx.packageManager; pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrNull()?.takeIf { it.isNotBlank() && it != pkg }?.let(PermsView::appName) ?: PermsView.appName(fallback)
 
     fun labels(entries: List<PermEntry>): String = entries.joinToString(", ") { it.label }
 
