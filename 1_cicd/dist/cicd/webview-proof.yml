@@ -1,0 +1,140 @@
+name: "Proof → web views (#1371: emulator screens of every libs:web-core app + foodforfish.org)"
+
+# Dispatch only. Installs the x86_64 APKs of the given Ship runs on an emulator and photographs their web views:
+# Mail, Drive, Notes, SuperApp (WebApps, Linktree), CG-Omniverse (Avatar, Galaxy, Food for Fish in mobile and desktop
+# mode, a WebGL world) and Cloud Browser (foodforfish.org, webgpureport.org). It records the installed Android System
+# WebView, whether Chrome is present, and the WebGPU capability line GpuProbe puts on a Galaxy world.
+# Emulator limits (stated, not hidden): the GPU is SwiftShader through ANGLE (-gpu swangle_indirect). WebGL2 works;
+# WebGPU needs a Vulkan adapter Chrome does not blocklist, so on this emulator navigator.gpu is expected to be absent
+# or adapterless. A real phone answers that question; this run proves the fallback path and the desktop-mode switch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Ship run ids whose x86_64 APKs to install (space-separated)"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the x86_64 APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNS: ${{ inputs.runs }}
+        run: |
+          set -u
+          mkdir -p apk dl
+          for r in $RUNS; do gh run download "$r" -R "$GITHUB_REPOSITORY" -p '*x86_64*' -D "dl/$r" || echo "::warning::run $r has no x86_64 artifact"; done
+          find dl -name '*.apk' | while read -r f; do cp "$f" "apk/$(basename "$f")"; done
+          ls -la apk; [ -n "$(ls apk)" ] || { echo "::error::no APK"; exit 1; }
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2
+          for a in apk/*.apk; do echo "$("$AAPT2" dump packagename "$a") $a"; done > apk/packages.txt; cat apk/packages.txt
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Write the walk
+        run: |
+          cat > walk.py <<'PY'
+          import re, subprocess, sys, time
+          OUT = "screens"
+          def sh(*a): return subprocess.run(["adb", *a], capture_output=True, text=True, timeout=120)
+          def dump():
+              for _ in range(6):
+                  sh("shell", "uiautomator", "dump", "/sdcard/u.xml")
+                  x = sh("shell", "cat", "/sdcard/u.xml").stdout
+                  if "<hierarchy" in x: return x
+                  time.sleep(2)
+              return ""
+          def nodes(x):
+              for m in re.finditer(r'<node [^>]*>', x):
+                  n = m.group(0)
+                  t = re.search(r' text="([^"]*)"', n); d = re.search(r' content-desc="([^"]*)"', n)
+                  b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+                  if b: yield (t.group(1) if t else ""), (d.group(1) if d else ""), tuple(map(int, b.groups()))
+          def tap(label, scroll=0, contains=False):
+              for _ in range(scroll + 1):
+                  hits = [b for t, d, b in nodes(dump()) if (label in t or label in d) if contains] or \
+                         [b for t, d, b in nodes(dump()) if label in (t, d)]
+                  if hits:
+                      x1, y1, x2, y2 = hits[0]; sh("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2)); time.sleep(2); return True
+                  sh("shell", "input", "swipe", "540", "1700", "540", "900", "400"); time.sleep(1)
+              print("::warning::no '%s' on screen" % label); return False
+          def shot(name, wait=0):
+              time.sleep(wait)
+              with open("%s/%s.png" % (OUT, name), "wb") as f:
+                  f.write(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout)
+              print("shot", name)
+          def texts(name):
+              with open("%s/%s.txt" % (OUT, name), "w") as f:
+                  f.write("\n".join(t or d for t, d, _ in nodes(dump()) if t or d))
+          def launch(pkg, wait=25):
+              sh("shell", "am", "force-stop", pkg)
+              sh("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(wait)
+          def view(pkg, url, wait=35):
+              sh("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "-p", pkg); time.sleep(wait)
+          pkgs = [l.split()[0] for l in open("apk/packages.txt") if l.strip()]
+          def find(*keys): return next((p for p in pkgs if any(k in p for k in keys)), None)
+          if (p := find("cgomniverse")):
+              launch(p); shot("omniverse-01-avatar-webgl")
+              tap("Galaxy"); time.sleep(2)
+              tap("Food for Fish", scroll=12); shot("omniverse-02-foodforfish-mobile", 30); texts("omniverse-02-foodforfish-mobile")
+              tap("Desktop mode"); shot("omniverse-03-foodforfish-desktop", 35); texts("omniverse-03-foodforfish-desktop")
+              tap("Close"); time.sleep(2)
+              tap("WebGL Fluid Simulation", scroll=12); shot("omniverse-04-webgl-world", 25)
+          if (p := find("cloudbrowser")):
+              view(p, "https://foodforfish.org/"); shot("browser-01-foodforfish")
+              view(p, "https://webgpureport.org/"); shot("browser-02-webgpureport"); texts("browser-02-webgpureport")
+          if (p := find("superapp")):
+              launch(p); shot("superapp-01-open")
+              tap("WebApps"); shot("superapp-02-webapps", 15)
+              tap("Linktree"); shot("superapp-03-linktree", 15)
+          if (p := find("cloudnotes", "notes")):
+              launch(p, 35); shot("notes-01-editor-webview")
+          if (p := find("sterna", "cloudmail", "mail")):
+              launch(p); shot("mail-01-open")
+          if (p := find("clouddrive", "drive")):
+              launch(p); shot("drive-01-open")
+          PY
+          cat > walk.sh <<'EOF2'
+          set -u
+          mkdir -p screens
+          adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard || true
+          for a in apk/*.apk; do adb install -r -g "$a" || echo "::warning::install failed: $a"; done
+          adb shell dumpsys webviewupdate > screens/webview-provider.txt 2>&1 || true
+          adb shell pm list packages | grep -E 'chrome|webview' > screens/browsers.txt || true
+          adb shell getprop ro.build.fingerprint >> screens/browsers.txt || true
+          adb logcat -v threadtime "*:W" chromium:I CloudWeb:V > screens/logcat.txt 2>&1 &
+          python3 walk.py; rc=$?
+          exit $rc
+          EOF2
+          chmod +x walk.sh
+      - name: Boot emulator + walk
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_5
+          ram-size: 4096M
+          cores: 4
+          emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./walk.sh
+      - name: Upload the screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webview-screens
+          path: screens
+          retention-days: 30
