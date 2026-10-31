@@ -27,6 +27,15 @@ class DashboardsUiTest {
         assertTrue(order.dropLastWhile { it.isPlaceholder }.none { it.isPlaceholder })
     }
 
+    @Test fun aKeyRowDeclaredFirstIsStillDrawnLast() {
+        val d = Dashboards.parse("""{"dashboards":[{"id":"x","entry":"X","tab":"fi","panels":[
+            {"id":"k","title":"K","source":"s","view":"table","placeholder":{"reason":"needs a key"}},
+            {"id":"a","title":"A","source":"s","view":"table","fetch":{"provider":"p"}},
+            {"id":"b","title":"B","source":"s","view":"table","fetch":{"provider":"p"},"segment_of":"a"}]}]}""").single()
+        assertEquals(listOf("a", "k"), Dashboards.drawOrder(d).map { it.id })
+        assertEquals(listOf("a", "b"), Dashboards.segments(d, d.panels[1]).map { it.id })
+    }
+
     @Test fun marketMonitorLeadsWithTheTreasuryTilesAndTheDerivedSpread() {
         val mm = d("market_monitor")
         assertEquals(listOf("ust", "funding", "equity", "fx", "crypto", "next"), mm.panels.map { it.id })
