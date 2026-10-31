@@ -825,6 +825,22 @@
   "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size4-Regular.woff2": {
    "licence": "MIT",
    "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "ad_Capital-Stack-FinTerminal/app/src/main/res/font/noto_sans_mono_regular.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Noto Sans Mono (Google Noto fonts, notofonts.github.io) is published under the SIL Open Font License 1.1"
+  },
+  "ad_Capital-Stack-FinTerminal/app/src/main/res/font/noto_sans_mono_medium.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Noto Sans Mono (Google Noto fonts, notofonts.github.io) is published under the SIL Open Font License 1.1"
+  },
+  "ad_Capital-Stack-FinTerminal/app/src/main/res/font/roboto_regular.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto (googlefonts/roboto-2) is published by Google under the Apache License 2.0"
+  },
+  "ad_Capital-Stack-FinTerminal/app/src/main/res/font/roboto_medium.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto (googlefonts/roboto-2) is published by Google under the Apache License 2.0"
   }
  }
 }
