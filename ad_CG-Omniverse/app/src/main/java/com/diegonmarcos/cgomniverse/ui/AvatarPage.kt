@@ -5,6 +5,7 @@ package com.diegonmarcos.cgomniverse.ui
 import android.app.backup.BackupManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Environment
@@ -52,10 +53,13 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -116,6 +120,7 @@ object AvatarTags {
     const val AI = "avatar_ai"
     const val SHEET = "avatar_sheet"
     const val HANDLE = "avatar_sheet_handle"
+    const val LOADING = "avatar_loading"
     fun category(id: String) = "avatar_cat_$id"
     fun card(category: String, id: String) = "avatar_card_${category}_$id"
 }
@@ -144,15 +149,14 @@ private fun iconFor(name: String): ImageVector = when (name) {
 }
 
 /**
- * The bridge cgc.js talks to (window.CgcHost): the scene config, its events, and exports streamed in base64 chunks into
- * Downloads. JavaScript calls arrive on a WebView thread; every state change is posted to the main thread.
+ * The bridge cgc.js talks to (window.CgcHost): its events, and exports streamed in base64 chunks into Downloads. The scene
+ * config is pushed to the page (window.cgcBoot from onPageFinished), never pulled by a synchronous call (#1373 launch freeze).
+ * JavaScript calls arrive on a WebView thread; every state change is posted to the main thread.
  */
-private class CgcBridge(private val ctx: Context, private val config: () -> String, private val onEvent: (JSONObject) -> Unit) {
+private class CgcBridge(private val ctx: Context, private val onEvent: (JSONObject) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
     private var out: OutputStream? = null
     private var name = ""
-
-    @JavascriptInterface fun config(): String = config.invoke()
 
     @JavascriptInterface fun event(json: String) {
         val o = runCatching { JSONObject(json) }.getOrNull() ?: return
@@ -203,10 +207,21 @@ fun AvatarPage() {
     val ctx = LocalContext.current
     val density = LocalDensity.current
     val spec = Decl.avatar
-    val prefs = remember { ctx.getSharedPreferences(AVATAR_PREFS, Context.MODE_PRIVATE) }
+    // #1373 launch freeze: nothing heavy on the main thread. The prefs file is read on IO (the defaults show meanwhile) and
+    // the WebView is created only after the page's first frame is on screen, behind the loading state.
+    var prefs by remember { mutableStateOf<SharedPreferences?>(null) }
     val keys = remember { AvatarKeys(ctx) }
     val scope = rememberCoroutineScope()
-    var cfg by remember { mutableStateOf(Avatar.load(spec, prefs.getString(AVATAR_KEY, null))) }
+    var cfg by remember { mutableStateOf(Avatar.load(spec, null)) }
+    var showScene by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val (p, saved) = withContext(Dispatchers.IO) {
+            val f = ctx.getSharedPreferences(AVATAR_PREFS, Context.MODE_PRIVATE)
+            f to f.getString(AVATAR_KEY, null)
+        }
+        cfg = Avatar.load(spec, saved); prefs = p
+    }
+    LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; showScene = true }
     var catId by rememberSaveable { mutableStateOf(spec.categories.lastOrNull()?.id.orEmpty()) }
     var sheetOpen by rememberSaveable { mutableStateOf(true) }
     var exportOpen by remember { mutableStateOf(false) }
@@ -222,7 +237,7 @@ fun AvatarPage() {
     fun update(next: Map<String, String>) {
         if (next == cfg) return
         cfg = next
-        prefs.edit().putString(AVATAR_KEY, Avatar.save(next)).apply()
+        prefs?.edit()?.putString(AVATAR_KEY, Avatar.save(next))?.apply()
         BackupManager(ctx).dataChanged()
     }
     fun js(code: String) { web?.evaluateJavascript("window.cgc&&($code)", null) }
@@ -235,7 +250,7 @@ fun AvatarPage() {
     DisposableEffect(Unit) { onDispose { web?.destroy(); web = null } }
 
     val bridge = remember {
-        CgcBridge(ctx, { Avatar.sceneConfig(spec, css(topPx), css(bottomPx)) }) { e ->
+        CgcBridge(ctx) { e ->
             when (e.optString("type")) {
                 "loaded" -> loaded = true
                 "camera" -> rotating = e.optBoolean("autoRotate")
@@ -246,11 +261,16 @@ fun AvatarPage() {
     }
 
     Box(Modifier.fillMaxSize().background(Scene).testTag(Tags.AVATAR)) {
-        AndroidView(
+        if (showScene) AndroidView(
             factory = { c ->
                 CloudWeb.create(c, WebProfile.WEB_WORLD).also { wv ->
                     wv.addJavascriptInterface(bridge, "CgcHost")
                     wv.webViewClient = object : CloudWebClient(WebProfile.WEB_WORLD, CloudWeb.assetLoader(c)) {
+                        override fun onPageFinished(view: WebView, url: String?) {
+                            super.onPageFinished(view, url)
+                            val conf = Avatar.sceneConfig(spec, css(topPx), css(bottomPx))
+                            view.evaluateJavascript("window.cgcBoot&&window.cgcBoot(" + JSONObject.quote(conf) + ")", null)
+                        }
                         override fun onRecovered(dead: WebView, fresh: WebView?) {
                             fresh?.addJavascriptInterface(bridge, "CgcHost")
                             web = fresh; loaded = false
@@ -262,7 +282,14 @@ fun AvatarPage() {
             },
             modifier = Modifier.fillMaxSize().testTag(Tags.AVATAR_SCENE),
         )
-        if (!loaded) Text(spec.text("loading"), color = Muted, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center))
+        if (!loaded) Column(
+            Modifier.align(Alignment.Center).testTag(AvatarTags.LOADING),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CircularProgressIndicator(color = Color(0xFFB13FE0), strokeWidth = 3.dp, modifier = Modifier.size(36.dp))
+            Text(spec.text("loading"), color = Muted, fontSize = 13.sp)
+        }
 
         // top chrome: Home (+ AI) at the left, Rotate + Export at the right
         Row(
@@ -390,11 +417,16 @@ private val thumbs = HashMap<String, ImageBitmap?>()
 private fun thumb(path: String?): ImageBitmap? {
     if (path == null) return null
     val ctx = LocalContext.current
-    return remember(path) {
-        thumbs.getOrPut(path) {
-            runCatching { ctx.assets.open("avatar/$path").use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull()
+    // decoded on IO (#1373): a sheet of cards must not decode PNGs on the main thread while the page is starting
+    val img by produceState(thumbs[path], path) {
+        if (value == null && !thumbs.containsKey(path)) {
+            value = withContext(Dispatchers.IO) {
+                runCatching { ctx.assets.open("avatar/$path").use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull()
+            }
+            synchronized(thumbs) { thumbs[path] = value }
         }
     }
+    return img
 }
 
 /** One option card: a white tile (the selected one purple) with the option's thumbnail or colour, or its label. */
@@ -439,7 +471,8 @@ private fun AiPanel(spec: AvatarSpec, keys: AvatarKeys, modifier: Modifier, onCl
     val slot = spec.ai?.keySlot.orEmpty()
     var text by rememberSaveable { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
-    var hasKey by remember { mutableStateOf(keys.has(slot)) }
+    var hasKey by remember { mutableStateOf(false) }
+    LaunchedEffect(slot) { hasKey = withContext(Dispatchers.IO) { keys.has(slot) } } // Keystore off the main thread
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     Column(

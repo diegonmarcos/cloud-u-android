@@ -37,8 +37,11 @@ const DEFAULTS = {
 /** Creates the viewer in [container] (an element; the canvas fills it). [base] resolves the config's relative URLs. */
 export function createViewer(container, cfgIn = {}) {
   const cfg = { ...DEFAULTS, ...cfgIn, camera: { ...DEFAULTS.camera, ...(cfgIn.camera || {}) }, insets: { ...DEFAULTS.insets, ...(cfgIn.insets || {}) } };
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // #1373 the render budget: a phone at DPR 2.75 renders 7.5x the CSS pixels; capped at 1.5 (AA only below that) the stage stays
+  // sharp and a software-GL device (the CI emulator, an old GPU) is not starved, which froze the app's UI on launch.
+  const dpr = Math.min(window.devicePixelRatio || 1, cfg.maxPixelRatio || 1.5);
+  const renderer = new THREE.WebGLRenderer({ antialias: dpr < 1.5, alpha: false, preserveDrawingBuffer: false, powerPreference: 'low-power' });
+  renderer.setPixelRatio(dpr);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = cfg.exposure;
@@ -55,7 +58,7 @@ export function createViewer(container, cfgIn = {}) {
 
   // studio light: warm key (casts the contact shadow), cool fill, rim from behind
   const key = new THREE.DirectionalLight(0xfff4e8, 2.1); key.position.set(0.35, 4.2, 1.4);
-  key.castShadow = renderer.shadowMap.enabled; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 5; key.shadow.bias = -0.0004;
+  key.castShadow = renderer.shadowMap.enabled; key.shadow.mapSize.set(512, 512); key.shadow.radius = 5; key.shadow.bias = -0.0004;
   Object.assign(key.shadow.camera, { left: -1.2, right: 1.2, top: 2.3, bottom: -0.3, near: 0.1, far: 10 });
   const fill = new THREE.DirectionalLight(0xdfe8ff, 0.7); fill.position.set(-2.4, 1.6, 1.8);
   const rim = new THREE.DirectionalLight(0xffffff, 1.4); rim.position.set(-0.8, 2.6, -2.8);
@@ -260,8 +263,15 @@ export function createViewer(container, cfgIn = {}) {
     return buf.byteLength;
   }
 
+  // #1373 at most cfg.fps frames a second (30 by default) and none while the page is hidden: the scene animates at 30 just as
+  // well, and the other half of the GPU stays with the app's own UI.
+  const frameMs = 1000 / (cfg.fps || 30);
+  let lastDraw = 0;
   function tick() {
-    const now = performance.now(); const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    const now = performance.now();
+    if (document.hidden || now - lastDraw < frameMs - 2) return;
+    lastDraw = now;
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
     state.mixer && state.mixer.update(dt);
     state.vrm && state.vrm.update(dt);
     controls.update();

@@ -10,15 +10,20 @@
 </style>
 <!-- The Avatar editor's scene: libs:cgc-3d (assets/cgc, merged from the library) over three.js. three.js and OrbitControls are
      Cloud Nav's copies (ac_cloud-nav/app/src/main/assets/space, merged in by app/build.gradle). The scene config is
-     data/avatar.json::scene, handed over synchronously by the app's CgcHost bridge; scene ops arrive through window.cgc.apply. -->
+     data/avatar.json::scene, pushed by the app (window.cgcBoot(json) from onPageFinished, #1373: no synchronous bridge call
+     on the page's critical path); scene ops arrive through window.cgc.apply. Without a host the page boots the default model. -->
 <script type="importmap">{ "imports": { "three": "../space/three.module.min.js" } }</script>
 </head>
 <body>
 <div id="cgc"></div>
+<script>window.cgcBoot = (json) => { window.cgcPending = json; };</script>
 <script type="module">
   import { boot } from '../cgc/cgc.js';
-  const host = window.CgcHost;
-  boot(host && host.config ? JSON.parse(host.config()) : { model: { url: 'models/owner.glb' } });
+  let booted = false;
+  const go = (json) => { if (booted) return; booted = true; boot(typeof json === 'string' ? JSON.parse(json) : json); };
+  if (!window.CgcHost) go({ model: { url: 'models/owner.glb' } });
+  else if (window.cgcPending) go(window.cgcPending);
+  else window.cgcBoot = go;
 </script>
 </body>
 </html>

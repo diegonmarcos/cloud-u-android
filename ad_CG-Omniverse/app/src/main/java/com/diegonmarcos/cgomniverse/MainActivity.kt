@@ -1,6 +1,8 @@
 package com.diegonmarcos.cgomniverse
 
 import android.os.Bundle
+import android.os.StrictMode
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.diegonmarcos.cgomniverse.ui.AppShell
@@ -10,6 +12,11 @@ import com.diegonmarcos.superapp.bottomnav.FleetChrome
 /** The one Activity: edge-to-edge through the fleet's FleetChrome; the bars clear their own insets. */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // #1373 launch-freeze proof: `adb shell setprop log.tag.CgcStrict VERBOSE` turns on a log-only StrictMode for the main
+        // thread (disk, network, slow calls); the avatar proof counts the violations. Off by default, so users pay nothing.
+        if (Log.isLoggable(STRICT_TAG, Log.VERBOSE)) {
+            StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
+        }
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
         // the start page and world, read once from the launching intent (Launch); state restores take over after that
@@ -17,4 +24,6 @@ class MainActivity : ComponentActivity() {
         val world = intent?.getStringExtra(Launch.EXTRA_WORLD)
         setContent { AppTheme { AppShell(startSection = section, startWorld = world) } }
     }
+
+    private companion object { const val STRICT_TAG = "CgcStrict" }
 }

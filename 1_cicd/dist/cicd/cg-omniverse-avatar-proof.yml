@@ -216,8 +216,26 @@ jobs:
           adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard || true
           adb install -r -g app.apk || exit 2
           PKG=com.diegonmarcos.cgomniverse
-          adb logcat -v threadtime "*:W" chromium:I > screens/logcat.txt 2>&1 &
+          adb logcat -v threadtime "*:W" chromium:I StrictMode:D > screens/logcat.txt 2>&1 &
+          # #1373 cold-launch gate: the Avatar page is the default page, so a launch that freezes is an ANR for every user.
+          # Log-only StrictMode on (MainActivity reads log.tag.CgcStrict), a cold start, 45 s on the Avatar page, then: no
+          # am_anr / not-responding for the package (hard fail), launch time and main-thread StrictMode violations recorded.
+          anr() { adb logcat -b events -d | grep -E "am_anr.*$PKG" ; adb shell dumpsys activity processes | grep -A3 "$PKG" | grep -E "notResponding=true|crashing=true" ; }
+          adb shell setprop log.tag.CgcStrict VERBOSE
+          adb shell am force-stop "$PKG"; adb logcat -b all -c || true
+          adb shell am start -W -n "$PKG/.MainActivity" | tee screens/launch.txt
+          for i in $(seq 1 9); do sleep 5; a=$(anr); [ -n "$a" ] && break; done
+          {
+            echo "--- ANR / not responding after cold launch (empty = none)"; echo "$a"
+            echo "--- main-thread StrictMode violations"; adb logcat -d -s StrictMode:D | grep -c "policy violation" || true
+            adb logcat -d -s StrictMode:D | grep -E "policy violation|at com\.diegonmarcos" | head -40
+            echo "--- frames"; adb shell dumpsys gfxinfo "$PKG" | grep -E "Total frames|Janky|50th|90th|99th" || true
+          } >> screens/launch.txt
+          adb exec-out screencap -p > screens/00-cold-launch.png || true
+          if [ -n "$a" ]; then echo "::error::CG-Omniverse is not responding after a cold launch"; cat screens/launch.txt; exit 3; fi
+          echo "cold launch: no ANR"
           python3 walk.py "$PKG"; rc=$?
+          a=$(anr); if [ -n "$a" ]; then echo "::error::an ANR during the walk: $a"; echo "--- ANR during walk"; echo "$a" >> screens/launch.txt; rc=4; fi
           adb shell dumpsys package "$PKG" | grep -E "versionName|codePath" > screens/package.txt || true
           adb shell ls -l /sdcard/Download/CG-Omniverse >> screens/package.txt 2>&1 || true
           ls -la app.apk >> screens/package.txt
