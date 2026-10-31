@@ -522,7 +522,7 @@ private fun PanelBody(
                 FinLineChart(visible, panel.view == Dashboards.VIEW_CURVE, h, panel.id) { hover = it }
                 if (state.data.rows.isNotEmpty()) {
                     Spacer(Modifier.height(FinDim.gap))
-                    FinTable(panel.id, state.data.columns, state.data.rows, state.data.links, declaredTypes(panel), width, limit = 5) { openUrl(ctx, it) }
+                    FinTable(panel.id, state.data.columns, state.data.rows, state.data.links, declaredTypes(panel), width, limit = 5, details = state.data.details) { openUrl(ctx, it) }
                 }
             }
         }
@@ -572,7 +572,7 @@ private fun PanelBody(
                         data.rows.mapIndexedNotNull { i, r -> FinFormat.parseNum(r.getOrNull(1))?.let { ChartPoint(r.getOrElse(0) { "" }, i.toDouble(), it) } }
                     }, panel.unit, panel.id)
                     Dashboards.VIEW_NEWS -> FinNewsList(panel.id, data.rows, data.links, panel.raw.optInt("limit", 8)) { openUrl(ctx, it) }
-                    else -> FinTable(panel.id, data.columns, data.rows, data.links, declaredTypes(panel), width) { openUrl(ctx, it) }
+                    else -> FinTable(panel.id, data.columns, data.rows, data.links, declaredTypes(panel), width, details = data.details) { openUrl(ctx, it) }
                 }
             }
         }

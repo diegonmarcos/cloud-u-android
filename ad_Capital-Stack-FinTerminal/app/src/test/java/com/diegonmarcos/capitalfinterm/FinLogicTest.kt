@@ -2,7 +2,9 @@ package com.diegonmarcos.capitalfinterm
 
 import com.diegonmarcos.capitalfinterm.FinLogic.Col
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -83,5 +85,22 @@ class FinLogicTest {
         assertEquals(8, FinLogic.visibleRows(24, false))
         assertEquals(24, FinLogic.visibleRows(24, true))
         assertEquals(5, FinLogic.visibleRows(5, false))
+    }
+
+    @Test fun wideTablesSizeEveryColumnToItsLongestCellAndScrollWhenTheyDoNotFit() {
+        val cols = listOf("Name", "Last", "WTD", "MTD", "YTD", "1M", "3M", "1Y", "3Y", "10Y")
+        val rows = listOf(listOf("XLK Technology", "188.74", "+3.01%", "-3.58%", "+31.10%", "+1.00%", "+2.00%", "+12.82%", "+10.10%", "+14.50%"))
+        val l = FinLogic.layout(cols, rows, 360f)
+        assertEquals(cols.size, l.widths.size)
+        assertFalse(l.fits)
+        // "+12.82%" is 7 mono characters: its column is wider than the old fixed 64dp and holds every character
+        for (i in 1 until cols.size) assertTrue("col $i ${l.widths[i]}", l.widths[i] >= rows[0][i].length * FinLogic.CHAR_NUM + FinLogic.CELL_PAD)
+        assertTrue(l.widths[4] > 64f)
+        // the pinned name holds its one-line name and stays within 45 % of the width
+        assertTrue(l.widths[0] >= "XLK Technology".length * FinLogic.CHAR_TEXT + FinLogic.CELL_PAD && l.widths[0] <= 360f * 0.45f)
+        // a narrow table fits and fills the width exactly
+        val small = FinLogic.layout(listOf("Name", "Last"), listOf(listOf("DAX", "1.0")), 360f)
+        assertTrue(small.fits)
+        assertEquals(360f, small.widths.sum(), 0.01f)
     }
 }

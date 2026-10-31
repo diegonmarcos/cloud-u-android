@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'ff-utc | ff-importance | merge | container-first | event-window | watchlist | alert-side | ics-dst | sdmx-key | jsonstat-stride | cache-ttl | fin-sort | fin-cell-dash | fin-engine-dash | fin-nav-back | fin-default | fin-keyrows-last | fin-afp | fin-spread | tbl-rebalance | tbl-weights | tbl-symbol-map | tbl-forward'
+        description: 'ff-utc | ff-importance | merge | container-first | event-window | watchlist | alert-side | ics-dst | sdmx-key | jsonstat-stride | cache-ttl | fin-sort | fin-cell-dash | fin-engine-dash | fin-nav-back | fin-default | fin-keyrows-last | fin-afp | fin-spread | tbl-rebalance | tbl-weights | tbl-symbol-map | tbl-forward | tbl-coverage | tbl-shortname | fin-layout | feeds-curve'
         required: true
 permissions:
   contents: read
@@ -47,6 +47,10 @@ jobs:
             tbl-weights)     sed -i 's/have.sumOf { it.first \* it.second!! } \/ w/have.sumOf { it.second!! } \/ have.size/' $K/Tables.kt ;;
             tbl-symbol-map)  sed -i 's/return Catalog.str(m, item).ifEmpty { null }/return item/' $K/Tables.kt ;;
             tbl-forward)     sed -i 's/        if (forward) Forward.rate(curve, start, t)/        if (false) Forward.rate(curve, start, t)/' $K/Tables.kt ;;
+            tbl-coverage)    sed -i 's/if (coverage(values) + 1e-12 < min) null else weighted(values)/if (false) null else weighted(values)/' $K/Tables.kt ;;
+            tbl-shortname)   sed -i 's/return if (m == null) short else "\${m.groupValues\[2\].trim()} \$short".trim()/return label/' $K/Tables.kt ;;
+            fin-layout)      sed -i 's/maxOf(44f, chars(i) \* CHAR_NUM + CELL_PAD)/64f/' $K/FinLogic.kt ;;
+            feeds-curve)     sed -i 's/tenorYears(k)?.let { y -> pts += Pt(k, k, y, v, null, Catalog.str(t, "date")) }/tenorYears(k)?.let { y -> pts += Pt(k, k, y, v, null, Catalog.str(t, "date")) }.also { pts.clear() }/' $K/Feeds.kt ;;
             *) echo "unknown mutation"; exit 2 ;;
           esac
           git diff --stat

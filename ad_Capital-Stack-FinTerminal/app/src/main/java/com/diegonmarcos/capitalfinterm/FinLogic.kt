@@ -39,6 +39,31 @@ object FinLogic {
         }
     }
 
+    /** A table's column widths (dp) and whether they fit without scrolling. */
+    data class Layout(val widths: List<Float>, val fits: Boolean)
+
+    /** Per-character advance (dp) of the body sans (name column, 12sp) and of the tabular mono numbers (13sp), and the cell padding. */
+    const val CHAR_TEXT = 6.6f
+    const val CHAR_NUM = 7.9f
+    const val CELL_PAD = 16f
+
+    /**
+     * Content-sized columns (the wide-table fix): every number column is as wide as its longest cell or header (never clipped, no
+     * fixed 64dp), the pinned name column fits its longest one-line name within 96dp .. 45 % of [width]. When the sum fits, the
+     * spare width goes to the number columns; otherwise the number columns scroll sideways under the pinned name.
+     */
+    fun layout(columns: List<String>, rows: List<List<String>>, width: Float): Layout {
+        val n = maxOf(columns.size, rows.maxOfOrNull { it.size } ?: 0)
+        if (n == 0) return Layout(emptyList(), true)
+        fun chars(i: Int) = maxOf(columns.getOrElse(i) { "" }.length, rows.maxOfOrNull { cell(it.getOrNull(i)).length } ?: 0)
+        val first = (chars(0) * CHAR_TEXT + CELL_PAD).coerceIn(96f, maxOf(96f, width * 0.45f))
+        val rest = (1 until n).map { i -> maxOf(44f, chars(i) * CHAR_NUM + CELL_PAD) }
+        val total = first + rest.sum()
+        if (total > width || rest.isEmpty()) return Layout(listOf(first) + rest, total <= width)
+        val spare = (width - total) / rest.size
+        return Layout(listOf(first) + rest.map { it + spare }, true)
+    }
+
     /**
      * The row order of a table sorted on [col] at [step] (spec 2.3): 0 = the source order; 1 = numbers descending / text
      * ascending; 2 = the reverse. Missing values always sort last.

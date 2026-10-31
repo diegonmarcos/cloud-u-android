@@ -40,16 +40,29 @@ class TablesTest {
     @Test fun performanceRowsComeFromTheContainerThroughPerformanceRow() {
         val http = Fake { u -> if (u.startsWith("http://mesh-base/v1/history?symbol=XLK")) v1Bars("2025-10-30" to 100.0, "2026-10-30" to 110.0) else null }
         val data = load("eq_dm_us", "sectors", http)
-        val xlk = data.rows.first { it[0] == "Technology (XLK)" }
+        val xlk = data.rows.first { it[0] == "XLK Technology" }
         assertEquals(listOf("Name", "Last") + Performance.COLUMNS, data.columns)
         assertEquals("+10.00%", xlk[2 + Performance.COLUMNS.indexOf("1Y")])
         assertEquals(FinFormat.DASH, xlk[2 + Performance.COLUMNS.indexOf("10Y")])
         assertTrue(data.note, data.note.contains("Technology (XLK) ") && data.note.contains("history from 2025-10-30"))
         // an item nobody answers is a row of dashes with its reason in the note, never dropped
-        val xlf = data.rows.first { it[0] == "Financials (XLF)" }
+        val xlf = data.rows.first { it[0] == "XLF Financials" }
         assertTrue(xlf.drop(1).all { it == FinFormat.DASH })
         assertTrue(data.note, data.note.contains("Financials (XLF): ") && data.note.contains("no answer"))
         assertEquals(12, data.rows.size)
+        // one-line names: ticker + short label in the cell, the declared full name in the detail view, row for row
+        assertEquals(data.rows.size, data.details.size)
+        assertEquals("Technology (XLK)", data.details[data.rows.indexOf(xlk)])
+        assertTrue(data.rows.map { it[0] }.toString(), data.rows.all { it[0].length <= 5 + 1 + Tables.SHORT_MAX })
+    }
+
+    @Test fun shortNamesPutTheTickerFirstAndCutLongLabels() {
+        assertEquals("XLK Technology", Tables.shortName("Technology (XLK)"))
+        assertEquals("XLY Cons Disc", Tables.shortName("Consumer Discretionary (XLY)"))
+        assertEquals("XLC Comm Serv", Tables.shortName("Communication Services (XLC)"))
+        assertEquals("XLV Health Care", Tables.shortName("Health Care (XLV)"))
+        assertEquals("DAX", Tables.shortName("DAX"))
+        assertEquals("Emer Mark", Tables.shortName("Emerging Markets Bonds"))
     }
 
     @Test fun whenTheMeshIsDownTheDirectSourceAnswersUnderTheMappedSymbol() {
@@ -102,7 +115,8 @@ class TablesTest {
             }
         }
         val data = load("mp_60_40", "perf", http)
-        assertEquals(listOf("Portfolio 60/40", "Bonds 60% (AGG)", "Equity 40% (ACWI)"), data.rows.map { it[0] })
+        assertEquals(listOf("Portfolio 60/40", "AGG Bonds 60%", "ACWI Equity 40%"), data.rows.map { it[0] })
+        assertEquals(listOf("Portfolio 60/40, daily rebalanced", "Bonds 60% (AGG)", "Equity 40% (ACWI)"), data.details)
         assertEquals(Engine.sig(100.0 * (0.6 * 1.01 + 0.4 * 1.10)), data.rows[0][1])
         assertEquals(listOf("Name", "Last") + Performance.COLUMNS + listOf(Tables.COL_VOL, Tables.COL_MDD), data.columns)
     }
@@ -134,21 +148,45 @@ class TablesTest {
             }
         }
         val data = load("yields_matrix", "spot", http)
-        assertEquals(listOf("Country", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"), data.columns)
+        assertEquals(listOf("Country", "Cov", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"), data.columns)
         assertEquals(listOf("World avg", "DM avg", "EM avg"), data.rows.take(3).map { it[0] })
         assertEquals(25, data.rows.size)
+        // US + DE hold 61 % of the DM GDP: the DM average is shown; BR alone is 6 % of EM and US+DE+BR 40 % of World: "—"
         val dm = (30507 * 4.0 + 4744 * 2.0) / (30507 + 4744)
-        assertEquals(String.format(java.util.Locale.US, "%.2f", dm), data.rows[1][1])
-        assertEquals("10.00", data.rows[2][1])
-        assertEquals(String.format(java.util.Locale.US, "%.2f", (30507 * 4.0 + 4744 * 2.0 + 2126 * 10.0) / (30507 + 4744 + 2126)), data.rows[0][1])
-        assertEquals(FinFormat.DASH, data.rows.first { it[0] == "United States" }[2])
+        assertEquals(String.format(java.util.Locale.US, "%.2f", dm), data.rows[1][2])
+        assertEquals(listOf("40%", "61%", "6%"), data.rows.take(3).map { it[1] })
+        assertEquals(FinFormat.DASH, data.rows[2][2])
+        assertEquals(FinFormat.DASH, data.rows[0][2])
+        assertTrue(data.note, data.note.contains("insufficient coverage: World avg 40%, EM avg 6% < 60%"))
+        assertEquals("33%", data.rows.first { it[0] == "United States" }[1])
+        assertEquals(FinFormat.DASH, data.rows.first { it[0] == "United States" }[3])
         assertTrue(data.rows.first { it[0] == "China" }.drop(1).all { it == FinFormat.DASH })
         assertTrue(data.note, data.note.contains("no curve: ") && data.note.contains("CN ("))
         assertTrue(data.note, data.note.contains("US 6M/1Y/2Y/3Y/5Y/7Y/20Y/30Y"))
         val fwd = load("yields_matrix", "fwd", http)
         val us = listOf(0.25 to 4.0, 10.0 to 5.0)
-        assertEquals(String.format(java.util.Locale.US, "%.2f", Forward.rate(us, 1.0, 10.0)), fwd.rows.first { it[0] == "United States" }[8])
+        assertEquals(String.format(java.util.Locale.US, "%.2f", Forward.rate(us, 1.0, 10.0)), fwd.rows.first { it[0] == "United States" }[9])
         assertTrue(fwd.note.startsWith("1y-forward"))
+    }
+
+    @Test fun anAverageOfTheUsAloneIsInsufficientCoverageNotTheUsYield() {
+        // the CI-emulator case (mesh off, only the Treasury curve answers): World / DM must not repeat the US
+        val http = Fake { u -> if (u == "http://mesh-base/v1/curves/US") """{"tenors":["3M","10Y"],"curve":{"country":"US","group":"dm","gdp_weight":0.53,"tenors":[{"tenor":"3M","value":4.16,"date":"2026-10-30","source":"treasury","method":"par"},{"tenor":"10Y","value":4.4,"date":"2026-10-30","source":"treasury","method":"par"},{"tenor":"6M","value":null,"date":null,"source":null,"method":"no free source declared for this cell"}]}}""" else null }
+        val data = load("yields_matrix", "spot", http)
+        assertEquals("4.16", data.rows.first { it[0] == "United States" }[2])
+        assertEquals("4.40", data.rows.first { it[0] == "United States" }[9])
+        for (r in data.rows.take(3)) assertTrue(r.toString(), r.drop(2).all { it == FinFormat.DASH })
+        assertEquals(listOf("33%", "53%", "0%"), data.rows.take(3).map { it[1] })
+        assertTrue(data.note, data.note.contains("insufficient coverage: World avg 33%, DM avg 53%, EM avg 0% < 60%"))
+        assertEquals(0.6, Dashboards.byId(dashboards, "yields_matrix")!!.panels.first { it.id == "spot" }.fetch!!.getDouble("min_coverage_gdp"), 0.0)
+    }
+
+    @Test fun coverageIsTheGdpShareWithAValueAndGatesTheAverage() {
+        val v = listOf(60.0 to 1.0, 40.0 to null)
+        assertEquals(0.6, Tables.coverage(v), 1e-12)
+        assertEquals(1.0, Tables.gatedAverage(v, 0.6)!!, 1e-12)
+        assertNull(Tables.gatedAverage(listOf(59.0 to 1.0, 41.0 to null), 0.6))
+        assertEquals(0.0, Tables.coverage(listOf(0.0 to 1.0)), 0.0)
     }
 
     @Test fun theDeclaredMatrixIsTheOwnersCountryList() {
@@ -158,6 +196,7 @@ class TablesTest {
         assertEquals(listOf("US", "DE", "FR", "IT", "ES", "GB", "JP", "CA", "AU", "CH", "NL", "SE"), dm)
         assertEquals(10, g.getJSONArray("EM").length())
         assertEquals("3M", Tables.tenors(f).first().label)
+        assertEquals("/v1/curves/{each}", f.getJSONObject("primary").getString("api"))
         assertEquals("30Y", Tables.tenors(f).last().label)
     }
 }

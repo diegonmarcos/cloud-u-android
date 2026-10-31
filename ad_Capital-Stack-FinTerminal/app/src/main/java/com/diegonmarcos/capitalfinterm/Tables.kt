@@ -142,19 +142,37 @@ object Tables {
         val missing = ArrayList<String>()
         var asOf = ""
         val by = LinkedHashSet<String>()
+        val full = got.keys.map { Catalog.str(labels, it).ifEmpty { it } }
         val rows = got.map { (item, ig) ->
             val cl = closes(ig.got)
             val name = Catalog.str(labels, item).ifEmpty { item }
-            if (cl.isEmpty()) { missing += "$name: ${ig.why}"; return@map listOf(name, FinFormat.DASH) + perf.map { FinFormat.DASH } }
+            val cellName = shortName(name)
+            if (cl.isEmpty()) { missing += "$name: ${ig.why}"; return@map listOf(cellName, FinFormat.DASH) + perf.map { FinFormat.DASH } }
             by += ig.by
             if (cl.last().first.toString() > asOf) asOf = cl.last().first.toString()
             val row = Performance.row(cl)
             val short = perf.filter { column(it, cl, row) == null }
             if (short.isNotEmpty()) missing += "$name ${short.joinToString("/")}: history from ${cl.first().first}"
-            listOf(name, Engine.sig(cl.last().second)) + perf.map { fmt(it, column(it, cl, row)) }
+            listOf(cellName, Engine.sig(cl.last().second)) + perf.map { fmt(it, column(it, cl, row)) }
         }
         val note = if (missing.isEmpty()) "" else "— " + missing.joinToString(" · ")
-        return PanelData(panel.columns, rows, emptyList(), emptyList(), asOf, note, servedBy = by.filter { it.isNotEmpty() }.joinToString(" + "))
+        return PanelData(panel.columns, rows, emptyList(), emptyList(), asOf, note, servedBy = by.filter { it.isNotEmpty() }.joinToString(" + "), details = full)
+    }
+
+    /** Longest short label kept whole; longer ones are cut to 4 letters a word ("Consumer Discretionary" -> "Cons Disc"). */
+    const val SHORT_MAX = 12
+
+    /**
+     * The one-line name cell: a declared "Full Name (TICKER)" becomes "TICKER Short" (ticker first, then [SHORT_MAX] at most);
+     * a label with no ticker is shortened the same way. The full label stays in [PanelData.details] for the detail view.
+     */
+    fun shortName(label: String): String {
+        val m = Regex("^(.*?)\\s*\\(([^()]+)\\)\\s*$").find(label.trim())
+        val base = (m?.groupValues?.get(1) ?: label).trim()
+        val short = if (base.length <= SHORT_MAX) base
+            else base.split(Regex("\\s+")).filter { it.isNotEmpty() }.map { w -> if (w.length > 4) w.take(4) else w }
+                .fold("") { acc, w -> if (acc.isEmpty()) w else if (acc.length + 1 + w.length <= SHORT_MAX) "$acc $w" else acc }
+        return if (m == null) short else "${m.groupValues[2].trim()} $short".trim()
     }
 
     // ------------------------------------------------------------------ model portfolio
@@ -185,12 +203,14 @@ object Tables {
         fun line(label: String, cl: List<Pair<LocalDate, Double>>, last: String): List<String> =
             if (cl.isEmpty()) listOf(label, FinFormat.DASH) + perf.map { FinFormat.DASH }
             else Performance.row(cl).let { r -> listOf(label, last) + perf.map { fmt(it, column(it, cl, r)) } }
-        val rows = listOf(line("Portfolio " + legs.joinToString("/") { it.second.toString() }, port, if (port.isEmpty()) FinFormat.DASH else Engine.sig(port.last().second))) +
-            series.map { (name, w, cl) -> line("$name ${w}% (${Catalog.str(proxies, name)})", cl, cl.lastOrNull()?.let { Engine.sig(it.second) } ?: FinFormat.DASH) }
+        val title = "Portfolio " + legs.joinToString("/") { it.second.toString() }
+        val rows = listOf(line(title, port, if (port.isEmpty()) FinFormat.DASH else Engine.sig(port.last().second))) +
+            series.map { (name, w, cl) -> line("${Catalog.str(proxies, name)} $name ${w}%".trim(), cl, cl.lastOrNull()?.let { Engine.sig(it.second) } ?: FinFormat.DASH) }
+        val full = listOf("$title, daily rebalanced") + series.map { (name, w, _) -> "$name ${w}% (${Catalog.str(proxies, name)})" }
         val note = (if (port.isNotEmpty()) "Daily rebalanced from ${port.first().first}; legs priced by ETF proxies." else "") +
             (if (missing.isEmpty()) "" else " — " + missing.joinToString(" · "))
         return PanelData(panel.columns, rows, emptyList(), emptyList(), port.lastOrNull()?.first?.toString().orEmpty(), note.trim(),
-            servedBy = got.values.map { it.by }.filter { it.isNotEmpty() }.distinct().joinToString(" + "))
+            servedBy = got.values.map { it.by }.filter { it.isNotEmpty() }.distinct().joinToString(" + "), details = full)
     }
 
     // ------------------------------------------------------------------ yields matrix
@@ -221,6 +241,21 @@ object Tables {
         return if (have.isEmpty() || w <= 0.0) null else have.sumOf { it.first * it.second!! } / w
     }
 
+    /** The declared default for `min_coverage_gdp`: an average is shown only when its countries with a value hold this GDP share. */
+    const val MIN_COVERAGE = 0.6
+    const val COL_COV = "Cov"
+
+    /** Share (0..1) of the members' total GDP held by the members that have a value; 0 when the members have no GDP. */
+    fun coverage(values: List<Pair<Double, Double?>>): Double {
+        val tot = values.filter { it.first > 0.0 }.sumOf { it.first }
+        return if (tot <= 0.0) 0.0 else values.filter { it.first > 0.0 && it.second != null }.sumOf { it.first } / tot
+    }
+
+    /** [weighted] gated by [coverage]: null (shown "—", insufficient coverage) below [min]. */
+    fun gatedAverage(values: List<Pair<Double, Double?>>, min: Double): Double? = if (coverage(values) + 1e-12 < min) null else weighted(values)
+
+    fun pct0(x: Double): String = String.format(Locale.US, "%.0f%%", x * 100.0)
+
     fun matrix(panel: Panel, f: JSONObject, got: Map<String, ItemGot>): PanelData {
         val forward = panel.raw.optString("mode") == "forward"
         val start = f.optDouble("forward_start_years", 1.0)
@@ -230,12 +265,23 @@ object Tables {
         val groups = f.optJSONObject("groups") ?: JSONObject()
         val curves = got.mapValues { curve(f, it.value.got) }
         val cells = curves.mapValues { (_, cv) -> ts.map { cell(cv, it.years, forward, start) } }
-        fun avg(members: List<String>): List<Double?> = ts.indices.map { i -> weighted(members.map { gdp.optDouble(it, 0.0) to cells[it]?.get(i) }) }
+        val min = f.optDouble("min_coverage_gdp", MIN_COVERAGE)
+        val hasCov = panel.columns.getOrNull(1) == COL_COV
+        fun vals(members: List<String>, i: Int) = members.map { gdp.optDouble(it, 0.0) to cells[it]?.get(i) }
+        fun avg(members: List<String>): List<Double?> = ts.indices.map { i -> gatedAverage(vals(members, i), min) }
+        // the row's coverage: the best tenor's share (each cell is gated on its own tenor's share)
+        fun cov(members: List<String>): Double = ts.indices.maxOfOrNull { i -> coverage(vals(members, i)) } ?: 0.0
         val dm = strings(groups.optJSONArray("DM"))
         val em = strings(groups.optJSONArray("EM"))
-        fun fmtRow(label: String, v: List<Double?>) = listOf(label) + v.map { x -> if (x == null) FinFormat.DASH else String.format(Locale.US, "%.2f", x) }
-        val rows = listOf(fmtRow("World avg", avg(dm + em)), fmtRow("DM avg", avg(dm)), fmtRow("EM avg", avg(em))) +
-            got.keys.map { fmtRow(Catalog.str(labels, it).ifEmpty { it }, cells[it]!!) }
+        val world = dm + em
+        val worldGdp = world.sumOf { gdp.optDouble(it, 0.0) }
+        fun fmtRow(label: String, covCell: String, v: List<Double?>) = listOf(label) + (if (hasCov) listOf(covCell) else emptyList()) +
+            v.map { x -> if (x == null) FinFormat.DASH else String.format(Locale.US, "%.2f", x) }
+        val avgs = listOf("World avg" to world, "DM avg" to dm, "EM avg" to em)
+        val thin = avgs.filter { (_, m) -> avg(m).any { it == null } && cov(m) + 1e-12 < min }
+            .map { (l, m) -> "$l ${pct0(cov(m))}" }
+        val rows = avgs.map { (l, m) -> fmtRow(l, pct0(cov(m)), avg(m)) } +
+            got.keys.map { fmtRow(Catalog.str(labels, it).ifEmpty { it }, if (worldGdp > 0) pct0(gdp.optDouble(it, 0.0) / worldGdp) else FinFormat.DASH, cells[it]!!) }
         val noCurve = got.filter { curves[it.key].isNullOrEmpty() }.map { "${it.key} (${it.value.why})" }
         val gaps = curves.filter { it.value.isNotEmpty() }.mapNotNull { (k, _) ->
             val miss = ts.filterIndexed { i, _ -> cells[k]!![i] == null }.map { it.label }
@@ -243,7 +289,8 @@ object Tables {
         }
         val note = listOfNotNull(
             if (forward) "${fmtYears(start)}-forward curve from each spot curve (Forward.rate)." else null,
-            "Averages GDP-weighted (IMF, USD), over the countries with a value.",
+            "Averages GDP-weighted (IMF, USD), shown only when the countries with a value hold ${pct0(min)} of the group's GDP; Cov = that share (country rows: share of World GDP).",
+            if (thin.isEmpty()) null else "— insufficient coverage: " + thin.joinToString(", ") + " < ${pct0(min)}.",
             if (noCurve.isEmpty()) null else "— no curve: " + noCurve.joinToString(", "),
             if (gaps.isEmpty()) null else "— no point at tenor: " + gaps.joinToString(", "),
         ).joinToString(" ")

@@ -419,6 +419,7 @@
               "BC_30YEAR": 30
             },
             "forward_start_years": 1,
+            "min_coverage_gdp": 0.6,
             "primary": {
               "source": "cloud_fincept",
               "api": "/v1/curves/{each}",
@@ -427,6 +428,7 @@
           },
           "columns": [
             "Country",
+            "Cov",
             "3M",
             "6M",
             "1Y",
@@ -628,6 +630,7 @@
               "BC_30YEAR": 30
             },
             "forward_start_years": 1,
+            "min_coverage_gdp": 0.6,
             "primary": {
               "source": "cloud_fincept",
               "api": "/v1/curves/{each}",
@@ -636,6 +639,7 @@
           },
           "columns": [
             "Country",
+            "Cov",
             "3M",
             "6M",
             "1Y",

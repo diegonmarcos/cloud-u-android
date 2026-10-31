@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,6 +58,7 @@ fun FinTable(
     declared: List<String>,
     width: Dp,
     limit: Int = 8,
+    details: List<String> = emptyList(),
     onOpen: (String) -> Unit,
 ) {
     val p = LocalFinPalette.current
@@ -68,12 +70,13 @@ fun FinTable(
     var expanded by rememberSaveable(panelId) { mutableIntStateOf(0) }
     val order = remember(rows, sortCol, sortStep) { FinLogic.sortOrder(rows, sortCol, types.getOrElse(sortCol) { Col.TEXT }, sortStep) }
     val shown = FinLogic.visibleRows(rows.size, expanded == 1, limit)
-    // Column widths: the first column 96dp .. 45 % of the width; the rest at least 64dp, sharing what is left.
-    val firstW = (width * 0.45f).coerceAtLeast(96.dp).coerceAtMost(maxOf(96.dp, width - 64.dp * (n - 1).coerceAtLeast(0)))
-    val restMin = 64.dp
-    val fits = firstW + restMin * (n - 1) <= width
-    val restW = if (fits && n > 1) (width - firstW) / (n - 1) else restMin
+    // Content-sized columns (FinLogic.layout): the pinned name fits its one-line name, every number column its longest cell.
+    val lay = remember(columns, rows, width) { FinLogic.layout(columns, rows, width.value) }
+    val ws = lay.widths.map { it.dp }
+    val firstW = ws.getOrElse(0) { 96.dp }
+    val fits = lay.fits
     val scroll = rememberScrollState()
+    var detail by remember(panelId) { mutableStateOf<Int?>(null) }
 
     @Composable
     fun headerCell(i: Int, w: Dp) {
@@ -103,9 +106,9 @@ fun FinTable(
         val link = links.getOrNull(r).orEmpty()
         val mod = Modifier.width(w).padding(horizontal = 8.dp)
         when {
-            i == 0 && link.isNotEmpty() -> Text(FinLogic.cell(raw), mod, color = p.accent, style = FinType.body.copy(fontSize = 12.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            i == 0 && link.isNotEmpty() -> Text(FinLogic.cell(raw), mod, color = p.accent, style = FinType.body.copy(fontSize = 12.sp), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
             t == Col.TEXT || t == Col.LINK -> Text(FinLogic.cell(raw), mod, color = if (FinLogic.missing(raw)) p.text3 else p.text,
-                style = FinType.body.copy(fontSize = 12.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                style = FinType.body.copy(fontSize = 12.sp), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
             t == Col.DATE -> Text(FinLogic.cell(raw), mod, color = p.text2, style = FinType.caption, textAlign = TextAlign.End, maxLines = 1)
             t == Col.CHG || t == Col.PCT -> {
                 val s = FinLogic.change(raw)
@@ -114,7 +117,7 @@ fun FinTable(
             else -> {
                 val s = FinLogic.cell(raw)
                 Box(mod.finFlash(s, FinFormat.Dir.FLAT)) {
-                    Text(s, Modifier.fillMaxWidth(), color = if (FinLogic.missing(raw)) p.text3 else p.text, style = FinType.num, textAlign = TextAlign.End, maxLines = 1)
+                    Text(s, Modifier.fillMaxWidth(), color = if (FinLogic.missing(raw)) p.text3 else p.text, style = FinType.num, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -130,24 +133,43 @@ fun FinTable(
                     for (k in 0 until shown) {
                         val r = order[k]
                         Row(Modifier.heightIn(min = FinDim.tableRow).background(if (k % 2 == 1) p.surfaceRaised.copy(alpha = 0.5f) else Color.Transparent)
-                            .let { m -> links.getOrNull(r).orEmpty().let { l -> if (l.isNotEmpty()) m.clickable { onOpen(l) } else m } }
+                            .let { m -> links.getOrNull(r).orEmpty().let { l -> if (l.isNotEmpty()) m.clickable { onOpen(l) } else if (details.isNotEmpty()) m.clickable { detail = r } else m } }
                             .height(FinDim.tableRow), verticalAlignment = Alignment.CenterVertically) { bodyCell(r, 0, firstW) }
                     }
                 }
                 Column(Modifier.horizontalScroll(scroll, enabled = !fits)) {
-                    Row(Modifier.height(FinDim.tableHeader).background(p.surfaceRaised)) { for (i in 1 until n) headerCell(i, restW) }
-                    Box(Modifier.width(restW * (n - 1)).height(1.dp).background(p.hairline))
+                    Row(Modifier.height(FinDim.tableHeader).background(p.surfaceRaised)) { for (i in 1 until n) headerCell(i, ws[i]) }
+                    Box(Modifier.width(ws.drop(1).fold(0.dp) { a, b -> a + b }).height(1.dp).background(p.hairline))
                     for (k in 0 until shown) {
                         val r = order[k]
                         Row(Modifier.height(FinDim.tableRow).background(if (k % 2 == 1) p.surfaceRaised.copy(alpha = 0.5f) else Color.Transparent),
-                            verticalAlignment = Alignment.CenterVertically) { for (i in 1 until n) bodyCell(r, i, restW) }
+                            verticalAlignment = Alignment.CenterVertically) { for (i in 1 until n) bodyCell(r, i, ws[i]) }
                     }
                 }
             }
+            // the scroll hint: a 32dp fade and a chevron while more columns lie to the right
             if (!fits && scroll.value < scroll.maxValue) {
-                Box(Modifier.align(Alignment.CenterEnd).width(16.dp).height(FinDim.tableHeader + FinDim.tableRow * shown)
-                    .background(Brush.horizontalGradient(listOf(Color.Transparent, p.surface))))
+                Box(Modifier.align(Alignment.CenterEnd).width(32.dp).height(FinDim.tableHeader + FinDim.tableRow * shown).testTag("fin:tablefade:$panelId")
+                    .background(Brush.horizontalGradient(listOf(Color.Transparent, p.surface))), contentAlignment = Alignment.TopEnd) {
+                    Text("\u203A", Modifier.height(FinDim.tableHeader).padding(end = 4.dp), color = p.accent, style = FinType.body.copy(fontSize = 18.sp))
+                }
             }
+        }
+        detail?.let { r ->
+            // the full-name detail view: the declared full name, then every column of the row
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { detail = null },
+                confirmButton = { androidx.compose.material3.TextButton(onClick = { detail = null }) { Text("Close") } },
+                title = { Text(details.getOrNull(r).orEmpty().ifEmpty { FinLogic.cell(rows[r].getOrNull(0)) }, style = FinType.body) },
+                text = {
+                    Column(Modifier.testTag("fin:rowdetail:$panelId")) {
+                        for (i in 1 until n) Row(Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(columns.getOrElse(i) { "" }, Modifier.weight(1f), color = p.text2, style = FinType.label)
+                            Text(FinLogic.cell(rows[r].getOrNull(i)), color = p.text, style = FinType.num)
+                        }
+                    }
+                },
+            )
         }
         if (rows.size > limit) {
             Box(Modifier.fillMaxWidth().height(FinDim.tableRow).clickable { expanded = 1 - expanded }.padding(horizontal = 8.dp).testTag("fin:showall:$panelId"),

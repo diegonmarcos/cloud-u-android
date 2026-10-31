@@ -23,6 +23,8 @@ data class PanelData(
     val servedBy: String = "",
     /** The user's alert rules that hold on this panel's data (Watchlist & Alerts), one line each. */
     val alerts: List<String> = emptyList(),
+    /** Per row, the full name the one-line name cell shortens (shown in the row's detail view); empty when the cell is the whole name. */
+    val details: List<String> = emptyList(),
 )
 
 /** What a model panel (Feeds.kt) needs besides its own source: the catalog (fallback routes), its dashboard, the container route, the user's lists and now (UTC). */

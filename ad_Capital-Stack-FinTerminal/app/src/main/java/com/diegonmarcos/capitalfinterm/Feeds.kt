@@ -430,6 +430,13 @@ object Feeds {
             val l = Catalog.str(p, "label")
             pts += Pt(Catalog.str(p, "key").ifEmpty { l }, l, p.optDouble("tenor_years", pts.size.toDouble()), v, prev[l], asof)
         }
+        // /v1/curves/{CC} (finterm-store): {tenors, curve:{country, gdp_weight, tenors:[{tenor, value|null, date, source, method}]}};
+        // a null value is a cell no free source covers (its `method` says why) and is left out
+        objects(o.optJSONObject("curve")?.optJSONArray("tenors")).forEach { t ->
+            val v = num(t, "value") ?: return@forEach
+            val k = Catalog.str(t, "tenor")
+            tenorYears(k)?.let { y -> pts += Pt(k, k, y, v, null, Catalog.str(t, "date")) }
+        }
         o.optJSONObject("rates")?.let { r ->
             val pr = o.optJSONObject("prev")
             r.keys().asSequence().sorted().forEach { c -> pts += Pt(c, c, pts.size.toDouble(), r.getDouble(c), pr?.optDouble(c)?.takeIf { it.isFinite() }, asof) }
@@ -454,6 +461,13 @@ object Feeds {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** A tenor label in years: "3M" 0.25, "10Y" 10.0, "2W" 2/52; null for anything else. */
+    fun tenorYears(t: String): Double? {
+        val m = Regex("^(\\d+(?:\\.\\d+)?)\\s*([WMY])$").find(t.trim().uppercase()) ?: return null
+        val n = m.groupValues[1].toDouble()
+        return when (m.groupValues[2]) { "Y" -> n; "M" -> n / 12.0; else -> n / 52.0 }
+    }
 
     private fun objects(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).mapNotNull { a.optJSONObject(it) }
 
