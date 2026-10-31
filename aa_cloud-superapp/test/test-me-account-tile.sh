@@ -11,7 +11,7 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
 G='.ui.sections[] | select(.id == "cloud") | .tile_groups[]'
 eq "Me row reads Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[].label] | join(\" \")" "$BJ")" "Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC"
 eq "separators are declared separator tiles with no target" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[] | select(.label == \"|\") | (.separator == true and (.target // \"\") == \"\")] | all" "$BJ")" "true"
-eq "every Me-* tile deep-links its Cloud Me section" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[] | select(.label | startswith(\"Me-\")) | .target | capture(\"^extapp:cloud-me#page:(?<s>[a-z]+)/\").s] | join(\",\")" "$BJ")" "health,study,achieves,duties,buro,llc"
+eq "every Me-* tile deep-links its Cloud Me section (Study and Achieves live under Experiences, #1350)" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[] | select(.label | startswith(\"Me-\")) | .target | capture(\"^extapp:cloud-me#page:(?<s>[a-z]+)/\").s] | join(\",\")" "$BJ")" "health,experiences,experiences,duties,buro,llc"
 eq "MySocials and MyTrips left the Me row" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[] | select(.id == \"mysocials\" or .id == \"mytrips\")] | length" "$BJ")" "0"
 eq "Me row starts Account, Me" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[0:2][].label] | join(\",\")" "$BJ")" "Account,Me"
 eq "Account tile opens the profile page" "$(jq -r "$G | select(.title == \"Me\") | .tiles[0].target" "$BJ")" "page:config/profile"
