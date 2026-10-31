@@ -38,7 +38,7 @@ class StoreExec(private val ctx: Context) {
     fun run(script: String, stdin: String? = null, timeoutMs: Int = 60_000): Result = call(guestWrap(script), stdin, timeoutMs)
 
     /** [script] on the HOST side of cld.termux (its own uid: its whole data dir is readable), not in the glibc guest. */
-    fun runHost(script: String, timeoutMs: Int = 60_000): Result = call(script, null, timeoutMs)
+    fun runHost(script: String, timeoutMs: Int = 60_000, stdin: String? = null): Result = call(script, stdin, timeoutMs)
 
     private fun call(script: String, stdin: String?, timeoutMs: Int): Result = bound { exec ->
         val b = exec.exec("/system/bin/sh", arrayOf("-c", script), stdin, null, timeoutMs)
@@ -46,18 +46,18 @@ class StoreExec(private val ctx: Context) {
         Result(if (err != null) -1 else b.getInt("exit"), b.getString("stdout").orEmpty(), (b.getString("stderr").orEmpty() + (err?.let { "\n$it" } ?: "")).trim())
     }
 
-    /** A long-running [script]: detached in the guest, polled until it writes its exit code or [deadlineMs] passes. */
+    /** A long-running [script]: started detached from the HOST side ([jobStart]), polled until it writes its exit code or [deadlineMs] passes. */
     fun job(script: String, stdin: String? = null, deadlineMs: Long = 30 * 60_000L): Result {
         val id = UUID.randomUUID().toString()
-        val dir = "/root/${BuildConfig.STORE_DIR}/.jobs"
-        val started = run(jobStart(script, dir, id), stdin ?: "")
+        val dir = "\$HOME/${BuildConfig.STORE_DIR}/.jobs"
+        val started = runHost(jobStart(script, dir, id), stdin = stdin ?: "")
         if (!started.ok) return started
         val until = System.currentTimeMillis() + deadlineMs
         while (System.currentTimeMillis() < until) {
             Thread.sleep(2_000)
-            val r = run("[ -f $dir/$id.rc ] && cat $dir/$id.rc", timeoutMs = 20_000)
+            val r = runHost("[ -f $dir/$id.rc ] && cat $dir/$id.rc", timeoutMs = 20_000)
             if (r.ok && r.out.isNotBlank()) {
-                val log = run("tail -c 16000 $dir/$id.log; rm -f $dir/$id.log $dir/$id.rc", timeoutMs = 20_000).out
+                val log = runHost("tail -c 16000 $dir/$id.log; rm -f $dir/$id.log $dir/$id.rc", timeoutMs = 20_000).out
                 return Result(r.out.trim().toIntOrNull() ?: -1, log, "")
             }
         }
@@ -79,9 +79,8 @@ class StoreExec(private val ctx: Context) {
         fun loginLine(script: String): String =
             "exec /bin/sh -c \"\$(echo " + java.util.Base64.getEncoder().encodeToString(script.toByteArray(Charsets.UTF_8)) + " | base64 -d)\""
 
-        /** The detached start of a [job]: stdin to <dir>/<id>.in, the script's output to .log, its exit code to .rc. */
-        fun jobStart(script: String, dir: String, id: String): String =
-            "mkdir -p $dir && chmod 700 $dir && cat > $dir/$id.in && " +
-                "( nohup sh -c ${q("sh -c ${q(script)} < $dir/$id.in > $dir/$id.log 2>&1; echo \$? > $dir/$id.rc; rm -f $dir/$id.in")} >/dev/null 2>&1 & )"
+        /** #1358 a [job]'s detached start, run on the HOST: a session's proot is --kill-on-exit, so a job backgrounded inside it died when the call returned (no .rc, polled to the deadline); its own session ([loginLine]) lives until the script ends. Stdin to <dir>/<id>.in, output to .log, exit code to .rc. */
+        fun jobStart(script: String, dir: String, id: String, termuxShell: String = "\$HOME/.termux/shell"): String = "mkdir -p $dir && chmod 700 $dir && cat > $dir/$id.in && " +
+            "( nohup /system/bin/sh \"$termuxShell\" -c ${q(loginLine(script))} < $dir/$id.in > $dir/$id.log 2>&1; echo \$? > $dir/$id.rc; rm -f $dir/$id.in ) >/dev/null 2>&1 &"
     }
 }

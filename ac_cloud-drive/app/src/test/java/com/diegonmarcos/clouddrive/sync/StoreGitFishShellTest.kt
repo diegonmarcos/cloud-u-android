@@ -46,8 +46,8 @@ class StoreGitFishShellTest {
 
     private fun run(script: String, stdin: String = "") = exec(StoreExec.guestWrap(script), stdin)
 
-    /** StoreExec.job: the detached start, then poll the exit file and read the log. */
-    private fun job(script: String, stdin: String = "", wrap: (String) -> String = { StoreExec.guestWrap(it) }): R {
+    /** StoreExec.job: the detached start on the HOST (its own session through the termux shell, #1358), then poll the exit file and read the log. */
+    private fun job(script: String, stdin: String = "", wrap: (String) -> String = { it }): R {
         val dir = File(home, "store/.jobs").absolutePath; val id = "j" + System.nanoTime()
         val started = exec(wrap(StoreExec.jobStart(script, dir, id)), stdin)
         if (started.exit != 0) return started

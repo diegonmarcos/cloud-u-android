@@ -3,7 +3,8 @@
 # cld.termux (terminal + rootfs lib) and Cloud Drive, both release-signed (CLOUD_EXEC is signature-level).
 #   1. BEFORE: the pre-#1353 job start (the script quoted twice, handed to root's login shell)
 #      through cld.termux's own login path (terminal/exec = login -c -> enter.sh -> fish -c):
-#      its exit code and fish's stderr are recorded; the failure is EXPECTED.
+#      fish's refusal is EXPECTED; then a job backgrounded inside a session must die with the
+#      session's --kill-on-exit proot (why the post-#1353 job never wrote its exit file).
 #   2. AFTER: Drive's Mirror all (bare) item path (git/bare = StoreGit.bareClone over CLOUD_EXEC)
 #      for three public repositories; every one must report ok, a failure prints git's real line.
 # Release builds serve their debug routes over the fleet IPC provider only (no TCP port), so the
@@ -54,6 +55,13 @@ ipc $TERMUX terminal/exec "cmd=sh -c $(q "cat $D/$ID.rc $D/$ID.log 2>&1; ls -d $
 grep -q "fish: Unsupported use of '='" "$OUT/before.json" || fail "the pre-#1353 start was not refused by fish: the root cause did not reproduce"
 grep -q "No such file or directory" "$OUT/before-job.json" || fail "the pre-#1353 start produced a job or a mirror"
 echo "BEFORE reproduced: fish refused the twice-quoted job start, no job ran, no mirror (the phone's bare clone failure)"
+
+echo "── BEFORE (2): a job backgrounded inside a session (the post-#1353 job start) dies with the session's --kill-on-exit proot ──"
+ipc $TERMUX terminal/exec "cmd=sh -c $(q "rm -f /root/kill-probe; ( nohup sh -c 'sleep 3; echo alive > /root/kill-probe' >/dev/null 2>&1 & )")" | tee "$OUT/kill-start.json"; echo
+sleep 12
+ipc $TERMUX terminal/exec "cmd=sh -c $(q "cat /root/kill-probe 2>&1")" | tee "$OUT/kill-probe.json"; echo
+grep -q '"stdout":"alive' "$OUT/kill-probe.json" && fail "a job backgrounded in a session survived it: kill-on-exit is not the second cause"
+echo "BEFORE (2) reproduced: the backgrounded job never wrote its file (killed with the session), so a guest-side job never writes .rc"
 
 echo "── AFTER: Drive's bare clone (StoreGit.bareClone over CLOUD_EXEC) for three public repositories ──"
 ipc $DRIVE health | tee "$OUT/drive-health.json"; echo
